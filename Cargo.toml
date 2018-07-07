@@ -1,0 +1,6 @@
+[package]
+name = "q1tsim"
+version = "0.1.0"
+authors = ["Gé Vissers <ge@octonion.nl>"]
+
+[dependencies]
