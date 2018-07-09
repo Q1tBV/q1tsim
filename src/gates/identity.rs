@@ -21,11 +21,33 @@ impl gates::Gate for Identity
 {
     fn description(&self) -> &str
     {
-        return "I";
+        "I"
     }
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
         cmatrix::CMatrix::eye(2)
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use gates::Gate;
+    use gates::Identity;
+
+    #[test]
+    fn test_description()
+    {
+        let i = Identity::new();
+        assert_eq!(i.description(), "I");
+    }
+
+    #[test]
+    fn test_matrix()
+    {
+        let i = Identity::new();
+        assert_eq!(i.matrix().real().data(), &vec![1.0, 0.0, 0.0, 1.0]);
+        assert_eq!(i.matrix().imag().data(), &vec![0.0; 4]);
     }
 }

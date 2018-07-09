@@ -2,6 +2,7 @@ extern crate rulinalg;
 
 mod hadamard;
 mod identity;
+mod kron;
 
 use cmatrix;
 
@@ -19,3 +20,4 @@ pub trait Gate
 
 pub use gates::hadamard::Hadamard;
 pub use gates::identity::Identity;
+pub use gates::kron::Kron;

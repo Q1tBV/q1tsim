@@ -22,12 +22,35 @@ impl gates::Gate for Hadamard
 {
     fn description(&self) -> &str
     {
-        return "H";
+        "H"
     }
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let s = ::std::f64::consts::FRAC_1_SQRT_2;
         cmatrix::CMatrix::new_real(matrix![s, s; s, -s])
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use gates::Gate;
+    use gates::Hadamard;
+
+    #[test]
+    fn test_description()
+    {
+        let h = Hadamard::new();
+        assert_eq!(h.description(), "H");
+    }
+
+    #[test]
+    fn test_matrix()
+    {
+        let h = Hadamard::new();
+        let s = ::std::f64::consts::FRAC_1_SQRT_2;
+        assert_eq!(h.matrix().real().data(), &vec![s, s, s, -s]);
+        assert_eq!(h.matrix().imag().data(), &vec![0.0; 4]);
     }
 }
