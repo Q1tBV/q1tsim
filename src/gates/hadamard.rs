@@ -3,8 +3,9 @@ use gates;
 
 /// The Hadamard gate.
 ///
-/// The Hadamard gate maps the zero state |0> to the symmetric combination of
-/// |0> and |1>, and the |1> state to the anti-symmetric combination.
+/// The Hadamard gate maps the zero state |0&rang; to the symmetric combination
+/// of |0&rang; and |1&rang;, and the |1&rang; state to the anti-symmetric
+/// combination.
 pub struct Hadamard
 {
 }
@@ -28,7 +29,7 @@ impl gates::Gate for Hadamard
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let s = ::std::f64::consts::FRAC_1_SQRT_2;
-        cmatrix::CMatrix::new_real(matrix![s, s; s, -s])
+        cmatrix::CMatrix::new_real(2, 2, vec![s, s, s, -s])
     }
 }
 

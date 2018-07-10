@@ -1,18 +1,29 @@
 extern crate rulinalg;
 
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
-use rulinalg::matrix::Matrix;
 
-fn kron(a0: &Matrix<f64>, a1: &Matrix<f64>) -> Matrix<f64>
+type RMatrix = rulinalg::matrix::Matrix<f64>;
+
+fn kron(a0: &RMatrix, a1: &RMatrix) -> RMatrix
 {
     let (n0, m0, n1, m1) = (a0.rows(), a0.cols(), a1.rows(), a1.cols());
-    let mut res = Matrix::zeros(n0*n1, m0*m1);
+    let mut res = RMatrix::zeros(n0*n1, m0*m1);
     for (i0, r0) in a0.row_iter().enumerate()
     {
         for (j0, &x0) in r0.iter().enumerate()
         {
             res.sub_slice_mut([n1*i0, m1*j0], n1, m1).set_to(a1 * x0);
         }
+    }
+    res
+}
+
+fn abs_sq(a: &RMatrix) -> RMatrix
+{
+    let mut res = RMatrix::zeros(a.rows(), a.cols());
+    for (x, &y) in res.iter_mut().zip(a.iter())
+    {
+        *x = y * y;
     }
     res
 }
@@ -25,25 +36,56 @@ fn kron(a0: &Matrix<f64>, a1: &Matrix<f64>) -> Matrix<f64>
 pub enum CMatrix
 {
     /// A real-valued matrix.
-    Real(Matrix<f64>),
+    Real(RMatrix),
     /// A fully imaginary matrix.
-    Imag(Matrix<f64>),
+    Imag(RMatrix),
     /// A complex-valued matrix
-    Complex(Matrix<f64>, Matrix<f64>)
+    Complex(RMatrix, RMatrix)
 }
 
 impl CMatrix
 {
-    /// Return an identity matrix of size `n` × `n`.
-    pub fn eye(n: usize) -> Self
+    /// The identity matrix.
+    ///
+    /// Return an identity matrix of size `n` × `m`. If `n` &ne; `m`, the
+    /// remaining rows or columns are filled with zeros.
+    pub fn eye(n: usize, m: usize) -> Self
     {
-        CMatrix::Real(Matrix::identity(n))
+        if n == m
+        {
+            CMatrix::Real(RMatrix::identity(n))
+        }
+        else
+        {
+            let mut res: RMatrix = RMatrix::zeros(n, m);
+            for x in res.diag_iter_mut(rulinalg::matrix::DiagOffset::Main)
+            {
+                *x = 1.0;
+            }
+            CMatrix::Real(res)
+        }
     }
 
-    /// Return a new real-valued matrix, with the coefficients from `mat`.
-    pub fn new_real(mat: Matrix<f64>) -> Self
+    /// Return a new real-valued matrix, with the coefficients from `data`.
+    pub fn new_real<U>(rows: usize, cols: usize, data: U) -> CMatrix
+    where U: Into<Vec<f64>>
     {
-        CMatrix::Real(mat)
+        CMatrix::Real(RMatrix::new(rows, cols, data))
+    }
+
+    /// Return a new imaginary matrix, with the coefficients from `data`.
+    pub fn new_imag<U>(rows: usize, cols: usize, data: U) -> CMatrix
+    where U: Into<Vec<f64>>
+    {
+        CMatrix::Imag(RMatrix::new(rows, cols, data))
+    }
+
+    /// Return a new Complex matrix, with the real parts of the coefficients
+    /// from `rdata`, and the imaginary part from `idata`.
+    pub fn new_complex<U>(rows: usize, cols: usize, rdata: U, idata: U) -> CMatrix
+    where U: Into<Vec<f64>>
+    {
+        CMatrix::Complex(RMatrix::new(rows, cols, rdata), RMatrix::new(rows, cols, idata))
     }
 
     /// Return the number of rows in this matrix.
@@ -69,25 +111,38 @@ impl CMatrix
     }
 
     /// Return the real part of this matrix.
-    pub fn real(&self) -> ::std::borrow::Cow<Matrix<f64>>
+    pub fn real(&self) -> ::std::borrow::Cow<RMatrix>
     {
         match self
         {
             &CMatrix::Real(ref mat)       => ::std::borrow::Cow::Borrowed(mat),
-            &CMatrix::Imag(_)             => ::std::borrow::Cow::Owned(Matrix::zeros(self.rows(), self.cols())),
+            &CMatrix::Imag(_)             => ::std::borrow::Cow::Owned(RMatrix::zeros(self.rows(), self.cols())),
             &CMatrix::Complex(ref mat, _) => ::std::borrow::Cow::Borrowed(mat)
         }
     }
 
-    /// Return the imaginary part of this matrix. If the matrix is purely real,
-    /// `None` is returned.
-    pub fn imag(&self) -> ::std::borrow::Cow<Matrix<f64>>
+    /// Return the imaginary part of this matrix.
+    pub fn imag(&self) -> ::std::borrow::Cow<RMatrix>
     {
         match self
         {
-            &CMatrix::Real(_)             => ::std::borrow::Cow::Owned(Matrix::zeros(self.rows(), self.cols())),
+            &CMatrix::Real(_)             => ::std::borrow::Cow::Owned(RMatrix::zeros(self.rows(), self.cols())),
             &CMatrix::Imag(ref mat)       => ::std::borrow::Cow::Borrowed(mat),
             &CMatrix::Complex(_, ref mat) => ::std::borrow::Cow::Borrowed(mat)
+        }
+    }
+
+    /// Squared absolute value of this matrix.
+    ///
+    /// Return the matrix with filled with the squared absolute values of the
+    /// elements in this matrix.
+    pub fn abs_sq(&self) -> RMatrix
+    {
+        match self
+        {
+            &CMatrix::Real(ref r)           => abs_sq(r),
+            &CMatrix::Imag(ref i)           => abs_sq(i),
+            &CMatrix::Complex(ref r, ref i) => abs_sq(r) + abs_sq(i)
         }
     }
 

@@ -4,4 +4,5 @@ version = "0.1.0"
 authors = ["Gé Vissers <ge@q1t.nl>"]
 
 [dependencies]
+rand="*"
 rulinalg="*"

@@ -26,7 +26,7 @@ impl gates::Gate for Identity
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        cmatrix::CMatrix::eye(2)
+        cmatrix::CMatrix::eye(2, 2)
     }
 }
 
