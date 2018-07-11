@@ -91,44 +91,44 @@ impl CMatrix
     /// Return the number of rows in this matrix.
     pub fn rows(&self) -> usize
     {
-        match self
+        match *self
         {
-            &CMatrix::Real(ref mat)       => mat.rows(),
-            &CMatrix::Imag(ref mat)       => mat.rows(),
-            &CMatrix::Complex(ref mat, _) => mat.rows()
+            CMatrix::Real(ref mat)       => mat.rows(),
+            CMatrix::Imag(ref mat)       => mat.rows(),
+            CMatrix::Complex(ref mat, _) => mat.rows()
         }
     }
 
     /// Return the number of columns in this matrix.
     pub fn cols(&self) -> usize
     {
-        match self
+        match *self
         {
-            &CMatrix::Real(ref mat)       => mat.cols(),
-            &CMatrix::Imag(ref mat)       => mat.cols(),
-            &CMatrix::Complex(ref mat, _) => mat.cols()
+            CMatrix::Real(ref mat)       => mat.cols(),
+            CMatrix::Imag(ref mat)       => mat.cols(),
+            CMatrix::Complex(ref mat, _) => mat.cols()
         }
     }
 
     /// Return the real part of this matrix.
     pub fn real(&self) -> ::std::borrow::Cow<RMatrix>
     {
-        match self
+        match *self
         {
-            &CMatrix::Real(ref mat)       => ::std::borrow::Cow::Borrowed(mat),
-            &CMatrix::Imag(_)             => ::std::borrow::Cow::Owned(RMatrix::zeros(self.rows(), self.cols())),
-            &CMatrix::Complex(ref mat, _) => ::std::borrow::Cow::Borrowed(mat)
+            CMatrix::Real(ref mat)       => ::std::borrow::Cow::Borrowed(mat),
+            CMatrix::Imag(_)             => ::std::borrow::Cow::Owned(RMatrix::zeros(self.rows(), self.cols())),
+            CMatrix::Complex(ref mat, _) => ::std::borrow::Cow::Borrowed(mat)
         }
     }
 
     /// Return the imaginary part of this matrix.
     pub fn imag(&self) -> ::std::borrow::Cow<RMatrix>
     {
-        match self
+        match *self
         {
-            &CMatrix::Real(_)             => ::std::borrow::Cow::Owned(RMatrix::zeros(self.rows(), self.cols())),
-            &CMatrix::Imag(ref mat)       => ::std::borrow::Cow::Borrowed(mat),
-            &CMatrix::Complex(_, ref mat) => ::std::borrow::Cow::Borrowed(mat)
+            CMatrix::Real(_)             => ::std::borrow::Cow::Owned(RMatrix::zeros(self.rows(), self.cols())),
+            CMatrix::Imag(ref mat)       => ::std::borrow::Cow::Borrowed(mat),
+            CMatrix::Complex(_, ref mat) => ::std::borrow::Cow::Borrowed(mat)
         }
     }
 
@@ -138,53 +138,85 @@ impl CMatrix
     /// elements in this matrix.
     pub fn abs_sq(&self) -> RMatrix
     {
-        match self
+        match *self
         {
-            &CMatrix::Real(ref r)           => abs_sq(r),
-            &CMatrix::Imag(ref i)           => abs_sq(i),
-            &CMatrix::Complex(ref r, ref i) => abs_sq(r) + abs_sq(i)
+            CMatrix::Real(ref r)           => abs_sq(r),
+            CMatrix::Imag(ref i)           => abs_sq(i),
+            CMatrix::Complex(ref r, ref i) => abs_sq(r) + abs_sq(i)
         }
     }
 
     /// Compute the Kronecker product of this matrix and `m`.
     pub fn kron(&self, m: &Self) -> Self
     {
-        match self
+        match *self
         {
-            &CMatrix::Real(ref r0)            => {
-                match m
+            CMatrix::Real(ref r0)            => {
+                match *m
                 {
-                    &CMatrix::Real(ref r1)            => { CMatrix::Real(kron(r0, r1)) },
-                    &CMatrix::Imag(ref i1)            => { CMatrix::Imag(kron(r0, i1)) },
-                    &CMatrix::Complex(ref r1, ref i1) => {
+                    CMatrix::Real(ref r1)            => { CMatrix::Real(kron(r0, r1)) },
+                    CMatrix::Imag(ref i1)            => { CMatrix::Imag(kron(r0, i1)) },
+                    CMatrix::Complex(ref r1, ref i1) => {
                         CMatrix::Complex(kron(r0, r1), kron(r0, i1))
                     }
                 }
             },
-            &CMatrix::Imag(ref i0)            => {
+            CMatrix::Imag(ref i0)            => {
                 match m
                 {
-                    &CMatrix::Real(ref r1)            => { CMatrix::Imag(kron(i0, r1)) },
-                    &CMatrix::Imag(ref i1)            => { CMatrix::Real(-kron(i0, i1)) },
-                    &CMatrix::Complex(ref r1, ref i1) => {
+                    CMatrix::Real(ref r1)            => { CMatrix::Imag(kron(i0, r1)) },
+                    CMatrix::Imag(ref i1)            => { CMatrix::Real(-kron(i0, i1)) },
+                    CMatrix::Complex(ref r1, ref i1) => {
                         CMatrix::Complex(-kron(i0, i1), kron(i0, r1))
                     }
                 }
             },
-            &CMatrix::Complex(ref r0, ref i0) => {
+            CMatrix::Complex(ref r0, ref i0) => {
                 match m
                 {
-                    &CMatrix::Real(ref r1)            => {
+                    CMatrix::Real(ref r1)            => {
                         CMatrix::Complex(kron(r0, r1), kron(i0, r1))
                     },
-                    &CMatrix::Imag(ref i1)            => {
+                    CMatrix::Imag(ref i1)            => {
                         CMatrix::Complex(-kron(i0, i1), kron(r0, i1))
                     },
-                    &CMatrix::Complex(ref r1, ref i1) => {
+                    CMatrix::Complex(ref r1, ref i1) => {
                         CMatrix::Complex(kron(r0, r1) - kron(i0, i1), kron(r0, i1) + kron(i0, r1))
                     }
                 }
             },
+        }
+    }
+
+    /// Set all elements in the range [`i`..`i`+`ni`, `j`..`j`+`nj`] to zero.
+    pub fn clear(&mut self, i: usize, j: usize, ni: usize, nj: usize)
+    {
+    println!("clear {}, {}, {}, {}", i, j, ni, nj);
+        match *self
+        {
+            CMatrix::Real(ref mut rl)                => {
+                rl.sub_slice_mut([i, j], ni, nj).set_to(RMatrix::zeros(ni, nj));
+            },
+            CMatrix::Imag(ref mut im)                => {
+                im.sub_slice_mut([i, j], ni, nj).set_to(RMatrix::zeros(ni, nj));
+            }
+            CMatrix::Complex(ref mut rl, ref mut im) => {
+                rl.sub_slice_mut([i, j], ni, nj).set_to(RMatrix::zeros(ni, nj));
+                im.sub_slice_mut([i, j], ni, nj).set_to(RMatrix::zeros(ni, nj));
+            }
+        }
+    }
+}
+
+impl ::std::ops::MulAssign<f64> for CMatrix
+{
+    fn mul_assign(&mut self, x: f64)
+    {
+        match *self
+        {
+            CMatrix::Real(ref mut r)               => *r *= x,
+            CMatrix::Imag(ref mut i)               => *i *= x,
+            CMatrix::Complex(ref mut r, ref mut i) => { *r *= x; *i *= x }
         }
     }
 }

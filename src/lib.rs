@@ -2,4 +2,4 @@
 
 pub mod cmatrix;
 pub mod gates;
-pub mod qubit;
+pub mod qustate;
