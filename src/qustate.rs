@@ -7,7 +7,7 @@ use rulinalg::matrix::BaseMatrix;
 /// Quantum state.
 ///
 /// Struct Qustate represents the quantum state of the system. It consists of a
-/// (normalized) superposition of basis states, ∑<sub>iM/sub>a<sub>i</sub>|i&rang;,
+/// (normalized) superposition of basis states, ∑<sub>i</sub>a<sub>i</sub>|i&rang;,
 /// where each basis function |i&rang; is a Kronecker product of quantum bits.
 pub struct QuState
 {
@@ -28,7 +28,7 @@ impl QuState
     /// Create a new qustate from qubit coefficients.
     ///
     /// Create a new qustate as a direct product of qubits, where the real
-    /// parts of the coefficients of the \0&rang; and |1&rang; states in the
+    /// parts of the coefficients of the |0&rang; and |1&rang; states in the
     /// qubits are given in `r`, and the imaginary parts in `i`. Both arrays
     /// must be of size 2`n`, where `n` is the number of qubits in the system.
     pub fn from_qubit_coefs(r: &[f64], i: &[f64]) -> Self

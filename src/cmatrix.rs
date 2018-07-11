@@ -80,7 +80,7 @@ impl CMatrix
         CMatrix::Imag(RMatrix::new(rows, cols, data))
     }
 
-    /// Return a new Complex matrix, with the real parts of the coefficients
+    /// Return a new complex matrix, with the real parts of the coefficients
     /// from `rdata`, and the imaginary part from `idata`.
     pub fn new_complex<U>(rows: usize, cols: usize, rdata: U, idata: U) -> CMatrix
     where U: Into<Vec<f64>>
@@ -191,7 +191,6 @@ impl CMatrix
     /// Set all elements in the range [`i`..`i`+`ni`, `j`..`j`+`nj`] to zero.
     pub fn clear(&mut self, i: usize, j: usize, ni: usize, nj: usize)
     {
-    println!("clear {}, {}, {}, {}", i, j, ni, nj);
         match *self
         {
             CMatrix::Real(ref mut rl)                => {
