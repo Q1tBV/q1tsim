@@ -30,11 +30,20 @@ impl gates::Gate for Identity
     }
 }
 
+impl gates::UnaryGate for Identity
+{
+    fn apply_unary(&self, _s: &mut cmatrix::CMatrix)
+    {
+        // Identity, leave state unchanged, so do nothing
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
-    use gates::Gate;
+    use gates::{Gate, UnaryGate};
     use gates::Identity;
+    use cmatrix;
 
     #[test]
     fn test_description()
@@ -50,4 +59,16 @@ mod tests
         assert_eq!(i.matrix().real().data(), &vec![1.0, 0.0, 0.0, 1.0]);
         assert_eq!(i.matrix().imag().data(), &vec![0.0; 4]);
     }
+
+    #[test]
+    fn test_apply_unary()
+    {
+        let x = ::std::f64::consts::FRAC_1_SQRT_2;
+        let mut state = cmatrix::CMatrix::new_real(2, 4, vec![1.0, 0.0, x, x, 0.0, 1.0, x, -x]);
+
+        Identity::new().apply_unary(&mut state);
+        assert_matrix_eq!(state.real(), matrix![1.0, 0.0, x, x; 0.0, 1.0, x, -x], comp=float);
+        assert_matrix_eq!(state.imag(), matrix![0.0, 0.0, 0.0, 0.0; 0.0, 0.0, 0.0, 0.0], comp=float);
+    }
+
 }

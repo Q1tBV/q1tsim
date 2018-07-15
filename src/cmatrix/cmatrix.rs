@@ -1,5 +1,6 @@
 extern crate rulinalg;
 
+use cmatrix;
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 type RMatrix = rulinalg::matrix::Matrix<f64>;
@@ -41,6 +42,18 @@ pub enum CMatrix
     Imag(RMatrix),
     /// A complex-valued matrix
     Complex(RMatrix, RMatrix)
+}
+
+/// Type for a single complex number
+#[derive(Clone, Copy)]
+pub enum CValue
+{
+    /// A real number.
+    Real(f64),
+    /// An imaginary number.
+    Imag(f64),
+    /// A complex number.
+    Complex(f64, f64)
 }
 
 impl CMatrix
@@ -110,6 +123,37 @@ impl CMatrix
         }
     }
 
+    /// Return whether this matrix is real-valued
+    pub fn is_real(&self) -> bool
+    {
+        match *self
+        {
+            CMatrix::Real(_) => true,
+            _                => false
+        }
+    }
+
+    /// Return whether this matrix is fully imaginary
+    pub fn is_imaginary(&self) -> bool
+    {
+        match *self
+        {
+            CMatrix::Imag(_) => true,
+            _                => false
+        }
+    }
+
+    /// Return the element at position `idx`.
+    pub fn at(&self, idx: [usize; 2]) -> CValue
+    {
+        match *self
+        {
+            CMatrix::Real(ref r)           => CValue::Real(r[idx]),
+            CMatrix::Imag(ref i)           => CValue::Imag(i[idx]),
+            CMatrix::Complex(ref r, ref i) => CValue::Complex(r[idx], i[idx])
+        }
+    }
+
     /// Return the real part of this matrix.
     pub fn real(&self) -> ::std::borrow::Cow<RMatrix>
     {
@@ -144,6 +188,22 @@ impl CMatrix
             CMatrix::Imag(ref i)           => abs_sq(i),
             CMatrix::Complex(ref r, ref i) => abs_sq(r) + abs_sq(i)
         }
+    }
+
+    /// Take an immutable slice of size `rows` × `cols` from this matrix,
+    /// starting at position `offset`.
+    pub fn sub_slice(&self, offset: [usize; 2], rows: usize, cols: usize)
+        -> cmatrix::CMatrixSlice
+    {
+        cmatrix::CMatrixSlice::new(self, offset, rows, cols)
+    }
+
+    /// Take an mutable slice of size `rows` × `cols` from this matrix,
+    /// starting at position `offset`.
+    pub fn sub_slice_mut(&mut self, offset: [usize; 2], rows: usize, cols: usize)
+        -> cmatrix::CMatrixSliceMut
+    {
+        cmatrix::CMatrixSliceMut::new(self, offset, rows, cols)
     }
 
     /// Compute the Kronecker product of this matrix and `m`.
@@ -188,6 +248,31 @@ impl CMatrix
         }
     }
 
+    /// Expand a real valued or imaginary matrix into a fully complex one,
+    /// with zeros for the previously omitted part
+    pub fn expand_to_complex(&mut self)
+    {
+        let (n, m) = (self.rows(), self.cols());
+        let r;
+        let i;
+        match *self
+        {
+            CMatrix::Real(ref mut cr)                => {
+                r = ::std::mem::replace(cr, RMatrix::zeros(0, 0));
+                i = RMatrix::zeros(n, m);
+            },
+            CMatrix::Imag(ref mut ci)                => {
+                r = RMatrix::zeros(n, m);
+                i = ::std::mem::replace(ci, RMatrix::zeros(0, 0));
+            },
+            CMatrix::Complex(ref mut cr, ref mut ci) => {
+                r = ::std::mem::replace(cr, RMatrix::zeros(0, 0));
+                i = ::std::mem::replace(ci, RMatrix::zeros(0, 0));
+            }
+        }
+        *self = CMatrix::Complex(r, i);
+    }
+
     /// Set all elements in the range [`i`..`i`+`ni`, `j`..`j`+`nj`] to zero.
     pub fn clear(&mut self, i: usize, j: usize, ni: usize, nj: usize)
     {
@@ -202,6 +287,134 @@ impl CMatrix
             CMatrix::Complex(ref mut rl, ref mut im) => {
                 rl.sub_slice_mut([i, j], ni, nj).set_to(RMatrix::zeros(ni, nj));
                 im.sub_slice_mut([i, j], ni, nj).set_to(RMatrix::zeros(ni, nj));
+            }
+        }
+    }
+}
+
+impl ::std::ops::Add<CMatrix> for CMatrix
+{
+    type Output = CMatrix;
+
+    fn add(self, m: CMatrix) -> Self::Output
+    {
+        &self + &m
+    }
+}
+
+impl<'a, 'b> ::std::ops::Add<&'b CMatrix> for &'a CMatrix
+{
+    type Output = CMatrix;
+
+    fn add(self, m: &CMatrix) -> Self::Output
+    {
+        match *self
+        {
+            CMatrix::Real(ref r)           => {
+                match *m
+                {
+                    CMatrix::Real(ref mr)            => CMatrix::Real(r + mr),
+                    CMatrix::Imag(ref mi)            => CMatrix::Complex(r.clone(), mi.clone()),
+                    CMatrix::Complex(ref mr, ref mi) => CMatrix::Complex(r + mr, mi.clone())
+                }
+            },
+            CMatrix::Imag(ref i)           => {
+                match *m
+                {
+                    CMatrix::Real(ref mr)            => CMatrix::Complex(mr.clone(), i.clone()),
+                    CMatrix::Imag(ref mi)            => CMatrix::Imag(i + mi),
+                    CMatrix::Complex(ref mr, ref mi) => CMatrix::Complex(mr.clone(), i + mi)
+                }
+            },
+            CMatrix::Complex(ref r, ref i) => {
+                match *m
+                {
+                    CMatrix::Real(ref mr)            => CMatrix::Complex(r + mr, i.clone()),
+                    CMatrix::Imag(ref mi)            => CMatrix::Complex(r.clone(), i + mi),
+                    CMatrix::Complex(ref mr, ref mi) => CMatrix::Complex(r + mr, i + mi)
+                }
+            }
+        }
+    }
+}
+
+impl ::std::ops::Sub<CMatrix> for CMatrix
+{
+    type Output = CMatrix;
+
+    fn sub(self, m: CMatrix) -> Self::Output
+    {
+        &self - &m
+    }
+}
+
+impl<'a, 'b> ::std::ops::Sub<&'b CMatrix> for &'a CMatrix
+{
+    type Output = CMatrix;
+
+    fn sub(self, m: &CMatrix) -> Self::Output
+    {
+        match *self
+        {
+            CMatrix::Real(ref r)           => {
+                match *m
+                {
+                    CMatrix::Real(ref mr)            => CMatrix::Real(r - mr),
+                    CMatrix::Imag(ref mi)            => CMatrix::Complex(r.clone(), -mi),
+                    CMatrix::Complex(ref mr, ref mi) => CMatrix::Complex(r - mr, -mi)
+                }
+            },
+            CMatrix::Imag(ref i)           => {
+                match *m
+                {
+                    CMatrix::Real(ref mr)            => CMatrix::Complex(-mr, i.clone()),
+                    CMatrix::Imag(ref mi)            => CMatrix::Imag(i - mi),
+                    CMatrix::Complex(ref mr, ref mi) => CMatrix::Complex(-mr, i - mi)
+                }
+            },
+            CMatrix::Complex(ref r, ref i) => {
+                match *m
+                {
+                    CMatrix::Real(ref mr)            => CMatrix::Complex(r - mr, i.clone()),
+                    CMatrix::Imag(ref mi)            => CMatrix::Complex(r.clone(), i - mi),
+                    CMatrix::Complex(ref mr, ref mi) => CMatrix::Complex(r - mr, i - mi)
+                }
+            }
+        }
+    }
+}
+
+impl<'a> ::std::ops::Mul<CValue> for &'a CMatrix
+{
+    type Output = CMatrix;
+
+    fn mul(self, x: CValue) -> Self::Output
+    {
+        match *self
+        {
+            CMatrix::Real(ref mr)            => {
+                match x
+                {
+                    CValue::Real(ref xr)            => CMatrix::Real(mr*xr),
+                    CValue::Imag(ref xi)            => CMatrix::Imag(mr*xi),
+                    CValue::Complex(ref xr, ref xi) => CMatrix::Complex(mr*xr, mr*xi)
+                }
+            },
+            CMatrix::Imag(ref mi)            => {
+                match x
+                {
+                    CValue::Real(ref xr)            => CMatrix::Imag(mi*xr),
+                    CValue::Imag(ref xi)            => CMatrix::Real(mi*(-xi)),
+                    CValue::Complex(ref xr, ref xi) => CMatrix::Complex(mi*(-xi), mi*xr)
+                }
+            },
+            CMatrix::Complex(ref mr, ref mi) => {
+                match x
+                {
+                    CValue::Real(xr)        => CMatrix::Complex(mr*xr, mi*xr),
+                    CValue::Imag(xi)        => CMatrix::Complex(mi*(-xi), mr*xi),
+                    CValue::Complex(xr, xi) => CMatrix::Complex(mr*xr - mi*xi, mr*xi + mi*xr)
+                }
             }
         }
     }

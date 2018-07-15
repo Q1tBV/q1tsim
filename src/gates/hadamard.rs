@@ -33,11 +33,30 @@ impl gates::Gate for Hadamard
     }
 }
 
+impl gates::UnaryGate for Hadamard
+{
+    fn apply_unary(&self, state: &mut cmatrix::CMatrix)
+    {
+        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        let m = state.cols();
+        let s0 = state.sub_slice([0, 0], n, m).into_matrix();
+        let s1 = state.sub_slice([n, 0], n, m).into_matrix();
+
+        state.sub_slice_mut([0, 0], n, m).set_to(&s0 + &s1);
+        state.sub_slice_mut([n, 0], n, m).set_to(&s0 - &s1);
+        *state *= ::std::f64::consts::FRAC_1_SQRT_2;
+    }
+}
+
+
 #[cfg(test)]
 mod tests
 {
-    use gates::Gate;
+    use gates::{Gate, UnaryGate};
     use gates::Hadamard;
+    use cmatrix;
 
     #[test]
     fn test_description()
@@ -53,5 +72,16 @@ mod tests
         let s = ::std::f64::consts::FRAC_1_SQRT_2;
         assert_eq!(h.matrix().real().data(), &vec![s, s, s, -s]);
         assert_eq!(h.matrix().imag().data(), &vec![0.0; 4]);
+    }
+
+    #[test]
+    fn test_apply_unary()
+    {
+        let x = ::std::f64::consts::FRAC_1_SQRT_2;
+        let mut state = cmatrix::CMatrix::new_real(2, 4, vec![1.0, 0.0, x, x, 0.0, 1.0, x, -x]);
+
+        Hadamard::new().apply_unary(&mut state);
+        assert_matrix_eq!(state.real(), matrix![x, x, 1.0, 0.0; x, -x, 0.0, 1.0], comp=float);
+        assert_matrix_eq!(state.imag(), matrix![0.0, 0.0, 0.0, 0.0; 0.0, 0.0, 0.0, 0.0], comp=float);
     }
 }
