@@ -206,6 +206,35 @@ impl CMatrix
         cmatrix::CMatrixSliceMut::new(self, offset, rows, cols)
     }
 
+    /// Swap `count` rows starting at `row0` with the equal sized block at `row1`.
+    pub fn swap_rows(&mut self, row0: usize, row1: usize, count: usize)
+    {
+        let r0 = ::std::cmp::min(row0, row1);
+        let r1 = ::std::cmp::max(row0, row1);
+        match *self
+        {
+            CMatrix::Real(ref mut rl)                => {
+                for i in 0..count
+                {
+                    rl.swap_rows(r1+i, r0+i);
+                }
+            },
+            CMatrix::Imag(ref mut im)                => {
+                for i in 0..count
+                {
+                    im.swap_rows(r1+i, r0+i);
+                }
+            },
+            CMatrix::Complex(ref mut rl, ref mut im) => {
+                for i in 0..count
+                {
+                    rl.swap_rows(r1+i, r0+i);
+                    im.swap_rows(r1+i, r0+i);
+                }
+            }
+        }
+    }
+
     /// Compute the Kronecker product of this matrix and `m`.
     pub fn kron(&self, m: &Self) -> Self
     {

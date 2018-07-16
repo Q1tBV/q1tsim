@@ -1,5 +1,6 @@
 extern crate rulinalg;
 
+mod cx;
 mod hadamard;
 mod identity;
 mod kron;
@@ -9,8 +10,8 @@ use cmatrix;
 pub trait Gate
 {
     /// Return a short description of the gate. This may be the name of the
-    /// gate (e.g. `"H"`, `"C_X"`), or the way the gate was constructed (like
-    /// `"kron(I, Z)"`)
+    /// gate (e.g. `"H"`, `"CX"`), or the way the gate was constructed (like
+    /// `"I⊗Z"`)
     fn description(&self) -> &str;
 
     /// Return a matrix describing the unitary transformation that the gate
@@ -40,6 +41,42 @@ pub trait UnaryGate: Gate
     }
 }
 
+pub trait BinaryGate: Gate
+{
+    /// Apply a binnary gate (working on two qubits) to quantum state `state`.
+    /// The number of rows `n` in `state` must be a multiple of four, with the
+    /// first block of `n`/4 rows corresponding to qustates with basis states
+    /// |00&rang; for the affected qubits, the second block to |01&rang;, the
+    /// third to |10&rang; and the last to |11&rang.
+    fn apply_binary(&self, state: &mut cmatrix::CMatrix)
+    {
+        assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
+
+        let mat = self.matrix();
+
+        let n = state.rows() / 4;
+        let m = state.cols();
+        let s0 = state.sub_slice([0, 0], n, m).into_matrix();
+        let s1 = state.sub_slice([n, 0], n, m).into_matrix();
+        let s2 = state.sub_slice([2*n, 0], n, m).into_matrix();
+        let s3 = state.sub_slice([3*n, 0], n, m).into_matrix();
+
+        state.sub_slice_mut([0, 0], n, m).set_to(
+            &s0*mat.at([0, 0]) + &s1*mat.at([0, 1]) + &s2*mat.at([0, 2]) + &s3*mat.at([0, 3])
+        );
+        state.sub_slice_mut([n, 0], n, m).set_to(
+            &s0*mat.at([1, 0]) + &s1*mat.at([1, 1]) + &s2*mat.at([1, 2]) + &s3*mat.at([1, 3])
+        );
+        state.sub_slice_mut([2*n, 0], n, m).set_to(
+            &s0*mat.at([2, 0]) + &s1*mat.at([2, 1]) + &s2*mat.at([2, 2]) + &s3*mat.at([2, 3])
+        );
+        state.sub_slice_mut([3*n, 0], n, m).set_to(
+            &s0*mat.at([3, 0]) + &s1*mat.at([3, 1]) + &s2*mat.at([3, 2]) + &s3*mat.at([3, 3])
+        );
+    }
+}
+
+pub use gates::cx::CX;
 pub use gates::hadamard::Hadamard;
 pub use gates::identity::Identity;
 pub use gates::kron::Kron;
