@@ -42,6 +42,8 @@ mod tests
     use gates::Hadamard;
     use gates::Identity;
     use gates::Kron;
+    use cmatrix;
+    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -57,34 +59,36 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let s = ::std::f64::consts::FRAC_1_SQRT_2;
+        let z = cmatrix::COMPLEX_ZERO;
+        let s = cmatrix::COMPLEX_HSQRT2;
+        let h = 0.5 * cmatrix::COMPLEX_ONE;
 
         let ih = Kron::new(Identity::new(), Hadamard::new());
-        assert_matrix_eq!(ih.matrix().real(),
-            &matrix![  s,   s, 0.0, 0.0;
-                       s,  -s, 0.0, 0.0;
-                     0.0, 0.0,   s,   s;
-                     0.0, 0.0,   s,  -s], comp=float);
-        assert_eq!(ih.matrix().imag().data(), &vec![0.0; 16]);
+        assert_complex_matrix_eq!(ih.matrix(), matrix![
+            s,  s, z,  z;
+            s, -s, z,  z;
+            z,  z, s,  s;
+            z,  z, s, -s
+        ]);
 
         let hh = Kron::new(Hadamard::new(), Hadamard::new());
-        assert_matrix_eq!(hh.matrix().real(),
-            &matrix![0.5,  0.5,  0.5,  0.5;
-                     0.5, -0.5,  0.5, -0.5;
-                     0.5,  0.5, -0.5, -0.5;
-                     0.5, -0.5, -0.5,  0.5], comp=float);
-        assert_eq!(hh.matrix().imag().data(), &vec![0.0; 16]);
+        assert_complex_matrix_eq!(hh.matrix(), matrix![
+            h,  h,  h,  h;
+            h, -h,  h, -h;
+            h,  h, -h, -h;
+            h, -h, -h,  h
+        ]);
 
         let hih = Kron::new(Hadamard::new(), Kron::new(Identity::new(), Hadamard::new()));
-        assert_matrix_eq!(hih.matrix().real(),
-            &matrix![0.5,  0.5,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0;
-                     0.5, -0.5,  0.0,  0.0,  0.5, -0.5,  0.0,  0.0;
-                     0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.5,  0.5;
-                     0.0,  0.0,  0.5, -0.5,  0.0,  0.0,  0.5, -0.5;
-                     0.5,  0.5,  0.0,  0.0, -0.5, -0.5,  0.0,  0.0;
-                     0.5, -0.5,  0.0,  0.0, -0.5,  0.5,  0.0,  0.0;
-                     0.0,  0.0,  0.5,  0.5,  0.0,  0.0, -0.5, -0.5;
-                     0.0,  0.0,  0.5, -0.5,  0.0,  0.0, -0.5,  0.5], comp=float);
-        assert_eq!(hih.matrix().imag().data(), &vec![0.0; 64]);
+        assert_complex_matrix_eq!(hih.matrix(), matrix![
+            h,  h,  z,  z,  h,  h,  z,  z;
+            h, -h,  z,  z,  h, -h,  z,  z;
+            z,  z,  h,  h,  z,  z,  h,  h;
+            z,  z,  h, -h,  z,  z,  h, -h;
+            h,  h,  z,  z, -h, -h,  z,  z;
+            h, -h,  z,  z, -h,  h,  z,  z;
+            z,  z,  h,  h,  z,  z, -h, -h;
+            z,  z,  h, -h,  z,  z, -h,  h
+        ]);
     }
 }

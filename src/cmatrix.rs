@@ -1,5 +1,5 @@
 extern crate num_complex;
-extern crate rulinalg;
+pub extern crate rulinalg;
 
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
@@ -106,5 +106,23 @@ impl ::std::ops::MulAssign<f64> for CMatrix
         // XXX TODO: Check which is better
         self.matrix *= num_complex::Complex::new(x, 0.0);
 //         self.matrix.apply(&|c| c * x);
+    }
+}
+
+#[cfg(test)]
+macro_rules! assert_complex_matrix_eq
+{
+    ($x:expr, $y:expr) => {
+        let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(), $x.iter()
+            .map(|c| c.re).collect::<Vec<f64>>());
+        let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(), $y.iter()
+            .map(|c| c.re).collect::<Vec<f64>>());
+        assert_matrix_eq!(rx, ry, comp=float);
+
+        let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(), $x.iter()
+            .map(|c| c.im).collect::<Vec<f64>>());
+        let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(), $y.iter()
+            .map(|c| c.im).collect::<Vec<f64>>());
+        assert_matrix_eq!(ix, iy, comp=float);
     }
 }

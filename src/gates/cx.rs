@@ -64,6 +64,7 @@ mod tests
     use gates::{Gate, BinaryGate};
     use gates::CX;
     use cmatrix;
+    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -75,19 +76,16 @@ mod tests
     #[test]
     fn test_matrix()
     {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+
         let cx = CX::new();
-        assert_matrix_eq!(cx.matrix().real(), matrix![
-            1.0, 0.0, 0.0, 0.0;
-            0.0, 1.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 1.0;
-            0.0, 0.0, 1.0, 0.0
-        ], comp=float);
-        assert_matrix_eq!(cx.matrix().imag(), matrix![
-            0.0, 0.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 0.0
-        ], comp=float);
+        assert_complex_matrix_eq!(cx.matrix(), matrix![
+            o, z, z, z;
+            z, o, z, z;
+            z, z, z, o;
+            z, z, o, z
+        ]);
     }
 
     #[test]
@@ -95,27 +93,22 @@ mod tests
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
         let h = o * 0.5;
-        let x = ::std::f64::consts::FRAC_1_SQRT_2;
-        let xc = o * x;
 
         let mut state = cmatrix::CMatrix::new(4, 4, vec![
             o, z,  h,  z,
             z, z, -h,  z,
-            z, o,  h,  xc,
-            z, z, -h, -xc]
-        );
+            z, o,  h,  x,
+            z, z, -h, -x
+        ]);
 
         CX::new().apply_binary(&mut state);
-        assert_matrix_eq!(state.real(), matrix![
-            1.0, 0.0,  0.5, 0.0;
-            0.0, 0.0, -0.5, 0.0;
-            0.0, 0.0, -0.5,  -x;
-            0.0, 1.0,  0.5,   x], comp=float);
-        assert_matrix_eq!(state.imag(), matrix![
-            0.0, 0.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 0.0;
-            0.0, 0.0, 0.0, 0.0], comp=float);
+        assert_complex_matrix_eq!(state, matrix![
+            o, z,  h,  z;
+            z, z, -h,  z;
+            z, z, -h, -x;
+            z, o,  h,  x
+        ]);
     }
 }

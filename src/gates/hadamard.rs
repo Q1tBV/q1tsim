@@ -61,6 +61,7 @@ mod tests
     use gates::{Gate, UnaryGate};
     use gates::Hadamard;
     use cmatrix;
+    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -73,9 +74,8 @@ mod tests
     fn test_matrix()
     {
         let h = Hadamard::new();
-        let s = ::std::f64::consts::FRAC_1_SQRT_2;
-        assert_matrix_eq!(h.matrix().real(), matrix![s, s; s, -s]);
-        assert_matrix_eq!(h.matrix().imag(), matrix![0.0, 0.0; 0.0, 0.0]);
+        let s = cmatrix::COMPLEX_HSQRT2;
+        assert_complex_matrix_eq!(h.matrix(), matrix![s, s; s, -s]);
     }
 
     #[test]
@@ -83,12 +83,10 @@ mod tests
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
-        let x = ::std::f64::consts::FRAC_1_SQRT_2;
-        let xc = cmatrix::COMPLEX_HSQRT2;
-        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, xc, xc, z, o, xc, -xc]);
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
         Hadamard::new().apply_unary(&mut state);
-        assert_matrix_eq!(state.real(), matrix![x, x, 1.0, 0.0; x, -x, 0.0, 1.0], comp=float);
-        assert_matrix_eq!(state.imag(), matrix![0.0, 0.0, 0.0, 0.0; 0.0, 0.0, 0.0, 0.0], comp=float);
+        assert_complex_matrix_eq!(state, matrix![x, x, o, z; x, -x, z, o]);
     }
 }
