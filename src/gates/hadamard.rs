@@ -1,5 +1,9 @@
+extern crate num_complex;
+
 use cmatrix;
 use gates;
+
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 /// The Hadamard gate.
 ///
@@ -28,8 +32,8 @@ impl gates::Gate for Hadamard
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let s = ::std::f64::consts::FRAC_1_SQRT_2;
-        cmatrix::CMatrix::new_real(2, 2, vec![s, s, s, -s])
+        let s = num_complex::Complex::new(::std::f64::consts::FRAC_1_SQRT_2, 0.0);
+        cmatrix::CMatrix::new(2, 2, vec![s, s, s, -s])
     }
 }
 
@@ -70,15 +74,18 @@ mod tests
     {
         let h = Hadamard::new();
         let s = ::std::f64::consts::FRAC_1_SQRT_2;
-        assert_eq!(h.matrix().real().data(), &vec![s, s, s, -s]);
-        assert_eq!(h.matrix().imag().data(), &vec![0.0; 4]);
+        assert_matrix_eq!(h.matrix().real(), matrix![s, s; s, -s]);
+        assert_matrix_eq!(h.matrix().imag(), matrix![0.0, 0.0; 0.0, 0.0]);
     }
 
     #[test]
     fn test_apply_unary()
     {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
         let x = ::std::f64::consts::FRAC_1_SQRT_2;
-        let mut state = cmatrix::CMatrix::new_real(2, 4, vec![1.0, 0.0, x, x, 0.0, 1.0, x, -x]);
+        let xc = cmatrix::COMPLEX_HSQRT2;
+        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, xc, xc, z, o, xc, -xc]);
 
         Hadamard::new().apply_unary(&mut state);
         assert_matrix_eq!(state.real(), matrix![x, x, 1.0, 0.0; x, -x, 0.0, 1.0], comp=float);

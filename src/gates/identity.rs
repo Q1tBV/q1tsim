@@ -56,15 +56,18 @@ mod tests
     fn test_matrix()
     {
         let i = Identity::new();
-        assert_eq!(i.matrix().real().data(), &vec![1.0, 0.0, 0.0, 1.0]);
-        assert_eq!(i.matrix().imag().data(), &vec![0.0; 4]);
+        assert_matrix_eq!(i.matrix().real(), matrix![1.0, 0.0; 0.0, 1.0], comp=float);
+        assert_matrix_eq!(i.matrix().imag(), matrix![0.0, 0.0; 0.0, 0.0], comp=float);
     }
 
     #[test]
     fn test_apply_unary()
     {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
         let x = ::std::f64::consts::FRAC_1_SQRT_2;
-        let mut state = cmatrix::CMatrix::new_real(2, 4, vec![1.0, 0.0, x, x, 0.0, 1.0, x, -x]);
+        let xc = o*x;
+        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, xc, xc, z, o, xc, -xc]);
 
         Identity::new().apply_unary(&mut state);
         assert_matrix_eq!(state.real(), matrix![1.0, 0.0, x, x; 0.0, 1.0, x, -x], comp=float);

@@ -1,11 +1,13 @@
 extern crate rulinalg;
 
+use cmatrix;
+
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
+
 mod cx;
 mod hadamard;
 mod identity;
 mod kron;
-
-use cmatrix;
 
 pub trait Gate
 {
@@ -36,8 +38,8 @@ pub trait UnaryGate: Gate
         let s0 = state.sub_slice([0, 0], n, m).into_matrix();
         let s1 = state.sub_slice([n, 0], n, m).into_matrix();
 
-        state.sub_slice_mut([0, 0], n, m).set_to(&s0*mat.at([0, 0]) + &s1*mat.at([0, 1]));
-        state.sub_slice_mut([n, 0], n, m).set_to(&s0*mat.at([1, 0]) + &s1*mat.at([1, 1]));
+        state.sub_slice_mut([0, 0], n, m).set_to(&s0*mat[[0, 0]] + &s1*mat[[0, 1]]);
+        state.sub_slice_mut([n, 0], n, m).set_to(&s0*mat[[1, 0]] + &s1*mat[[1, 1]]);
     }
 }
 
@@ -62,16 +64,16 @@ pub trait BinaryGate: Gate
         let s3 = state.sub_slice([3*n, 0], n, m).into_matrix();
 
         state.sub_slice_mut([0, 0], n, m).set_to(
-            &s0*mat.at([0, 0]) + &s1*mat.at([0, 1]) + &s2*mat.at([0, 2]) + &s3*mat.at([0, 3])
+            &s0*mat[[0, 0]] + &s1*mat[[0, 1]] + &s2*mat[[0, 2]] + &s3*mat[[0, 3]]
         );
         state.sub_slice_mut([n, 0], n, m).set_to(
-            &s0*mat.at([1, 0]) + &s1*mat.at([1, 1]) + &s2*mat.at([1, 2]) + &s3*mat.at([1, 3])
+            &s0*mat[[1, 0]] + &s1*mat[[1, 1]] + &s2*mat[[1, 2]] + &s3*mat[[1, 3]]
         );
         state.sub_slice_mut([2*n, 0], n, m).set_to(
-            &s0*mat.at([2, 0]) + &s1*mat.at([2, 1]) + &s2*mat.at([2, 2]) + &s3*mat.at([2, 3])
+            &s0*mat[[2, 0]] + &s1*mat[[2, 1]] + &s2*mat[[2, 2]] + &s3*mat[[2, 3]]
         );
         state.sub_slice_mut([3*n, 0], n, m).set_to(
-            &s0*mat.at([3, 0]) + &s1*mat.at([3, 1]) + &s2*mat.at([3, 2]) + &s3*mat.at([3, 3])
+            &s0*mat[[3, 0]] + &s1*mat[[3, 1]] + &s2*mat[[3, 2]] + &s3*mat[[3, 3]]
         );
     }
 }
