@@ -1,3 +1,6 @@
+extern crate num_complex;
+extern crate rulinalg;
+
 use cmatrix;
 use gates;
 
@@ -35,10 +38,27 @@ where G0: gates::Gate, G1: gates::Gate
     }
 }
 
+impl<G0, G1> gates::BinaryGate for Kron<G0, G1>
+where G0: gates::UnaryGate, G1: gates::UnaryGate
+{
+    fn apply_binary<T>(&self, state: &mut T)
+    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    {
+        assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
+
+        let n = state.rows() / 2;
+        let m = state.cols();
+
+        self.g0.apply_unary(state);
+        self.g1.apply_unary(&mut state.sub_slice_mut([0, 0], n, m));
+        self.g1.apply_unary(&mut state.sub_slice_mut([n, 0], n, m));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
-    use gates::Gate;
+    use gates::{Gate, BinaryGate};
     use gates::Hadamard;
     use gates::Identity;
     use gates::Kron;
@@ -64,7 +84,7 @@ mod tests
         let h = 0.5 * cmatrix::COMPLEX_ONE;
 
         let ih = Kron::new(Identity::new(), Hadamard::new());
-        assert_complex_matrix_eq!(ih.matrix(), matrix![
+        assert_complex_matrix_eq!(ih.matrix().as_ref(), matrix![
             s,  s, z,  z;
             s, -s, z,  z;
             z,  z, s,  s;
@@ -72,7 +92,7 @@ mod tests
         ]);
 
         let hh = Kron::new(Hadamard::new(), Hadamard::new());
-        assert_complex_matrix_eq!(hh.matrix(), matrix![
+        assert_complex_matrix_eq!(hh.matrix().as_ref(), matrix![
             h,  h,  h,  h;
             h, -h,  h, -h;
             h,  h, -h, -h;
@@ -80,7 +100,7 @@ mod tests
         ]);
 
         let hih = Kron::new(Hadamard::new(), Kron::new(Identity::new(), Hadamard::new()));
-        assert_complex_matrix_eq!(hih.matrix(), matrix![
+        assert_complex_matrix_eq!(hih.matrix().as_ref(), matrix![
             h,  h,  z,  z,  h,  h,  z,  z;
             h, -h,  z,  z,  h, -h,  z,  z;
             z,  z,  h,  h,  z,  z,  h,  h;
@@ -89,6 +109,60 @@ mod tests
             h, -h,  z,  z, -h,  h,  z,  z;
             z,  z,  h,  h,  z,  z, -h, -h;
             z,  z,  h, -h,  z,  z, -h,  h
+        ]);
+    }
+
+    #[test]
+    fn test_apply_binary()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let h = o * 0.5;
+
+        let mut state = cmatrix::CMatrix::new(4, 4, vec![
+            o, z,  h,  z,
+            z, z, -h,  z,
+            z, o,  h,  x,
+            z, z, -h, -x
+        ]);
+        let ih = Kron::new(Identity::new(), Hadamard::new());
+        ih.apply_binary(state.as_mut());
+        assert_complex_matrix_eq!(state.as_ref(), matrix![
+            x, z, z, z;
+            x, z, x, z;
+            z, x, z, z;
+            z, x, x, o
+        ]);
+
+        let mut state = cmatrix::CMatrix::new(4, 4, vec![
+            o, z,  h,  z,
+            z, z, -h,  z,
+            z, o,  h,  x,
+            z, z, -h, -x
+        ]);
+        let hi = Kron::new(Hadamard::new(), Identity::new());
+        hi.apply_binary(state.as_mut());
+        assert_complex_matrix_eq!(state.as_ref(), matrix![
+            x,  x,  x,  h;
+            z,  z, -x, -h;
+            x, -x,  z, -h;
+            z,  z,  z,  h
+        ]);
+
+        let mut state = cmatrix::CMatrix::new(4, 4, vec![
+            o, z,  h,  z,
+            z, z, -h,  z,
+            z, o,  h,  x,
+            z, z, -h, -x
+        ]);
+        let hh = Kron::new(Hadamard::new(), Hadamard::new());
+        hh.apply_binary(state.as_mut());
+        assert_complex_matrix_eq!(state.as_ref(), matrix![
+            h,  h, z,  z;
+            h,  h, o,  x;
+            h, -h, z,  z;
+            h, -h, z, -x
         ]);
     }
 }

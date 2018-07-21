@@ -1,3 +1,4 @@
+extern crate num_complex;
 extern crate rulinalg;
 
 use cmatrix;
@@ -27,7 +28,8 @@ pub trait UnaryGate: Gate
     /// The number of rows in `state` must be even, with the first half
     /// corresponding to qustates with basis state |0&rang; for the affected
     /// qubit, and the second half to states with basis state |1&rang.
-    fn apply_unary(&self, state: &mut cmatrix::CMatrix)
+    fn apply_unary<T>(&self, state: &mut T)
+    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -50,7 +52,8 @@ pub trait BinaryGate: Gate
     /// first block of `n`/4 rows corresponding to qustates with basis states
     /// |00&rang; for the affected qubits, the second block to |01&rang;, the
     /// third to |10&rang; and the last to |11&rang.
-    fn apply_binary(&self, state: &mut cmatrix::CMatrix)
+    fn apply_binary<T>(&self, state: &mut T)
+    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
         assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
 

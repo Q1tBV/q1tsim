@@ -1,3 +1,6 @@
+extern crate num_complex;
+extern crate rulinalg;
+
 use cmatrix;
 use gates;
 
@@ -32,7 +35,8 @@ impl gates::Gate for Identity
 
 impl gates::UnaryGate for Identity
 {
-    fn apply_unary(&self, _s: &mut cmatrix::CMatrix)
+    fn apply_unary<T>(&self, _s: &mut T)
+    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
         // Identity, leave state unchanged, so do nothing
     }
@@ -59,7 +63,7 @@ mod tests
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         let i = Identity::new();
-        assert_complex_matrix_eq!(i.matrix(), matrix![o, z; z, o]);
+        assert_complex_matrix_eq!(i.matrix().as_ref(), matrix![o, z; z, o]);
     }
 
     #[test]
@@ -71,8 +75,8 @@ mod tests
 
         let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
-        Identity::new().apply_unary(&mut state);
-        assert_complex_matrix_eq!(state, matrix![o, z, x, x; z, o, x, -x]);
+        Identity::new().apply_unary(state.as_mut());
+        assert_complex_matrix_eq!(state.as_ref(), matrix![o, z, x, x; z, o, x, -x]);
     }
 
 }

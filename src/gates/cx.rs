@@ -1,9 +1,8 @@
 extern crate num_complex;
+extern crate rulinalg;
 
 use cmatrix;
 use gates;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 /// The C<sub>X</sub> gate.
 ///
@@ -45,7 +44,8 @@ impl gates::Gate for CX
 
 impl gates::BinaryGate for CX
 {
-    fn apply_binary(&self, state: &mut cmatrix::CMatrix)
+    fn apply_binary<T>(&self, state: &mut T)
+    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
         assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
 
@@ -80,7 +80,7 @@ mod tests
         let o = cmatrix::COMPLEX_ONE;
 
         let cx = CX::new();
-        assert_complex_matrix_eq!(cx.matrix(), matrix![
+        assert_complex_matrix_eq!(cx.matrix().as_ref(), matrix![
             o, z, z, z;
             z, o, z, z;
             z, z, z, o;
@@ -103,8 +103,8 @@ mod tests
             z, z, -h, -x
         ]);
 
-        CX::new().apply_binary(&mut state);
-        assert_complex_matrix_eq!(state, matrix![
+        CX::new().apply_binary(state.as_mut());
+        assert_complex_matrix_eq!(state.as_ref(), matrix![
             o, z,  h,  z;
             z, z, -h,  z;
             z, z, -h, -x;

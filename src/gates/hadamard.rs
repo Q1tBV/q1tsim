@@ -1,4 +1,5 @@
 extern crate num_complex;
+extern crate rulinalg;
 
 use cmatrix;
 use gates;
@@ -39,18 +40,18 @@ impl gates::Gate for Hadamard
 
 impl gates::UnaryGate for Hadamard
 {
-    fn apply_unary(&self, state: &mut cmatrix::CMatrix)
+    fn apply_unary<T>(&self, state: &mut T)
+    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
         let n = state.rows() / 2;
         let m = state.cols();
-        let s0 = state.sub_slice([0, 0], n, m).into_matrix();
-        let s1 = state.sub_slice([n, 0], n, m).into_matrix();
+        let s0 = state.sub_slice([0, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
+        let s1 = state.sub_slice([n, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
 
         state.sub_slice_mut([0, 0], n, m).set_to(&s0 + &s1);
         state.sub_slice_mut([n, 0], n, m).set_to(&s0 - &s1);
-        *state *= ::std::f64::consts::FRAC_1_SQRT_2;
     }
 }
 
@@ -75,7 +76,7 @@ mod tests
     {
         let h = Hadamard::new();
         let s = cmatrix::COMPLEX_HSQRT2;
-        assert_complex_matrix_eq!(h.matrix(), matrix![s, s; s, -s]);
+        assert_complex_matrix_eq!(h.matrix().as_ref(), matrix![s, s; s, -s]);
     }
 
     #[test]
@@ -86,7 +87,7 @@ mod tests
         let x = cmatrix::COMPLEX_HSQRT2;
         let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
-        Hadamard::new().apply_unary(&mut state);
-        assert_complex_matrix_eq!(state, matrix![x, x, o, z; x, -x, z, o]);
+        Hadamard::new().apply_unary(state.as_mut());
+        assert_complex_matrix_eq!(state.as_ref(), matrix![x, x, o, z; x, -x, z, o]);
     }
 }

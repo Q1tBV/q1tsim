@@ -57,7 +57,7 @@ impl QuState
     {
         assert!(i < self.nr_bits, "Invalid bit index");
 
-        let nr_measurements = self.coefs.cols();
+        let nr_measurements = self.coefs.as_ref().cols();
 
         let block_size = 1 << (self.nr_bits - i - 1);
         let nr_blocks = 1 << i;
@@ -65,7 +65,7 @@ impl QuState
         let mut off = 0;
         for _ in 0..nr_blocks
         {
-            let elems: Vec<f64> = self.coefs
+            let elems: Vec<f64> = self.coefs.as_ref()
                 .sub_slice([off, 0], block_size, nr_measurements)
                 .iter().map(|c| c.norm_sqr()).collect();
             let block = rulinalg::matrix::Matrix::new(block_size, nr_measurements,
@@ -92,13 +92,13 @@ impl QuState
             }
             for _ in 0..nr_blocks
             {
-                self.coefs.col_mut(i).sub_slice_mut([off, 0], block_size, 1)
+                self.coefs.as_mut().col_mut(i).sub_slice_mut([off, 0], block_size, 1)
                     .apply(&|_| cmatrix::COMPLEX_ZERO);
                 off += 2 * block_size;
             }
 
             let inorm = 1.0 / norm_sq.sqrt();
-            self.coefs.col_mut(i).apply(&|c| c * inorm);
+            self.coefs.as_mut().col_mut(i).apply(&|c| c * inorm);
         }
 
         res
@@ -120,10 +120,10 @@ mod tests
 
         let s = QuState::new(1);
         assert_eq!(s.nr_bits, 1);
-        assert_complex_matrix_eq!(s.coefs, matrix![o; z]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z]);
         let s = QuState::new(3);
         assert_eq!(s.nr_bits, 3);
-        assert_complex_matrix_eq!(s.coefs, matrix![o; z; z; z; z; z; z; z]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z; z; z; z; z; z; z]);
     }
 
     #[test]
@@ -135,14 +135,14 @@ mod tests
 
         // |0〉⊗|1〉
         let s = QuState::from_qubit_coefs(&[o, z, z, o]);
-        assert_complex_matrix_eq!(s.coefs, matrix![z; o; z; z]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; o; z; z]);
         // |1〉⊗|0〉
         let s = QuState::from_qubit_coefs(&[z, o, o, z]);
-        assert_complex_matrix_eq!(s.coefs, matrix![z; z; o; z]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; o; z]);
         // (H|0〉)⊗(Y|1〉), unnormalized
         let s = QuState::from_qubit_coefs(&[o, o, -i, z]);
         let x = ::std::f64::consts::FRAC_1_SQRT_2 * i;
-        assert_complex_matrix_eq!(s.coefs, matrix![-x; z; -x; z]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![-x; z; -x; z]);
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests
         // |0>
         let mut s = QuState::new(1);
         assert_eq!(s.measure(0)[0], 0);
-        assert_complex_matrix_eq!(s.coefs, matrix![o; z]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z]);
 
         // (H|0>)⊗|0>, unnormalized
         let mut s = QuState::from_qubit_coefs(&[o, z, o, z]);
@@ -163,11 +163,11 @@ mod tests
         assert!(m[0] == 0 || m[0] == 1);
         if m[0] == 0
         {
-            assert_complex_matrix_eq!(s.coefs, matrix![o; z; z; z]);
+            assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z; z; z]);
         }
         else
         {
-            assert_complex_matrix_eq!(s.coefs, matrix![z; z; o; z]);
+            assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; o; z]);
         }
         let m1 = s.measure(0);
         assert_eq!(m1, m);
@@ -180,11 +180,11 @@ mod tests
         assert!(m[0] == 0 || m[0] == 1);
         if m[0] == 0
         {
-            assert_complex_matrix_eq!(s.coefs, matrix![x; x; z; z]);
+            assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![x; x; z; z]);
         }
         else
         {
-            assert_complex_matrix_eq!(s.coefs, matrix![z; z; x; x]);
+            assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; x; x]);
         }
         let m1 = s.measure(0);
         assert_eq!(m1, m);

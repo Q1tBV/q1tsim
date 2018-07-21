@@ -46,7 +46,7 @@ impl CMatrix
     /// Compute the Kronecker product `self` ⊗ `m`.
     pub fn kron(&self, m: &Self) -> Self
     {
-        let (n0, m0, n1, m1) = (self.rows(), self.cols(), m.rows(), m.cols());
+        let (n0, m0, n1, m1) = (self.matrix.rows(), self.matrix.cols(), m.matrix.rows(), m.matrix.cols());
         let mut data = rulinalg::matrix::Matrix::zeros(n0*n1, m0*m1);
         for i in 0..n0
         {
@@ -61,31 +61,29 @@ impl CMatrix
     /// Return the real part of this matrix
     pub fn real(&self) -> rulinalg::matrix::Matrix<f64>
     {
-        rulinalg::matrix::Matrix::new(self.rows(), self.cols(), self.iter()
-            .map(|c| c.re).collect::<Vec<f64>>())
+        rulinalg::matrix::Matrix::new(self.matrix.rows(), self.matrix.cols(),
+            self.matrix.iter().map(|c| c.re).collect::<Vec<f64>>())
     }
 
     /// Return the imaginary part of this matrix
     pub fn imag(&self) -> rulinalg::matrix::Matrix<f64>
     {
-        rulinalg::matrix::Matrix::new(self.rows(), self.cols(), self.iter()
-            .map(|c| c.im).collect::<Vec<f64>>())
+        rulinalg::matrix::Matrix::new(self.matrix.rows(), self.matrix.cols(),
+            self.matrix.iter().map(|c| c.im).collect::<Vec<f64>>())
     }
 }
 
-impl ::std::ops::Deref for CMatrix
+impl ::std::convert::AsRef<rulinalg::matrix::Matrix<num_complex::Complex64>> for CMatrix
 {
-    type Target = rulinalg::matrix::Matrix<num_complex::Complex<f64>>;
-
-    fn deref(&self) -> &Self::Target
+    fn as_ref(&self) -> &rulinalg::matrix::Matrix<num_complex::Complex64>
     {
         &self.matrix
     }
 }
 
-impl ::std::ops::DerefMut for CMatrix
+impl ::std::convert::AsMut<rulinalg::matrix::Matrix<num_complex::Complex64>> for CMatrix
 {
-    fn deref_mut(&mut self) -> &mut Self::Target
+    fn as_mut(&mut self) -> &mut rulinalg::matrix::Matrix<num_complex::Complex64>
     {
         &mut self.matrix
     }
@@ -96,6 +94,16 @@ impl ::std::fmt::Display for CMatrix
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
     {
         write!(f, "{}", self.matrix)
+    }
+}
+
+impl ::std::ops::Index<[usize; 2]> for CMatrix
+{
+    type Output = num_complex::Complex64;
+
+    fn index(&self, index: [usize; 2]) -> &Self::Output
+    {
+        &self.matrix[index]
     }
 }
 
@@ -113,16 +121,16 @@ impl ::std::ops::MulAssign<f64> for CMatrix
 macro_rules! assert_complex_matrix_eq
 {
     ($x:expr, $y:expr) => {
-        let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(), $x.iter()
-            .map(|c| c.re).collect::<Vec<f64>>());
-        let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(), $y.iter()
-            .map(|c| c.re).collect::<Vec<f64>>());
+        let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
+            $x.iter().map(|c| c.re).collect::<Vec<f64>>());
+        let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
+            $y.iter().map(|c| c.re).collect::<Vec<f64>>());
         assert_matrix_eq!(rx, ry, comp=float);
 
-        let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(), $x.iter()
-            .map(|c| c.im).collect::<Vec<f64>>());
-        let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(), $y.iter()
-            .map(|c| c.im).collect::<Vec<f64>>());
+        let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
+            $x.iter().map(|c| c.im).collect::<Vec<f64>>());
+        let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
+            $y.iter().map(|c| c.im).collect::<Vec<f64>>());
         assert_matrix_eq!(ix, iy, comp=float);
     }
 }
