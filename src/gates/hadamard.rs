@@ -33,7 +33,7 @@ impl gates::Gate for Hadamard
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let s = num_complex::Complex::new(::std::f64::consts::FRAC_1_SQRT_2, 0.0);
+        let s = cmatrix::COMPLEX_HSQRT2;
         cmatrix::CMatrix::new(2, 2, vec![s, s, s, -s])
     }
 }

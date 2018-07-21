@@ -9,6 +9,7 @@ mod cx;
 mod hadamard;
 mod identity;
 mod kron;
+mod y;
 
 pub trait Gate
 {
@@ -26,8 +27,8 @@ pub trait UnaryGate: Gate
 {
     /// Apply a unary gate (working on a single qubit) to quantum state `state`.
     /// The number of rows in `state` must be even, with the first half
-    /// corresponding to qustates with basis state |0&rang; for the affected
-    /// qubit, and the second half to states with basis state |1&rang.
+    /// corresponding to qustates with basis state |0〉 for the affected
+    /// qubit, and the second half to states with basis state |1〉.
     fn apply_unary<T>(&self, state: &mut T)
     where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
@@ -47,11 +48,11 @@ pub trait UnaryGate: Gate
 
 pub trait BinaryGate: Gate
 {
-    /// Apply a binnary gate (working on two qubits) to quantum state `state`.
+    /// Apply a binary gate (working on two qubits) to quantum state `state`.
     /// The number of rows `n` in `state` must be a multiple of four, with the
-    /// first block of `n`/4 rows corresponding to qustates with basis states
-    /// |00&rang; for the affected qubits, the second block to |01&rang;, the
-    /// third to |10&rang; and the last to |11&rang.
+    /// first block of `n/4` rows corresponding to qustates with basis states
+    /// |00〉 for the affected qubits, the second block to |01〉, the
+    /// third to |10〉 and the last to |11〉.
     fn apply_binary<T>(&self, state: &mut T)
     where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
     {
@@ -85,3 +86,4 @@ pub use gates::cx::CX;
 pub use gates::hadamard::Hadamard;
 pub use gates::identity::Identity;
 pub use gates::kron::Kron;
+pub use gates::y::Y;
