@@ -9,6 +9,7 @@ mod cx;
 mod hadamard;
 mod identity;
 mod kron;
+mod x;
 mod y;
 
 pub trait Gate
@@ -86,4 +87,5 @@ pub use gates::cx::CX;
 pub use gates::hadamard::Hadamard;
 pub use gates::identity::Identity;
 pub use gates::kron::Kron;
+pub use gates::x::X;
 pub use gates::y::Y;
