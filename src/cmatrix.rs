@@ -23,6 +23,12 @@ impl CMatrix
         CMatrix { matrix: rulinalg::matrix::Matrix::new(rows, cols, data) }
     }
 
+    /// Create a new CMatrix object with `matrix` as data.
+    pub fn from_matrix(matrix: rulinalg::matrix::Matrix<num_complex::Complex64>) -> Self
+    {
+        CMatrix { matrix: matrix }
+    }
+
     /// Create an identity matrix of size `rows` × `cols`. If `rows` ≠ `cols`,
     /// the remaining rows or columns are filled with zeros.
     pub fn eye(rows: usize, cols: usize) -> Self
@@ -97,6 +103,14 @@ impl ::std::fmt::Display for CMatrix
     }
 }
 
+impl ::std::fmt::Debug for CMatrix
+{
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
+    {
+        write!(f, "{}", self.matrix)
+    }
+}
+
 impl ::std::ops::Index<[usize; 2]> for CMatrix
 {
     type Output = num_complex::Complex64;
@@ -121,16 +135,33 @@ impl ::std::ops::MulAssign<f64> for CMatrix
 macro_rules! assert_complex_matrix_eq
 {
     ($x:expr, $y:expr) => {
-        let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
-            $x.iter().map(|c| c.re).collect::<Vec<f64>>());
-        let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
-            $y.iter().map(|c| c.re).collect::<Vec<f64>>());
-        assert_matrix_eq!(rx, ry, comp=float);
+        {
+            let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
+                $x.iter().map(|c| c.re).collect::<Vec<f64>>());
+            let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
+                $y.iter().map(|c| c.re).collect::<Vec<f64>>());
+            assert_matrix_eq!(rx, ry, comp=float);
 
-        let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
-            $x.iter().map(|c| c.im).collect::<Vec<f64>>());
-        let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
-            $y.iter().map(|c| c.im).collect::<Vec<f64>>());
-        assert_matrix_eq!(ix, iy, comp=float);
+            let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
+                $x.iter().map(|c| c.im).collect::<Vec<f64>>());
+            let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
+                $y.iter().map(|c| c.im).collect::<Vec<f64>>());
+            assert_matrix_eq!(ix, iy, comp=float);
+        }
+    };
+    ($x:expr, $y:expr, eps=$t:expr) => {
+        {
+            let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
+                $x.iter().map(|c| c.re).collect::<Vec<f64>>());
+            let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
+                $y.iter().map(|c| c.re).collect::<Vec<f64>>());
+            assert_matrix_eq!(rx, ry, comp=float, eps=$t);
+
+            let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
+                $x.iter().map(|c| c.im).collect::<Vec<f64>>());
+            let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
+                $y.iter().map(|c| c.im).collect::<Vec<f64>>());
+            assert_matrix_eq!(ix, iy, comp=float, eps=$t);
+        }
     }
 }
