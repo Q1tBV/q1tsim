@@ -12,6 +12,7 @@ mod identity;
 mod kron;
 mod x;
 mod y;
+mod z;
 
 pub trait Gate
 {
@@ -109,8 +110,8 @@ pub trait NaryGate: Gate
     fn nr_affected_bits(&self) -> usize;
 
     /// Apply a `n`-ary gate (working on multiple qubits) to quantum state `state`.
-    /// The number of rows `r` in `state` must be a multiple of `2<sup>n</sup`,
-    /// with the first block of `r/2<sup>n</sup>` rows corresponding to qustates
+    /// The number of rows `r` in `state` must be a multiple of 2<sup>`n`</sup>,
+    /// with the first block of `r`/2<sup>`n`</sup> rows corresponding to qustates
     /// with basis states |00...0〉 for the affected qubits, the second block to
     /// |00...1〉, etc. up until |11...1〉.
     fn apply_n_ary(&self, state: &mut rulinalg::matrix::Matrix<num_complex::Complex64>)
@@ -120,8 +121,8 @@ pub trait NaryGate: Gate
     }
 
     /// Apply a `n`-ary gate (working on multiple qubits) to quantum state `state`.
-    /// The number of rows `r` in `state` must be a multiple of `2<sup>n</sup`,
-    /// with the first block of `r/2<sup>n</sup>` rows corresponding to qustates
+    /// The number of rows `r` in `state` must be a multiple of 2<sup>`n`</sup>,
+    /// with the first block of `r`/2<sup>`n`</sup> rows corresponding to qustates
     /// with basis states |00...0〉 for the affected qubits, the second block to
     /// |00...1〉, etc. up until |11...1〉.
     fn apply_n_ary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
@@ -154,3 +155,4 @@ pub use gates::identity::Identity;
 pub use gates::kron::Kron;
 pub use gates::x::X;
 pub use gates::y::Y;
+pub use gates::z::Z;
