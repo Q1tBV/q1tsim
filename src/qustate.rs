@@ -68,14 +68,14 @@ impl QuState
 
     /// Apply a unary quantum gate `gate` on qubit `bit` in this state.
     pub fn apply_unary_gate<G>(&mut self, gate: &G, bit: usize)
-    where G: gates::UnaryGate
+    where G: gates::UnaryGate + ?Sized
     {
         let nr_measurements = self.coefs.as_ref().cols();
         let block_size = 1 << (self.nr_bits - bit);
         let nr_blocks = 1 << bit;
         for i in 0..nr_blocks
         {
-            gate.apply_unary(&mut self.coefs.as_mut()
+            gate.apply_unary_slice(&mut self.coefs.as_mut()
                 .sub_slice_mut([i*block_size, 0], block_size, nr_measurements));
         }
     }
@@ -83,7 +83,7 @@ impl QuState
     /// Apply a binary quantum gate `gate` on qubits `bit0` and `bit1` in this
     /// state.
     pub fn apply_binary_gate<G>(&mut self, gate: &G, bit0: usize, bit1: usize)
-    where G: gates::BinaryGate
+    where G: gates::BinaryGate + ?Sized
     {
         let s0 = self.nr_bits - bit0 - 1;
         let s1 = self.nr_bits - bit1 - 1;

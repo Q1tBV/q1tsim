@@ -35,8 +35,7 @@ impl gates::Gate for Identity
 
 impl gates::UnaryGate for Identity
 {
-    fn apply_unary<T>(&self, _s: &mut T)
-    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    fn apply_unary_slice(&self, _state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         // Identity, leave state unchanged, so do nothing
     }

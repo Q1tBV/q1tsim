@@ -30,8 +30,17 @@ pub trait UnaryGate: Gate
     /// The number of rows in `state` must be even, with the first half
     /// corresponding to qustates with basis state |0〉 for the affected
     /// qubit, and the second half to states with basis state |1〉.
-    fn apply_unary<T>(&self, state: &mut T)
-    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    fn apply_unary(&self, state: &mut rulinalg::matrix::Matrix<num_complex::Complex64>)
+    {
+        let (n, m) = (state.rows(), state.cols());
+        self.apply_unary_slice(&mut state.sub_slice_mut([0, 0], n, m));
+    }
+
+    /// Apply a unary gate (working on a single qubit) to quantum state `state`.
+    /// The number of rows in `state` must be even, with the first half
+    /// corresponding to qustates with basis state |0〉 for the affected
+    /// qubit, and the second half to states with basis state |1〉.
+    fn apply_unary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -54,8 +63,18 @@ pub trait BinaryGate: Gate
     /// first block of `n/4` rows corresponding to qustates with basis states
     /// |00〉 for the affected qubits, the second block to |01〉, the
     /// third to |10〉 and the last to |11〉.
-    fn apply_binary<T>(&self, state: &mut T)
-    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    fn apply_binary(&self, state: &mut rulinalg::matrix::Matrix<num_complex::Complex64>)
+    {
+        let (n, m) = (state.rows(), state.cols());
+        self.apply_binary_slice(&mut state.sub_slice_mut([0, 0], n, m));
+    }
+
+    /// Apply a binary gate (working on two qubits) to quantum state `state`.
+    /// The number of rows `n` in `state` must be a multiple of four, with the
+    /// first block of `n/4` rows corresponding to qustates with basis states
+    /// |00〉 for the affected qubits, the second block to |01〉, the
+    /// third to |10〉 and the last to |11〉.
+    fn apply_binary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
 

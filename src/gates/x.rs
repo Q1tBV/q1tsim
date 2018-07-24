@@ -4,6 +4,8 @@ extern crate rulinalg;
 use cmatrix;
 use gates;
 
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
+
 /// The Pauli X gate.
 ///
 /// The X, or NOT, gate rotates the state over π radians around the `x` axis of
@@ -38,8 +40,7 @@ impl gates::Gate for X
 
 impl gates::UnaryGate for X
 {
-    fn apply_unary<T>(&self, state: &mut T)
-    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    fn apply_unary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 

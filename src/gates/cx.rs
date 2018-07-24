@@ -4,6 +4,8 @@ extern crate rulinalg;
 use cmatrix;
 use gates;
 
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
+
 /// The C<sub>X</sub> gate.
 ///
 /// The C<sub>X</sub> or CNOT gate flips a qubit based on a control bit: when
@@ -44,8 +46,7 @@ impl gates::Gate for CX
 
 impl gates::BinaryGate for CX
 {
-    fn apply_binary<T>(&self, state: &mut T)
-    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    fn apply_binary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
 

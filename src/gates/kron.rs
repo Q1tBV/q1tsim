@@ -4,6 +4,8 @@ extern crate rulinalg;
 use cmatrix;
 use gates;
 
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
+
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
 pub struct Kron<G0, G1>
@@ -41,17 +43,16 @@ where G0: gates::Gate, G1: gates::Gate
 impl<G0, G1> gates::BinaryGate for Kron<G0, G1>
 where G0: gates::UnaryGate, G1: gates::UnaryGate
 {
-    fn apply_binary<T>(&self, state: &mut T)
-    where T: rulinalg::matrix::BaseMatrixMut<num_complex::Complex64>
+    fn apply_binary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
 
         let n = state.rows() / 2;
         let m = state.cols();
 
-        self.g0.apply_unary(state);
-        self.g1.apply_unary(&mut state.sub_slice_mut([0, 0], n, m));
-        self.g1.apply_unary(&mut state.sub_slice_mut([n, 0], n, m));
+        self.g0.apply_unary_slice(state);
+        self.g1.apply_unary_slice(&mut state.sub_slice_mut([0, 0], n, m));
+        self.g1.apply_unary_slice(&mut state.sub_slice_mut([n, 0], n, m));
     }
 }
 
