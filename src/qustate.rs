@@ -80,20 +80,58 @@ impl QuState
         }
     }
 
+    /// Get sort key of a row.
+    ///
+    /// When applying multi-bit gates, the rows in the state are shuffled
+    /// such that:
+    /// * The first half of the rows correspond to components with the first
+    ///   affected bit being 0, the second half to those with this bit being 1.
+    /// * Within each of these two blocks, the first half corresponds to
+    ///   components with the second bit 0, the second half to those with the
+    ///   second bit 1.
+    /// * And so on, for each affected bit.
+    ///
+    /// This function generates the permutation that creates this order.
+    fn get_sort_key(&self, idx: usize, bits: &[usize]) -> usize
+    {
+        let mut res = 0;
+        for b in bits
+        {
+            let s = self.nr_bits - b - 1;
+            res = (res << 1) | ((idx >> s) & 1);
+        }
+        res
+    }
+
     /// Apply a binary quantum gate `gate` on qubits `bit0` and `bit1` in this
     /// state.
     pub fn apply_binary_gate<G>(&mut self, gate: &G, bit0: usize, bit1: usize)
     where G: gates::BinaryGate + ?Sized
     {
-        let s0 = self.nr_bits - bit0 - 1;
-        let s1 = self.nr_bits - bit1 - 1;
         let mut idxs = (0..(1 << self.nr_bits)).collect::<Vec<usize>>();
-        idxs.sort_by_key(|i| (((i >> s0) & 1) << 1) | ((i << s1) & 1));
+        idxs.sort_by_key(|&i| self.get_sort_key(i, &[bit0, bit1]));
         let perm = ::rulinalg::matrix::PermutationMatrix::from_array(idxs).unwrap();
         let inv_perm = perm.inverse();
 
         inv_perm.permute_rows_in_place(self.coefs.as_mut());
         gate.apply_binary(self.coefs.as_mut());
+        perm.permute_rows_in_place(self.coefs.as_mut());
+    }
+
+    /// Apply a n-ary quantum gate `gate` on the qubits from `bits` in this state.
+    pub fn apply_n_ary_gate<G>(&mut self, gate: &G, bits: &[usize])
+    where G: gates::NaryGate + ?Sized
+    {
+        assert!(gate.nr_affected_bits() == bits.len(),
+            "The number of bits affected by the gate does not match the provided number of bits.");
+
+        let mut idxs = (0..(1 << self.nr_bits)).collect::<Vec<usize>>();
+        idxs.sort_by_key(|&i| self.get_sort_key(i, bits));
+        let perm = ::rulinalg::matrix::PermutationMatrix::from_array(idxs).unwrap();
+        let inv_perm = perm.inverse();
+
+        inv_perm.permute_rows_in_place(self.coefs.as_mut());
+        gate.apply_n_ary(self.coefs.as_mut());
         perm.permute_rows_in_place(self.coefs.as_mut());
     }
 
@@ -308,5 +346,30 @@ mod tests
         let hh = gates::Kron::new(gates::Hadamard::new(), gates::Hadamard::new());
         s.apply_binary_gate(&hh, 1, 2);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; h; h; h; h]);
+    }
+
+    #[test]
+    fn test_apply_n_ary_gate()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let hx = 0.5 * x;
+
+        let mut s = QuState::new(3, 1);
+        let ccx = gates::CCX::new();
+        s.apply_n_ary_gate(&ccx, &[0, 1, 2]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z; z; z; z; z; z; z]);
+
+        let mut s = QuState::from_qubit_coefs(&vec![z, o, z, o, o, z], 1);
+        let ccx = gates::CCX::new();
+        s.apply_n_ary_gate(&ccx, &[0, 2, 1]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; z; o; z]);
+        s.apply_n_ary_gate(&ccx, &[0, 1, 2]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; z; z; o]);
+
+        let mut s = QuState::from_qubit_coefs(&vec![x, -x, x, -x, x, -x], 1);
+        s.apply_n_ary_gate(&ccx, &[0, 2, 1]);
+        assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![hx; -hx; -hx; hx; -hx; -hx; hx; hx]);
     }
 }

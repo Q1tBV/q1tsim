@@ -6,6 +6,7 @@ use cmatrix;
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 mod cx;
+mod ccx;
 mod hadamard;
 mod identity;
 mod kron;
@@ -59,8 +60,8 @@ pub trait UnaryGate: Gate
 pub trait BinaryGate: Gate
 {
     /// Apply a binary gate (working on two qubits) to quantum state `state`.
-    /// The number of rows `n` in `state` must be a multiple of four, with the
-    /// first block of `n/4` rows corresponding to qustates with basis states
+    /// The number of rows `r` in `state` must be a multiple of four, with the
+    /// first block of `r/4` rows corresponding to qustates with basis states
     /// |00〉 for the affected qubits, the second block to |01〉, the
     /// third to |10〉 and the last to |11〉.
     fn apply_binary(&self, state: &mut rulinalg::matrix::Matrix<num_complex::Complex64>)
@@ -70,8 +71,8 @@ pub trait BinaryGate: Gate
     }
 
     /// Apply a binary gate (working on two qubits) to quantum state `state`.
-    /// The number of rows `n` in `state` must be a multiple of four, with the
-    /// first block of `n/4` rows corresponding to qustates with basis states
+    /// The number of rows `r` in `state` must be a multiple of four, with the
+    /// first block of `r/4` rows corresponding to qustates with basis states
     /// |00〉 for the affected qubits, the second block to |01〉, the
     /// third to |10〉 and the last to |11〉.
     fn apply_binary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
@@ -102,7 +103,52 @@ pub trait BinaryGate: Gate
     }
 }
 
+pub trait NaryGate: Gate
+{
+    /// The number of qubits affected by this gate.
+    fn nr_affected_bits(&self) -> usize;
+
+    /// Apply a `n`-ary gate (working on multiple qubits) to quantum state `state`.
+    /// The number of rows `r` in `state` must be a multiple of `2<sup>n</sup`,
+    /// with the first block of `r/2<sup>n</sup>` rows corresponding to qustates
+    /// with basis states |00...0〉 for the affected qubits, the second block to
+    /// |00...1〉, etc. up until |11...1〉.
+    fn apply_n_ary(&self, state: &mut rulinalg::matrix::Matrix<num_complex::Complex64>)
+    {
+        let (nr, nc) = (state.rows(), state.cols());
+        self.apply_n_ary_slice(&mut state.sub_slice_mut([0, 0], nr, nc));
+    }
+
+    /// Apply a `n`-ary gate (working on multiple qubits) to quantum state `state`.
+    /// The number of rows `r` in `state` must be a multiple of `2<sup>n</sup`,
+    /// with the first block of `r/2<sup>n</sup>` rows corresponding to qustates
+    /// with basis states |00...0〉 for the affected qubits, the second block to
+    /// |00...1〉, etc. up until |11...1〉.
+    fn apply_n_ary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    {
+        let n = self.nr_affected_bits();
+        assert!(state.rows() % (1 << n) == 0, "Number of rows is not a multiple of 2^{}.", n);
+
+        let mat = self.matrix();
+        let mut res = rulinalg::matrix::Matrix::zeros(state.rows(), state.cols());
+
+        let nr = state.rows() / (1 << n);
+        let nc = state.cols();
+        for i in 0..(1 << n)
+        {
+            let mut slice = res.sub_slice_mut([i*nr, 0], nr, nc);
+            for j in 0..(1 << n)
+            {
+                slice += state.sub_slice([j*nr, 0], nr, nc) * mat[[i,j]];
+            }
+        }
+
+        state.sub_slice_mut([0, 0], nr << n, nc).set_to(res);
+    }
+}
+
 pub use gates::cx::CX;
+pub use gates::ccx::CCX;
 pub use gates::hadamard::Hadamard;
 pub use gates::identity::Identity;
 pub use gates::kron::Kron;

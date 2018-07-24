@@ -10,14 +10,14 @@ use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 ///
 /// The C<sub>X</sub> or CNOT gate flips a qubit based on a control bit: when
 /// the control bit is zero, it leaves the target unchanged; when the control
-/// bit is one, it flips the |0&rang; and |1&rang; components of the target bit.
+/// bit is one, it flips the |0〉 and |1〉 components of the target bit.
 pub struct CX
 {
 }
 
 impl CX
 {
-    /// Create a new Hadamard gate.
+    /// Create a new C<sub>X</sub> gate.
     pub fn new() -> Self
     {
         CX { }
