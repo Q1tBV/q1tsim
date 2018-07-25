@@ -80,37 +80,12 @@ impl QuState
         }
     }
 
-    /// Get sort key of a row.
-    ///
-    /// When applying multi-bit gates, the rows in the state are shuffled
-    /// such that:
-    /// * The first half of the rows correspond to components with the first
-    ///   affected bit being 0, the second half to those with this bit being 1.
-    /// * Within each of these two blocks, the first half corresponds to
-    ///   components with the second bit 0, the second half to those with the
-    ///   second bit 1.
-    /// * And so on, for each affected bit.
-    ///
-    /// This function generates the permutation that creates this order.
-    fn get_sort_key(&self, idx: usize, bits: &[usize]) -> usize
-    {
-        let mut res = 0;
-        for b in bits
-        {
-            let s = self.nr_bits - b - 1;
-            res = (res << 1) | ((idx >> s) & 1);
-        }
-        res
-    }
-
     /// Apply a binary quantum gate `gate` on qubits `bit0` and `bit1` in this
     /// state.
     pub fn apply_binary_gate<G>(&mut self, gate: &G, bit0: usize, bit1: usize)
     where G: gates::BinaryGate + ?Sized
     {
-        let mut idxs = (0..(1 << self.nr_bits)).collect::<Vec<usize>>();
-        idxs.sort_by_key(|&i| self.get_sort_key(i, &[bit0, bit1]));
-        let perm = ::rulinalg::matrix::PermutationMatrix::from_array(idxs).unwrap();
+        let perm = gates::bit_permutation(self.nr_bits, &[bit0, bit1]);
         let inv_perm = perm.inverse();
 
         inv_perm.permute_rows_in_place(self.coefs.as_mut());
@@ -125,9 +100,7 @@ impl QuState
         assert!(gate.nr_affected_bits() == bits.len(),
             "The number of bits affected by the gate does not match the provided number of bits.");
 
-        let mut idxs = (0..(1 << self.nr_bits)).collect::<Vec<usize>>();
-        idxs.sort_by_key(|&i| self.get_sort_key(i, bits));
-        let perm = ::rulinalg::matrix::PermutationMatrix::from_array(idxs).unwrap();
+        let perm = gates::bit_permutation(self.nr_bits, bits);
         let inv_perm = perm.inverse();
 
         inv_perm.permute_rows_in_place(self.coefs.as_mut());

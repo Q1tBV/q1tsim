@@ -50,7 +50,6 @@ impl gates::UnaryGate for Z
     }
 }
 
-
 #[cfg(test)]
 mod tests
 {

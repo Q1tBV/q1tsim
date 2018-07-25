@@ -29,6 +29,12 @@ impl CMatrix
         CMatrix { matrix: matrix }
     }
 
+    /// Create an identity matrix of size `n` × `n`.
+    pub fn eye_sq(n: usize) -> Self
+    {
+        CMatrix { matrix: rulinalg::matrix::Matrix::identity(n) }
+    }
+
     /// Create an identity matrix of size `rows` × `cols`. If `rows` ≠ `cols`,
     /// the remaining rows or columns are filled with zeros.
     pub fn eye(rows: usize, cols: usize) -> Self
@@ -128,6 +134,16 @@ impl ::std::ops::MulAssign<f64> for CMatrix
         // XXX TODO: Check which is better
         self.matrix *= num_complex::Complex::new(x, 0.0);
 //         self.matrix.apply(&|c| c * x);
+    }
+}
+
+impl ::std::ops::Mul for CMatrix
+{
+    type Output = CMatrix;
+
+    fn mul(self, m: Self) -> Self::Output
+    {
+        CMatrix { matrix: self.matrix * m.matrix }
     }
 }
 

@@ -12,11 +12,13 @@ enum CircuitOp
     Unary(Box<gates::UnaryGate>, usize),
     /// Apply a binary gate on two qubits
     Binary(Box<gates::BinaryGate>, usize, usize),
+    /// Apply a multi-bit gate
+    Nary(Box<gates::NaryGate>, Vec<usize>),
     /// Measure a qubit
     Measure(usize, usize)
 }
 
-/// A Quantum circuit
+/// A quantum circuit
 ///
 /// Struct Circuit represents a quantum circuit, holding a quantum state and the
 /// operations to be performed on it.
@@ -32,7 +34,7 @@ pub struct Circuit
 
 impl Circuit
 {
-    /// Create a new circuit
+    /// Create a new circuit.
     ///
     /// Create a new (empty) quantum circuit, with `nr_qubits` quantum bits and
     /// `nr_cbits` classical bits, to be run `nr_shots` times.
@@ -46,7 +48,7 @@ impl Circuit
         }
     }
 
-    /// The classical register
+    /// The classical register.
     ///
     /// Return a reference to the classical bit register, containing the results
     /// of any measurements made on the system.
@@ -55,7 +57,7 @@ impl Circuit
         &self.c_state
     }
 
-    /// Add a unary gate
+    /// Add a unary gate.
     ///
     /// Append a unary gate `gate` operating on qubit `bit` to this circuit.
     pub fn add_unary_gate<G: 'static>(&mut self, gate: G, bit: usize)
@@ -64,7 +66,7 @@ impl Circuit
         self.ops.push(CircuitOp::Unary(Box::new(gate), bit));
     }
 
-    /// Add a binary gate
+    /// Add a binary gate.
     ///
     /// Append a binary gate `gate` operating on qubits `bit0` and `bit1` to
     /// this circuit.
@@ -74,7 +76,17 @@ impl Circuit
         self.ops.push(CircuitOp::Binary(Box::new(gate), bit0, bit1));
     }
 
-    /// Add a measurement
+    /// Add a multi-bit gate.
+    ///
+    /// Append a `n`-ary gate `gate`, operating on the `n` qubits in `bits`, to
+    /// this circuit.
+    pub fn add_n_ary_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
+    where G: gates::NaryGate
+    {
+        self.ops.push(CircuitOp::Nary(Box::new(gate), bits.to_owned()));
+    }
+
+    /// Add a measurement.
     ///
     /// Add measurement of qubit `qbit` into classical bit `cbit` to this circuit.
     pub fn add_measurement(&mut self, qbit: usize, cbit: usize)
@@ -99,6 +111,9 @@ impl Circuit
                 },
                 CircuitOp::Binary(ref gate, bit0, bit1) => {
                     self.q_state.apply_binary_gate(&**gate, bit0, bit1);
+                },
+                CircuitOp::Nary(ref gate, ref bits) => {
+                    self.q_state.apply_n_ary_gate(&**gate, bits.as_slice());
                 },
                 CircuitOp::Measure(qbit, cbit)          => {
                     let msr = self.q_state.measure(qbit);
