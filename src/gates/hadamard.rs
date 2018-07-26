@@ -22,6 +22,19 @@ impl Hadamard
     {
         Hadamard { }
     }
+
+    pub fn transform(state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    {
+        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        let m = state.cols();
+        let s0 = state.sub_slice([0, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
+        let s1 = state.sub_slice([n, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
+
+        state.sub_slice_mut([0, 0], n, m).set_to(&s0 + &s1);
+        state.sub_slice_mut([n, 0], n, m).set_to(&s0 - &s1);
+    }
 }
 
 impl gates::Gate for Hadamard
@@ -42,15 +55,7 @@ impl gates::UnaryGate for Hadamard
 {
     fn apply_unary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
-        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
-
-        let n = state.rows() / 2;
-        let m = state.cols();
-        let s0 = state.sub_slice([0, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
-        let s1 = state.sub_slice([n, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
-
-        state.sub_slice_mut([0, 0], n, m).set_to(&s0 + &s1);
-        state.sub_slice_mut([n, 0], n, m).set_to(&s0 - &s1);
+        Self::transform(state);
     }
 }
 

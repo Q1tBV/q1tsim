@@ -5,9 +5,10 @@ use cmatrix;
 
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
-mod cx;
 mod ccx;
+mod ch;
 mod custom;
+mod cx;
 mod hadamard;
 mod identity;
 mod kron;
@@ -275,9 +276,10 @@ pub trait NaryGate: Gate
     }
 }
 
-pub use gates::cx::CX;
 pub use gates::ccx::CCX;
+pub use gates::ch::CH;
 pub use gates::custom::Custom;
+pub use gates::cx::CX;
 pub use gates::hadamard::Hadamard;
 pub use gates::identity::Identity;
 pub use gates::kron::Kron;
