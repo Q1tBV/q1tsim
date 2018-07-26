@@ -1,6 +1,6 @@
 extern crate rulinalg;
 
-use rulinalg::matrix::BaseMatrixMut;
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 use gates;
 use qustate;
@@ -122,6 +122,18 @@ impl Circuit
             }
         }
     }
+
+    pub fn histogram(&self) -> ::std::collections::HashMap<String, usize>
+    {
+        let mut res = ::std::collections::HashMap::new();
+        for col in self.c_state.col_iter()
+        {
+            let key = col.iter().map(|&b| ::std::char::from_digit(b as u32, 10).unwrap()).collect();
+            let count = res.entry(key).or_insert(0);
+            *count += 1;
+        }
+        res
+    }
 }
 
 #[cfg(test)]
@@ -141,5 +153,30 @@ mod tests
         circuit.add_measurement(1, 1);
         circuit.execute();
         assert_matrix_eq!(circuit.cstate(), matrix![1, 1, 1, 1, 1; 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_histogram()
+    {
+        let nr_shots = 4096;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 906;
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.add_unary_gate(gates::Hadamard::new(), 0);
+        circuit.add_unary_gate(gates::Hadamard::new(), 1);
+        circuit.add_measurement(0, 0);
+        circuit.add_measurement(1, 1);
+        circuit.execute();
+
+        let hist = circuit.histogram();
+        // With this many shots, we expect all keys to be present
+        let mut keys: Vec<&String> = hist.keys().collect();
+        keys.sort();
+        assert_eq!(keys, vec!["00", "01", "10", "11"]);
+
+        assert_eq!(hist.values().sum::<usize>(), nr_shots);
+        assert!(*hist.values().min().unwrap() >= min_count);
     }
 }
