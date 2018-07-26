@@ -279,7 +279,7 @@ mod tests
         let x = cmatrix::COMPLEX_HSQRT2;
         let i = cmatrix::COMPLEX_I;
 
-        let h = gates::Hadamard::new();
+        let h = gates::H::new();
         let y = gates::Y::new();
 
         let mut s = QuState::new(3, 1);
@@ -316,7 +316,7 @@ mod tests
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; o; z; z]);
 
         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
-        let hh = gates::Kron::new(gates::Hadamard::new(), gates::Hadamard::new());
+        let hh = gates::Kron::new(gates::H::new(), gates::H::new());
         s.apply_binary_gate(&hh, 1, 2);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; h; h; h; h]);
     }

@@ -60,7 +60,7 @@ where G0: gates::UnaryGate, G1: gates::UnaryGate
 mod tests
 {
     use gates::{Gate, BinaryGate};
-    use gates::Hadamard;
+    use gates::H;
     use gates::Identity;
     use gates::Kron;
     use cmatrix;
@@ -69,11 +69,11 @@ mod tests
     #[test]
     fn test_description()
     {
-        let ih = Kron::new(Identity::new(), Hadamard::new());
+        let ih = Kron::new(Identity::new(), H::new());
         assert_eq!(ih.description(), "I⊗H");
-        let hh = Kron::new(Hadamard::new(), Hadamard::new());
+        let hh = Kron::new(H::new(), H::new());
         assert_eq!(hh.description(), "H⊗H");
-        let hih = Kron::new(Hadamard::new(), Kron::new(Identity::new(), Hadamard::new()));
+        let hih = Kron::new(H::new(), Kron::new(Identity::new(), H::new()));
         assert_eq!(hih.description(), "H⊗I⊗H");
     }
 
@@ -84,7 +84,7 @@ mod tests
         let s = cmatrix::COMPLEX_HSQRT2;
         let h = 0.5 * cmatrix::COMPLEX_ONE;
 
-        let ih = Kron::new(Identity::new(), Hadamard::new());
+        let ih = Kron::new(Identity::new(), H::new());
         assert_complex_matrix_eq!(ih.matrix().as_ref(), matrix![
             s,  s, z,  z;
             s, -s, z,  z;
@@ -92,7 +92,7 @@ mod tests
             z,  z, s, -s
         ]);
 
-        let hh = Kron::new(Hadamard::new(), Hadamard::new());
+        let hh = Kron::new(H::new(), H::new());
         assert_complex_matrix_eq!(hh.matrix().as_ref(), matrix![
             h,  h,  h,  h;
             h, -h,  h, -h;
@@ -100,7 +100,7 @@ mod tests
             h, -h, -h,  h
         ]);
 
-        let hih = Kron::new(Hadamard::new(), Kron::new(Identity::new(), Hadamard::new()));
+        let hih = Kron::new(H::new(), Kron::new(Identity::new(), H::new()));
         assert_complex_matrix_eq!(hih.matrix().as_ref(), matrix![
             h,  h,  z,  z,  h,  h,  z,  z;
             h, -h,  z,  z,  h, -h,  z,  z;
@@ -127,7 +127,7 @@ mod tests
             z, o,  h,  x,
             z, z, -h, -x
         ]);
-        let ih = Kron::new(Identity::new(), Hadamard::new());
+        let ih = Kron::new(Identity::new(), H::new());
         ih.apply_binary(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
             x, z, z, z;
@@ -142,7 +142,7 @@ mod tests
             z, o,  h,  x,
             z, z, -h, -x
         ]);
-        let hi = Kron::new(Hadamard::new(), Identity::new());
+        let hi = Kron::new(H::new(), Identity::new());
         hi.apply_binary(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
             x,  x,  x,  h;
@@ -157,7 +157,7 @@ mod tests
             z, o,  h,  x,
             z, z, -h, -x
         ]);
-        let hh = Kron::new(Hadamard::new(), Hadamard::new());
+        let hh = Kron::new(H::new(), H::new());
         hh.apply_binary(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
             h,  h, z,  z;

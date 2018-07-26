@@ -164,8 +164,8 @@ mod tests
         let min_count = 906;
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
-        circuit.add_unary_gate(gates::Hadamard::new(), 0);
-        circuit.add_unary_gate(gates::Hadamard::new(), 1);
+        circuit.add_unary_gate(gates::H::new(), 0);
+        circuit.add_unary_gate(gates::H::new(), 1);
         circuit.add_measurement(0, 0);
         circuit.add_measurement(1, 1);
         circuit.execute();

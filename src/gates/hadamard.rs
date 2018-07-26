@@ -11,16 +11,16 @@ use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 /// The Hadamard gate maps the zero state |0&rang; to the symmetric combination
 /// of |0&rang; and |1&rang;, and the |1&rang; state to the anti-symmetric
 /// combination.
-pub struct Hadamard
+pub struct H
 {
 }
 
-impl Hadamard
+impl H
 {
     /// Create a new Hadamard gate.
     pub fn new() -> Self
     {
-        Hadamard { }
+        H { }
     }
 
     pub fn transform(state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
@@ -37,7 +37,7 @@ impl Hadamard
     }
 }
 
-impl gates::Gate for Hadamard
+impl gates::Gate for H
 {
     fn description(&self) -> &str
     {
@@ -51,7 +51,7 @@ impl gates::Gate for Hadamard
     }
 }
 
-impl gates::UnaryGate for Hadamard
+impl gates::UnaryGate for H
 {
     fn apply_unary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
@@ -64,21 +64,21 @@ impl gates::UnaryGate for Hadamard
 mod tests
 {
     use gates::{Gate, UnaryGate};
-    use gates::Hadamard;
+    use gates::H;
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
     {
-        let h = Hadamard::new();
+        let h = H::new();
         assert_eq!(h.description(), "H");
     }
 
     #[test]
     fn test_matrix()
     {
-        let h = Hadamard::new();
+        let h = H::new();
         let s = cmatrix::COMPLEX_HSQRT2;
         assert_complex_matrix_eq!(h.matrix().as_ref(), matrix![s, s; s, -s]);
     }
@@ -91,7 +91,7 @@ mod tests
         let x = cmatrix::COMPLEX_HSQRT2;
         let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
-        Hadamard::new().apply_unary(state.as_mut());
+        H::new().apply_unary(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![x, x, o, z; x, -x, z, o]);
     }
 }

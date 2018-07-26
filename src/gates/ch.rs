@@ -53,7 +53,7 @@ impl gates::BinaryGate for CH
 
         let n = state.rows() / 2;
         let m = state.cols();
-        gates::Hadamard::transform(&mut state.sub_slice_mut([n, 0], n, m));
+        gates::H::transform(&mut state.sub_slice_mut([n, 0], n, m));
     }
 }
 

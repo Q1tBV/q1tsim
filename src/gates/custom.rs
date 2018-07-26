@@ -111,7 +111,7 @@ mod tests
 {
     use cmatrix;
     use gates::Gate;
-    use gates::{Custom, CCX, CX, Hadamard, X};
+    use gates::{Custom, CCX, CX, H, X};
     use rulinalg::matrix::BaseMatrix;
 
     #[test]
@@ -128,9 +128,9 @@ mod tests
         let o = cmatrix::COMPLEX_ONE;
 
         let mut gate = Custom::new("CZ", 2);
-        gate.add_unary_gate(Hadamard::new(), 1);
+        gate.add_unary_gate(H::new(), 1);
         gate.add_binary_gate(CX::new(), 0, 1);
-        gate.add_unary_gate(Hadamard::new(), 1);
+        gate.add_unary_gate(H::new(), 1);
         assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
             o, z, z,  z;
             z, o, z,  z;
@@ -139,11 +139,11 @@ mod tests
         ]);
 
         let mut gate = Custom::new("Inc", 2);
-        gate.add_unary_gate(Hadamard::new(), 0);
-        gate.add_unary_gate(Hadamard::new(), 1);
+        gate.add_unary_gate(H::new(), 0);
+        gate.add_unary_gate(H::new(), 1);
         gate.add_binary_gate(CX::new(), 0, 1);
-        gate.add_unary_gate(Hadamard::new(), 1);
-        gate.add_unary_gate(Hadamard::new(), 0);
+        gate.add_unary_gate(H::new(), 1);
+        gate.add_unary_gate(H::new(), 0);
         gate.add_unary_gate(X::new(), 1);
         assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
             z, z, z, o;
@@ -153,14 +153,14 @@ mod tests
         ]);
 
         let mut gate = Custom::new("Inc", 3);
-        gate.add_unary_gate(Hadamard::new(), 0);
-        gate.add_unary_gate(Hadamard::new(), 2);
+        gate.add_unary_gate(H::new(), 0);
+        gate.add_unary_gate(H::new(), 2);
         gate.add_n_ary_gate(CCX::new(), &[0, 1, 2]);
-        gate.add_unary_gate(Hadamard::new(), 1);
+        gate.add_unary_gate(H::new(), 1);
         gate.add_binary_gate(CX::new(), 1, 2);
-        gate.add_unary_gate(Hadamard::new(), 2);
-        gate.add_unary_gate(Hadamard::new(), 0);
-        gate.add_unary_gate(Hadamard::new(), 1);
+        gate.add_unary_gate(H::new(), 2);
+        gate.add_unary_gate(H::new(), 0);
+        gate.add_unary_gate(H::new(), 1);
         gate.add_unary_gate(X::new(), 2);
         assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
             z, z, z, z, z, z, z, o;
