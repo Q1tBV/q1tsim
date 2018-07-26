@@ -70,6 +70,12 @@ impl CMatrix
         CMatrix { matrix: data }
     }
 
+    /// Return the matrix data
+    pub fn as_matrix(self) -> rulinalg::matrix::Matrix<num_complex::Complex64>
+    {
+        self.matrix
+    }
+
     /// Return the real part of this matrix
     pub fn real(&self) -> rulinalg::matrix::Matrix<f64>
     {

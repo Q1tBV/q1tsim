@@ -178,6 +178,7 @@ mod tests
     use gates;
     use qustate::QuState;
     use rulinalg::matrix::BaseMatrix;
+    use gates::CNew;
 
     #[test]
     fn test_new()

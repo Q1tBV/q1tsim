@@ -141,6 +141,7 @@ mod tests
 {
     use circuit::Circuit;
     use gates;
+    use gates::CNew;
 
     #[test]
     fn test_execute()

@@ -5,10 +5,8 @@ use cmatrix;
 
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
-mod ccx;
-mod ch;
+mod controlled;
 mod custom;
-mod cx;
 mod hadamard;
 mod identity;
 mod kron;
@@ -276,16 +274,14 @@ pub trait NaryGate: Gate
     }
 }
 
-pub use gates::ccx::CCX;
-pub use gates::ch::CH;
-pub use gates::custom::Custom;
-pub use gates::cx::CX;
-pub use gates::hadamard::H;
-pub use gates::identity::Identity;
-pub use gates::kron::Kron;
-pub use gates::u1::U1;
-pub use gates::u2::U2;
-pub use gates::u3::U3;
-pub use gates::x::X;
-pub use gates::y::Y;
-pub use gates::z::Z;
+pub use self::controlled::{CNew, C, CX, CZ, CH, CCX};
+pub use self::custom::Custom;
+pub use self::hadamard::H;
+pub use self::identity::Identity;
+pub use self::kron::Kron;
+pub use self::u1::U1;
+pub use self::u2::U2;
+pub use self::u3::U3;
+pub use self::x::X;
+pub use self::y::Y;
+pub use self::z::Z;

@@ -111,7 +111,7 @@ mod tests
 {
     use cmatrix;
     use gates::Gate;
-    use gates::{Custom, CCX, CX, H, X};
+    use gates::{Custom, CNew, CCX, CX, H, X};
     use rulinalg::matrix::BaseMatrix;
 
     #[test]
