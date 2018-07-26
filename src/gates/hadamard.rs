@@ -44,26 +44,27 @@ impl gates::Gate for H
         "H"
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        1
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let s = cmatrix::COMPLEX_HSQRT2;
-        cmatrix::CMatrix::new(2, 2, vec![s, s, s, -s])
+        cmatrix::CMatrix::from_matrix(matrix![s, s; s, -s])
     }
-}
 
-impl gates::UnaryGate for H
-{
-    fn apply_unary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         Self::transform(state);
     }
 }
 
-
 #[cfg(test)]
 mod tests
 {
-    use gates::{Gate, UnaryGate};
+    use gates::Gate;
     use gates::H;
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
@@ -84,14 +85,14 @@ mod tests
     }
 
     #[test]
-    fn test_apply_unary()
+    fn test_apply()
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
         let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
-        H::new().apply_unary(state.as_mut());
+        H::new().apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![x, x, o, z; x, -x, z, o]);
     }
 }

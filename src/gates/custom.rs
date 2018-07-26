@@ -4,14 +4,26 @@ use cmatrix;
 use gates;
 
 /// Operation in a Custom gate.
-enum CustomOp
+struct CustomOp
 {
-    /// Unary gate operating on a single qubit.
-    Unary(Box<gates::UnaryGate>, usize),
-    /// Binary gate operating on two qubits.
-    Binary(Box<gates::BinaryGate>, usize, usize),
-    /// Gate operating on multiple qubits.
-    Nary(Box<gates::NaryGate>, Vec<usize>)
+    /// The gate
+    gate: Box<gates::Gate>,
+    /// The bits on which the gate acts
+    bits: Vec<usize>
+}
+
+impl CustomOp
+{
+    /// Create a new Custom gate operation
+    fn new<G>(gate: G, bits: &[usize]) -> Self
+    where G: 'static + gates::Gate
+    {
+        CustomOp
+        {
+            gate: Box::new(gate),
+            bits: bits.to_owned()
+        }
+    }
 }
 
 /// Custom gate.
@@ -34,7 +46,7 @@ impl Custom
     ///
     /// Initialize a new custom gate with name `name` for operating on `nr_bits`
     /// qubits at a time. The gates making up the operation should be added
-    /// using the `add_unary_gate()`, `add_binary_gate()` and `add_n_ary_gate()` functions.
+    /// using the `add_gate()`, `add_gate()` and `add_gate()` functions.
     pub fn new(name: &str, nr_bits: usize) -> Self
     {
         Custom
@@ -45,34 +57,14 @@ impl Custom
         }
     }
 
-    /// Add a unary gate.
-    ///
-    /// Append a unary gate `gate` operating on qubit `bit` to this gate.
-    pub fn add_unary_gate<G: 'static>(&mut self, gate: G, bit: usize)
-    where G: gates::UnaryGate
-    {
-        assert!(bit < self.nr_bits, "Invalid bit index {} for {}-bit gate", bit, self.nr_bits);
-        self.ops.push(CustomOp::Unary(Box::new(gate), bit));
-    }
-
-    /// Add a binary gate.
-    ///
-    /// Append a binary gate `gate` operating on qubits `bit0` and `bit1` to
-    /// this gate.
-    pub fn add_binary_gate<G: 'static>(&mut self, gate: G, bit0: usize, bit1: usize)
-    where G: gates::BinaryGate
-    {
-        self.ops.push(CustomOp::Binary(Box::new(gate), bit0, bit1));
-    }
-
-    /// Add a multi-bit gate.
+    /// Add a gate.
     ///
     /// Append a `n`-ary gate `gate`, operating on the `n` qubits in `bits`, to
     /// this gate.
-    pub fn add_n_ary_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
-    where G: gates::NaryGate
+    pub fn add_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
+    where G: gates::Gate
     {
-        self.ops.push(CustomOp::Nary(Box::new(gate), bits.to_owned()));
+        self.ops.push(CustomOp::new(gate, bits));
     }
 }
 
@@ -83,23 +75,17 @@ impl gates::Gate for Custom
         &self.name
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        self.nr_bits
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let mut res = cmatrix::CMatrix::eye_sq(1 << self.nr_bits);
         for op in self.ops.iter()
         {
-            match *op
-            {
-                CustomOp::Unary(ref gate, bit)         => {
-                    res = gate.expanded_matrix(bit, self.nr_bits) * res;
-                },
-                CustomOp::Binary(ref gate, bit0, bit1) => {
-                    res = gate.expanded_matrix(bit0, bit1, self.nr_bits) * res;
-                },
-                CustomOp::Nary(ref gate, ref bits)     => {
-                    res = gate.expanded_matrix(bits, self.nr_bits) * res;
-                }
-            }
+            res = op.gate.expanded_matrix(&op.bits, self.nr_bits) * res;
         }
 
         res
@@ -111,7 +97,7 @@ mod tests
 {
     use cmatrix;
     use gates::Gate;
-    use gates::{Custom, CNew, CCX, CX, H, X};
+    use gates::{Custom, CCX, CX, H, X};
     use rulinalg::matrix::BaseMatrix;
 
     #[test]
@@ -128,9 +114,9 @@ mod tests
         let o = cmatrix::COMPLEX_ONE;
 
         let mut gate = Custom::new("CZ", 2);
-        gate.add_unary_gate(H::new(), 1);
-        gate.add_binary_gate(CX::new(), 0, 1);
-        gate.add_unary_gate(H::new(), 1);
+        gate.add_gate(H::new(), &[1]);
+        gate.add_gate(CX::new(), &[0, 1]);
+        gate.add_gate(H::new(), &[1]);
         assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
             o, z, z,  z;
             z, o, z,  z;
@@ -139,12 +125,12 @@ mod tests
         ]);
 
         let mut gate = Custom::new("Inc", 2);
-        gate.add_unary_gate(H::new(), 0);
-        gate.add_unary_gate(H::new(), 1);
-        gate.add_binary_gate(CX::new(), 0, 1);
-        gate.add_unary_gate(H::new(), 1);
-        gate.add_unary_gate(H::new(), 0);
-        gate.add_unary_gate(X::new(), 1);
+        gate.add_gate(H::new(), &[0]);
+        gate.add_gate(H::new(), &[1]);
+        gate.add_gate(CX::new(), &[0, 1]);
+        gate.add_gate(H::new(), &[1]);
+        gate.add_gate(H::new(), &[0]);
+        gate.add_gate(X::new(), &[1]);
         assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
             z, z, z, o;
             o, z, z, z;
@@ -153,15 +139,15 @@ mod tests
         ]);
 
         let mut gate = Custom::new("Inc", 3);
-        gate.add_unary_gate(H::new(), 0);
-        gate.add_unary_gate(H::new(), 2);
-        gate.add_n_ary_gate(CCX::new(), &[0, 1, 2]);
-        gate.add_unary_gate(H::new(), 1);
-        gate.add_binary_gate(CX::new(), 1, 2);
-        gate.add_unary_gate(H::new(), 2);
-        gate.add_unary_gate(H::new(), 0);
-        gate.add_unary_gate(H::new(), 1);
-        gate.add_unary_gate(X::new(), 2);
+        gate.add_gate(H::new(), &[0]);
+        gate.add_gate(H::new(), &[2]);
+        gate.add_gate(CCX::new(), &[0, 1, 2]);
+        gate.add_gate(H::new(), &[1]);
+        gate.add_gate(CX::new(), &[1, 2]);
+        gate.add_gate(H::new(), &[2]);
+        gate.add_gate(H::new(), &[0]);
+        gate.add_gate(H::new(), &[1]);
+        gate.add_gate(X::new(), &[2]);
         assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
             z, z, z, z, z, z, z, o;
             o, z, z, z, z, z, z, z;

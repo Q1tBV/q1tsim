@@ -8,9 +8,12 @@ pub const COMPLEX_ONE:    num_complex::Complex64 = num_complex::Complex { re: 1.
 pub const COMPLEX_HSQRT2: num_complex::Complex64 = num_complex::Complex { re: ::std::f64::consts::FRAC_1_SQRT_2, im: 0.0 };
 pub const COMPLEX_I:      num_complex::Complex64 = num_complex::Complex { re: 0.0, im: 1.0 };
 
+pub type RLMatrix = rulinalg::matrix::Matrix<num_complex::Complex64>;
+pub type RLMatrixSliceMut<'a> = rulinalg::matrix::MatrixSliceMut<'a, num_complex::Complex64>;
+
 pub struct CMatrix
 {
-    matrix: rulinalg::matrix::Matrix<num_complex::Complex64>
+    matrix: RLMatrix
 }
 
 impl CMatrix
@@ -20,11 +23,11 @@ impl CMatrix
     pub fn new<U>(rows: usize, cols: usize, data: U) -> CMatrix
     where U: Into<Vec<num_complex::Complex64>>
     {
-        CMatrix { matrix: rulinalg::matrix::Matrix::new(rows, cols, data) }
+        CMatrix { matrix: RLMatrix::new(rows, cols, data) }
     }
 
     /// Create a new CMatrix object with `matrix` as data.
-    pub fn from_matrix(matrix: rulinalg::matrix::Matrix<num_complex::Complex64>) -> Self
+    pub fn from_matrix(matrix: RLMatrix) -> Self
     {
         CMatrix { matrix: matrix }
     }
@@ -32,7 +35,7 @@ impl CMatrix
     /// Create an identity matrix of size `n` × `n`.
     pub fn eye_sq(n: usize) -> Self
     {
-        CMatrix { matrix: rulinalg::matrix::Matrix::identity(n) }
+        CMatrix { matrix: RLMatrix::identity(n) }
     }
 
     /// Create an identity matrix of size `rows` × `cols`. If `rows` ≠ `cols`,
@@ -42,11 +45,11 @@ impl CMatrix
         let mut matrix;
         if rows == cols
         {
-            matrix = rulinalg::matrix::Matrix::identity(rows);
+            matrix = RLMatrix::identity(rows);
         }
         else
         {
-            matrix = rulinalg::matrix::Matrix::zeros(rows, cols);
+            matrix = RLMatrix::zeros(rows, cols);
             for x in matrix.diag_iter_mut(rulinalg::matrix::DiagOffset::Main)
             {
                 *x = COMPLEX_ONE;
@@ -59,7 +62,7 @@ impl CMatrix
     pub fn kron(&self, m: &Self) -> Self
     {
         let (n0, m0, n1, m1) = (self.matrix.rows(), self.matrix.cols(), m.matrix.rows(), m.matrix.cols());
-        let mut data = rulinalg::matrix::Matrix::zeros(n0*n1, m0*m1);
+        let mut data = RLMatrix::zeros(n0*n1, m0*m1);
         for i in 0..n0
         {
             for j in 0..m0
@@ -71,7 +74,7 @@ impl CMatrix
     }
 
     /// Return the matrix data
-    pub fn as_matrix(self) -> rulinalg::matrix::Matrix<num_complex::Complex64>
+    pub fn as_matrix(self) -> RLMatrix
     {
         self.matrix
     }
@@ -91,17 +94,17 @@ impl CMatrix
     }
 }
 
-impl ::std::convert::AsRef<rulinalg::matrix::Matrix<num_complex::Complex64>> for CMatrix
+impl ::std::convert::AsRef<RLMatrix> for CMatrix
 {
-    fn as_ref(&self) -> &rulinalg::matrix::Matrix<num_complex::Complex64>
+    fn as_ref(&self) -> &RLMatrix
     {
         &self.matrix
     }
 }
 
-impl ::std::convert::AsMut<rulinalg::matrix::Matrix<num_complex::Complex64>> for CMatrix
+impl ::std::convert::AsMut<RLMatrix> for CMatrix
 {
-    fn as_mut(&mut self) -> &mut rulinalg::matrix::Matrix<num_complex::Complex64>
+    fn as_mut(&mut self) -> &mut RLMatrix
     {
         &mut self.matrix
     }

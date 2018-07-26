@@ -37,6 +37,11 @@ impl gates::Gate for U2
         &self.desc
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        1
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let x = ::std::f64::consts::FRAC_1_SQRT_2;
@@ -49,14 +54,12 @@ impl gates::Gate for U2
     }
 }
 
-impl gates::UnaryGate for U2 { /* use default implementation */ }
-
 #[cfg(test)]
 mod tests
 {
     extern crate num_complex;
 
-    use gates::{Gate, UnaryGate};
+    use gates::Gate;
     use gates::U2;
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
@@ -80,7 +83,7 @@ mod tests
     }
 
     #[test]
-    fn test_apply_unary()
+    fn test_apply()
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
@@ -90,7 +93,7 @@ mod tests
 
         let gate = U2::new(::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2);
 
-        gate.apply_unary(state.as_mut());
+        gate.apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
                 o-i,        o;
                   z,       -o;

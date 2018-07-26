@@ -27,15 +27,17 @@ impl gates::Gate for Identity
         "I"
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        1
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         cmatrix::CMatrix::eye(2, 2)
     }
-}
 
-impl gates::UnaryGate for Identity
-{
-    fn apply_unary_slice(&self, _state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, _state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         // Identity, leave state unchanged, so do nothing
     }
@@ -44,7 +46,7 @@ impl gates::UnaryGate for Identity
 #[cfg(test)]
 mod tests
 {
-    use gates::{Gate, UnaryGate};
+    use gates::Gate;
     use gates::Identity;
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
@@ -66,7 +68,7 @@ mod tests
     }
 
     #[test]
-    fn test_apply_unary()
+    fn test_apply()
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
@@ -74,7 +76,7 @@ mod tests
 
         let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
-        Identity::new().apply_unary(state.as_mut());
+        Identity::new().apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![o, z, x, x; z, o, x, -x]);
     }
 

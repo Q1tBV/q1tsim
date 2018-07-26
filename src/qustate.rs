@@ -66,46 +66,34 @@ impl QuState
         }
     }
 
-    /// Apply a unary quantum gate `gate` on qubit `bit` in this state.
-    pub fn apply_unary_gate<G>(&mut self, gate: &G, bit: usize)
-    where G: gates::UnaryGate + ?Sized
-    {
-        let nr_measurements = self.coefs.as_ref().cols();
-        let block_size = 1 << (self.nr_bits - bit);
-        let nr_blocks = 1 << bit;
-        for i in 0..nr_blocks
-        {
-            gate.apply_unary_slice(&mut self.coefs.as_mut()
-                .sub_slice_mut([i*block_size, 0], block_size, nr_measurements));
-        }
-    }
-
-    /// Apply a binary quantum gate `gate` on qubits `bit0` and `bit1` in this
-    /// state.
-    pub fn apply_binary_gate<G>(&mut self, gate: &G, bit0: usize, bit1: usize)
-    where G: gates::BinaryGate + ?Sized
-    {
-        let perm = gates::bit_permutation(self.nr_bits, &[bit0, bit1]);
-        let inv_perm = perm.inverse();
-
-        inv_perm.permute_rows_in_place(self.coefs.as_mut());
-        gate.apply_binary(self.coefs.as_mut());
-        perm.permute_rows_in_place(self.coefs.as_mut());
-    }
-
     /// Apply a n-ary quantum gate `gate` on the qubits from `bits` in this state.
-    pub fn apply_n_ary_gate<G>(&mut self, gate: &G, bits: &[usize])
-    where G: gates::NaryGate + ?Sized
+    pub fn apply_gate<G>(&mut self, gate: &G, bits: &[usize])
+    where G: gates::Gate + ?Sized
     {
-        assert!(gate.nr_affected_bits() == bits.len(),
+        let gate_bits = gate.nr_affected_bits();
+        assert!(gate_bits == bits.len(),
             "The number of bits affected by the gate does not match the provided number of bits.");
 
-        let perm = gates::bit_permutation(self.nr_bits, bits);
-        let inv_perm = perm.inverse();
+        if gate_bits == 1
+        {
+            let nr_measurements = self.coefs.as_ref().cols();
+            let block_size = 1 << (self.nr_bits - bits[0]);
+            let nr_blocks = 1 << bits[0];
+            for i in 0..nr_blocks
+            {
+                gate.apply_slice(&mut self.coefs.as_mut()
+                    .sub_slice_mut([i*block_size, 0], block_size, nr_measurements));
+            }
+        }
+        else
+        {
+            let perm = gates::bit_permutation(self.nr_bits, bits);
+            let inv_perm = perm.inverse();
 
-        inv_perm.permute_rows_in_place(self.coefs.as_mut());
-        gate.apply_n_ary(self.coefs.as_mut());
-        perm.permute_rows_in_place(self.coefs.as_mut());
+            inv_perm.permute_rows_in_place(self.coefs.as_mut());
+            gate.apply(self.coefs.as_mut());
+            perm.permute_rows_in_place(self.coefs.as_mut());
+        }
     }
 
     /// Measure a qubit.
@@ -178,7 +166,6 @@ mod tests
     use gates;
     use qustate::QuState;
     use rulinalg::matrix::BaseMatrix;
-    use gates::CNew;
 
     #[test]
     fn test_new()
@@ -284,15 +271,15 @@ mod tests
         let y = gates::Y::new();
 
         let mut s = QuState::new(3, 1);
-        s.apply_unary_gate(&h, 0);
+        s.apply_gate(&h, &[0]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![x; z; z; z; x; z; z; z]);
 
         let mut s = QuState::new(3, 1);
-        s.apply_unary_gate(&h, 1);
+        s.apply_gate(&h, &[1]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![x; z; x; z; z; z; z; z]);
 
         let mut s = QuState::new(3, 1);
-        s.apply_unary_gate(&y, 2);
+        s.apply_gate(&y, &[2]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; i; z; z; z; z; z; z]);
     }
 
@@ -305,20 +292,20 @@ mod tests
 
         let mut s = QuState::new(3, 1);
         let cx = gates::CX::new();
-        s.apply_binary_gate(&cx, 0, 1);
+        s.apply_gate(&cx, &[0, 1]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z; z; z; z; z; z; z]);
 
         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
-        s.apply_binary_gate(&cx, 0, 1);
+        s.apply_gate(&cx, &[0, 1]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; z; o; z]);
 
         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
-        s.apply_binary_gate(&cx, 0, 2);
+        s.apply_gate(&cx, &[0, 2]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; o; z; z]);
 
         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
         let hh = gates::Kron::new(gates::H::new(), gates::H::new());
-        s.apply_binary_gate(&hh, 1, 2);
+        s.apply_gate(&hh, &[1, 2]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; h; h; h; h]);
     }
 
@@ -332,18 +319,18 @@ mod tests
 
         let mut s = QuState::new(3, 1);
         let ccx = gates::CCX::new();
-        s.apply_n_ary_gate(&ccx, &[0, 1, 2]);
+        s.apply_gate(&ccx, &[0, 1, 2]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![o; z; z; z; z; z; z; z]);
 
         let mut s = QuState::from_qubit_coefs(&vec![z, o, z, o, o, z], 1);
         let ccx = gates::CCX::new();
-        s.apply_n_ary_gate(&ccx, &[0, 2, 1]);
+        s.apply_gate(&ccx, &[0, 2, 1]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; z; o; z]);
-        s.apply_n_ary_gate(&ccx, &[0, 1, 2]);
+        s.apply_gate(&ccx, &[0, 1, 2]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![z; z; z; z; z; z; z; o]);
 
         let mut s = QuState::from_qubit_coefs(&vec![x, -x, x, -x, x, -x], 1);
-        s.apply_n_ary_gate(&ccx, &[0, 2, 1]);
+        s.apply_gate(&ccx, &[0, 2, 1]);
         assert_complex_matrix_eq!(s.coefs.as_ref(), matrix![hx; -hx; -hx; hx; -hx; -hx; hx; hx]);
     }
 }

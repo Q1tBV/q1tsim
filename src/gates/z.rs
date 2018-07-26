@@ -30,17 +30,19 @@ impl gates::Gate for Z
         "Z"
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        1
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         cmatrix::CMatrix::new(2, 2, vec![o, z, z, -o])
     }
-}
 
-impl gates::UnaryGate for Z
-{
-    fn apply_unary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -53,7 +55,7 @@ impl gates::UnaryGate for Z
 #[cfg(test)]
 mod tests
 {
-    use gates::{Gate, UnaryGate};
+    use gates::Gate;
     use gates::Z;
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
@@ -75,14 +77,14 @@ mod tests
     }
 
     #[test]
-    fn test_apply_unary()
+    fn test_apply()
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
         let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
 
-        Z::new().apply_unary(state.as_mut());
+        Z::new().apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![o, z, x, x; z, -o, -x, x]);
     }
 }

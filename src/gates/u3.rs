@@ -46,6 +46,11 @@ impl gates::Gate for U3
         &self.desc
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        1
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let (c, s) = (self.theta.cos(), self.theta.sin());
@@ -58,14 +63,12 @@ impl gates::Gate for U3
     }
 }
 
-impl gates::UnaryGate for U3 { /* use default implementation */ }
-
 #[cfg(test)]
 mod tests
 {
     extern crate num_complex;
 
-    use gates::{Gate, UnaryGate};
+    use gates::Gate;
     use gates::U3;
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
@@ -89,7 +92,7 @@ mod tests
     }
 
     #[test]
-    fn test_apply_unary()
+    fn test_apply()
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
@@ -100,7 +103,7 @@ mod tests
         let gate = U3::new(3.0*::std::f64::consts::FRAC_PI_4,
             ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2);
 
-        gate.apply_unary(state.as_mut());
+        gate.apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
                -o-i,       -o;
                   z,        o;

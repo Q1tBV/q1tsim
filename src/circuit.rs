@@ -8,12 +8,8 @@ use qustate;
 /// A single operation in a circuit
 enum CircuitOp
 {
-    /// Apply a unary gate to a single qubit
-    Unary(Box<gates::UnaryGate>, usize),
-    /// Apply a binary gate on two qubits
-    Binary(Box<gates::BinaryGate>, usize, usize),
-    /// Apply a multi-bit gate
-    Nary(Box<gates::NaryGate>, Vec<usize>),
+    /// Apply a gate to the state
+    Gate(Box<gates::Gate>, Vec<usize>),
     /// Measure a qubit
     Measure(usize, usize)
 }
@@ -57,33 +53,14 @@ impl Circuit
         &self.c_state
     }
 
-    /// Add a unary gate.
-    ///
-    /// Append a unary gate `gate` operating on qubit `bit` to this circuit.
-    pub fn add_unary_gate<G: 'static>(&mut self, gate: G, bit: usize)
-    where G: gates::UnaryGate
-    {
-        self.ops.push(CircuitOp::Unary(Box::new(gate), bit));
-    }
-
-    /// Add a binary gate.
-    ///
-    /// Append a binary gate `gate` operating on qubits `bit0` and `bit1` to
-    /// this circuit.
-    pub fn add_binary_gate<G: 'static>(&mut self, gate: G, bit0: usize, bit1: usize)
-    where G: gates::BinaryGate
-    {
-        self.ops.push(CircuitOp::Binary(Box::new(gate), bit0, bit1));
-    }
-
-    /// Add a multi-bit gate.
+    /// Add a gate.
     ///
     /// Append a `n`-ary gate `gate`, operating on the `n` qubits in `bits`, to
     /// this circuit.
-    pub fn add_n_ary_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
-    where G: gates::NaryGate
+    pub fn add_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
+    where G: gates::Gate
     {
-        self.ops.push(CircuitOp::Nary(Box::new(gate), bits.to_owned()));
+        self.ops.push(CircuitOp::Gate(Box::new(gate), bits.to_owned()));
     }
 
     /// Add a measurement.
@@ -106,14 +83,8 @@ impl Circuit
         {
             match *op
             {
-                CircuitOp::Unary(ref gate, bit)         => {
-                    self.q_state.apply_unary_gate(&**gate, bit);
-                },
-                CircuitOp::Binary(ref gate, bit0, bit1) => {
-                    self.q_state.apply_binary_gate(&**gate, bit0, bit1);
-                },
-                CircuitOp::Nary(ref gate, ref bits) => {
-                    self.q_state.apply_n_ary_gate(&**gate, bits.as_slice());
+                CircuitOp::Gate(ref gate, ref bits) => {
+                    self.q_state.apply_gate(&**gate, bits.as_slice());
                 },
                 CircuitOp::Measure(qbit, cbit)          => {
                     let msr = self.q_state.measure(qbit);
@@ -141,15 +112,14 @@ mod tests
 {
     use circuit::Circuit;
     use gates;
-    use gates::CNew;
 
     #[test]
     fn test_execute()
     {
         let mut circuit = Circuit::new(2, 2, 5);
-        circuit.add_unary_gate(gates::X::new(), 0);
-        circuit.add_unary_gate(gates::X::new(), 1);
-        circuit.add_binary_gate(gates::CX::new(), 0, 1);
+        circuit.add_gate(gates::X::new(), &[0]);
+        circuit.add_gate(gates::X::new(), &[1]);
+        circuit.add_gate(gates::CX::new(), &[0, 1]);
         circuit.add_measurement(0, 0);
         circuit.add_measurement(1, 1);
         circuit.execute();
@@ -165,8 +135,8 @@ mod tests
         let min_count = 906;
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
-        circuit.add_unary_gate(gates::H::new(), 0);
-        circuit.add_unary_gate(gates::H::new(), 1);
+        circuit.add_gate(gates::H::new(), &[0]);
+        circuit.add_gate(gates::H::new(), &[1]);
         circuit.add_measurement(0, 0);
         circuit.add_measurement(1, 1);
         circuit.execute();

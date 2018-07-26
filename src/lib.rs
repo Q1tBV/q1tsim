@@ -2,5 +2,5 @@
 
 pub mod circuit;
 #[macro_use] pub mod cmatrix;
-pub mod gates;
+#[macro_use] pub mod gates;
 pub mod qustate;

@@ -34,35 +34,33 @@ where G0: gates::Gate, G1: gates::Gate
         &self.desc
     }
 
+    fn nr_affected_bits(&self) -> usize
+    {
+        self.g0.nr_affected_bits() + self.g1.nr_affected_bits()
+    }
+
     fn matrix(&self) -> cmatrix::CMatrix
     {
         self.g0.matrix().kron(&self.g1.matrix())
     }
-}
 
-impl<G0, G1> gates::BinaryGate for Kron<G0, G1>
-where G0: gates::UnaryGate, G1: gates::UnaryGate
-{
-    fn apply_binary_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
     {
         assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
 
         let n = state.rows() / 2;
         let m = state.cols();
 
-        self.g0.apply_unary_slice(state);
-        self.g1.apply_unary_slice(&mut state.sub_slice_mut([0, 0], n, m));
-        self.g1.apply_unary_slice(&mut state.sub_slice_mut([n, 0], n, m));
+        self.g0.apply_slice(state);
+        self.g1.apply_slice(&mut state.sub_slice_mut([0, 0], n, m));
+        self.g1.apply_slice(&mut state.sub_slice_mut([n, 0], n, m));
     }
 }
 
 #[cfg(test)]
 mod tests
 {
-    use gates::{Gate, BinaryGate};
-    use gates::H;
-    use gates::Identity;
-    use gates::Kron;
+    use gates::{Gate, H, Identity, Kron};
     use cmatrix;
     use rulinalg::matrix::BaseMatrix;
 
@@ -114,7 +112,7 @@ mod tests
     }
 
     #[test]
-    fn test_apply_binary()
+    fn test_apply()
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
@@ -128,7 +126,7 @@ mod tests
             z, z, -h, -x
         ]);
         let ih = Kron::new(Identity::new(), H::new());
-        ih.apply_binary(state.as_mut());
+        ih.apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
             x, z, z, z;
             x, z, x, z;
@@ -143,7 +141,7 @@ mod tests
             z, z, -h, -x
         ]);
         let hi = Kron::new(H::new(), Identity::new());
-        hi.apply_binary(state.as_mut());
+        hi.apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
             x,  x,  x,  h;
             z,  z, -x, -h;
@@ -158,7 +156,7 @@ mod tests
             z, z, -h, -x
         ]);
         let hh = Kron::new(H::new(), H::new());
-        hh.apply_binary(state.as_mut());
+        hh.apply(state.as_mut());
         assert_complex_matrix_eq!(state.as_ref(), matrix![
             h,  h, z,  z;
             h,  h, o,  x;
