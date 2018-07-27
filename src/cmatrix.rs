@@ -39,36 +39,73 @@ pub fn kron_mat(a0: &CMatrix, a1: &CMatrix) -> CMatrix
 }
 
 #[cfg(test)]
+macro_rules! assert_complex_vector_eq
+{
+    ($a0:expr, $a1:expr) => {
+        {
+            let (n0, n1) = ($a0.len(), $a1.len());
+
+            assert!(n0 == n1, "Incompatible array dimensions, {} vs {}", n0, n1);
+
+            let diff = $a0 - $a1;
+            let tol = 1.0e-15;
+            let mut diff_elems = vec![];
+            for i in 0..n0
+            {
+                if diff[i].norm() > tol
+                {
+                    diff_elems.push(i);
+                }
+            }
+
+            if !diff_elems.is_empty()
+            {
+                let mut msg = String::from("Differences found:\n");
+                for i in diff_elems
+                {
+                    msg += &format!("At ({}): x = {}, y = {}, difference = {}\n",
+                        i, $a0[i], $a1[i], diff[i]);
+                }
+                panic!("{}", msg);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 macro_rules! assert_complex_matrix_eq
 {
-    ($x:expr, $y:expr) => {
+    ($a0:expr, $a1:expr) => {
         {
-            let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
-                $x.iter().map(|c| c.re).collect::<Vec<f64>>());
-            let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
-                $y.iter().map(|c| c.re).collect::<Vec<f64>>());
-            assert_matrix_eq!(rx, ry, comp=float);
+            let (n0, m0, n1, m1) = ($a0.rows(), $a0.cols(), $a1.rows(), $a1.cols());
 
-            let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
-                $x.iter().map(|c| c.im).collect::<Vec<f64>>());
-            let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
-                $y.iter().map(|c| c.im).collect::<Vec<f64>>());
-            assert_matrix_eq!(ix, iy, comp=float);
-        }
-    };
-    ($x:expr, $y:expr, eps=$t:expr) => {
-        {
-            let rx = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
-                $x.iter().map(|c| c.re).collect::<Vec<f64>>());
-            let ry = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
-                $y.iter().map(|c| c.re).collect::<Vec<f64>>());
-            assert_matrix_eq!(rx, ry, comp=float, eps=$t);
+            assert!(n0 == n1 && m0 == m1, "Incompatible array dimensions, {} × {} vs {} × {}",
+                n0, m0, n1, m1);
 
-            let ix = $crate::rulinalg::matrix::Matrix::new($x.rows(), $x.cols(),
-                $x.iter().map(|c| c.im).collect::<Vec<f64>>());
-            let iy = $crate::rulinalg::matrix::Matrix::new($y.rows(), $y.cols(),
-                $y.iter().map(|c| c.im).collect::<Vec<f64>>());
-            assert_matrix_eq!(ix, iy, comp=float, eps=$t);
+            let diff = $a0 - $a1;
+            let tol = 1.0e-15;
+            let mut diff_elems = vec![];
+            for i in 0..n0
+            {
+                for j in 0..m0
+                {
+                    if diff[[i, j]].norm() > tol
+                    {
+                        diff_elems.push((i, j));
+                    }
+                }
+            }
+
+            if !diff_elems.is_empty()
+            {
+                let mut msg = String::from("Differences found:\n");
+                for (i, j) in diff_elems
+                {
+                    msg += &format!("At ({}, {}): x = {}, y = {}, difference = {}\n",
+                        i, j, $a0[[i, j]], $a1[[i, j]], diff[[i, j]]);
+                }
+                panic!("{}", msg);
+            }
         }
     }
 }

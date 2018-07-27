@@ -95,7 +95,6 @@ mod tests
 {
     use cmatrix;
     use gates::{Gate, Custom, CCX, CX, H, X};
-    use gates::Identity as I;
 
     #[test]
     fn test_description()
