@@ -1,5 +1,3 @@
-extern crate rulinalg;
-
 use cmatrix;
 use gates;
 
@@ -82,10 +80,10 @@ impl gates::Gate for Custom
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let mut res = cmatrix::CMatrix::eye_sq(1 << self.nr_bits);
+        let mut res = cmatrix::CMatrix::eye(1 << self.nr_bits);
         for op in self.ops.iter()
         {
-            res = op.gate.expanded_matrix(&op.bits, self.nr_bits) * res;
+            res = op.gate.expanded_matrix(&op.bits, self.nr_bits).dot(&res);
         }
 
         res
@@ -96,9 +94,8 @@ impl gates::Gate for Custom
 mod tests
 {
     use cmatrix;
-    use gates::Gate;
-    use gates::{Custom, CCX, CX, H, X};
-    use rulinalg::matrix::BaseMatrix;
+    use gates::{Gate, Custom, CCX, CX, H, X};
+    use gates::Identity as I;
 
     #[test]
     fn test_description()
@@ -117,11 +114,11 @@ mod tests
         gate.add_gate(H::new(), &[1]);
         gate.add_gate(CX::new(), &[0, 1]);
         gate.add_gate(H::new(), &[1]);
-        assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
-            o, z, z,  z;
-            z, o, z,  z;
-            z, z, o,  z;
-            z, z, z, -o
+        assert_complex_matrix_eq!(gate.matrix(), array![
+            [o, z, z,  z],
+            [z, o, z,  z],
+            [z, z, o,  z],
+            [z, z, z, -o]
         ]);
 
         let mut gate = Custom::new("Inc", 2);
@@ -131,32 +128,34 @@ mod tests
         gate.add_gate(H::new(), &[1]);
         gate.add_gate(H::new(), &[0]);
         gate.add_gate(X::new(), &[1]);
-        assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
-            z, z, z, o;
-            o, z, z, z;
-            z, o, z, z;
-            z, z, o, z
+        assert_complex_matrix_eq!(gate.matrix(), array![
+            [z, z, z, o],
+            [o, z, z, z],
+            [z, o, z, z],
+            [z, z, o, z]
         ]);
 
         let mut gate = Custom::new("Inc", 3);
         gate.add_gate(H::new(), &[0]);
         gate.add_gate(H::new(), &[2]);
         gate.add_gate(CCX::new(), &[0, 1, 2]);
+        gate.add_gate(H::new(), &[2]);
         gate.add_gate(H::new(), &[1]);
+        gate.add_gate(H::new(), &[2]);
         gate.add_gate(CX::new(), &[1, 2]);
         gate.add_gate(H::new(), &[2]);
         gate.add_gate(H::new(), &[0]);
         gate.add_gate(H::new(), &[1]);
         gate.add_gate(X::new(), &[2]);
-        assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
-            z, z, z, z, z, z, z, o;
-            o, z, z, z, z, z, z, z;
-            z, o, z, z, z, z, z, z;
-            z, z, o, z, z, z, z, z;
-            z, z, z, o, z, z, z, z;
-            z, z, z, z, o, z, z, z;
-            z, z, z, z, z, o, z, z;
-            z, z, z, z, z, z, o, z
+        assert_complex_matrix_eq!(gate.matrix(), array![
+            [z, z, z, z, z, z, z, o],
+            [o, z, z, z, z, z, z, z],
+            [z, o, z, z, z, z, z, z],
+            [z, z, o, z, z, z, z, z],
+            [z, z, z, o, z, z, z, z],
+            [z, z, z, z, o, z, z, z],
+            [z, z, z, z, z, o, z, z],
+            [z, z, z, z, z, z, o, z]
         ]);
     }
 }

@@ -1,9 +1,7 @@
 extern crate num_complex;
-extern crate rulinalg;
 
 use cmatrix;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
+use permutation;
 
 #[macro_use] mod controlled;
 mod custom;
@@ -45,12 +43,11 @@ fn get_sort_key(idx: usize, nr_bits: usize, affected_bits: &[usize]) -> usize
 /// This function returns a permutation matrix `P`, such that the matrix
 /// `P (G ⊗ I ⊗ ... ⊗ I) P`<sup>`T`</sup> describes the effect of operating with a
 /// gate `G` on bits `affected_bits` in a `nr_bits`-sized system.
-pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize])
-    -> rulinalg::matrix::PermutationMatrix<num_complex::Complex64>
+pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> permutation::Permutation
 {
     let mut idxs = (0..(1 << nr_bits)).collect::<Vec<usize>>();
     idxs.sort_by_key(|&i| get_sort_key(i, nr_bits, affected_bits));
-    rulinalg::matrix::PermutationMatrix::from_array(idxs).unwrap()
+    permutation::Permutation::new(idxs)
 }
 
 pub trait Gate
@@ -84,24 +81,15 @@ pub trait Gate
 
         if gate_bits == 1
         {
-            cmatrix::CMatrix::eye_sq(1 << bits[0]).kron(&self.matrix())
-                .kron(&cmatrix::CMatrix::eye_sq(1 << (nr_bits-bits[0]-1)))
+            cmatrix::kron_mat(&cmatrix::CMatrix::eye(1 << bits[0]),
+                &cmatrix::kron_mat(&self.matrix(),
+                    &cmatrix::CMatrix::eye(1 << (nr_bits-bits[0]-1))))
         }
         else
         {
-            let perm = bit_permutation(nr_bits, bits);
-            let gate_mat = self.matrix().kron(&cmatrix::CMatrix::eye_sq(1 << (nr_bits-gate_bits)));
-            // XXX WARNING!
-            // Bug/inconsistency in rulinalg: right multiplying by a permutation
-            // matrix actually results in a multiplication by its inverse. So instead
-            // of the expected
-            //
-            // let invp = p.inverse();
-            // cmatrix::CMatrix::from_matrix(p * g.as_ref() * invp)
-            //
-            // we do
-            let invperm = perm.clone();
-            cmatrix::CMatrix::from_matrix(perm * gate_mat.as_ref() * invperm)
+            let gate_mat = cmatrix::kron_mat(&self.matrix(),
+                &cmatrix::CMatrix::eye(1 << (nr_bits-gate_bits)));
+            bit_permutation(nr_bits, bits).transform(&gate_mat)
         }
     }
 
@@ -113,10 +101,9 @@ pub trait Gate
     /// of `r`/2<sup>`n`</sup> rows corresponds to qustates with basis states
     /// |00...0〉 for the affected qubits, the second block to |00...1〉, etc.,
     /// up until |11...1〉.
-    fn apply(&self, state: &mut rulinalg::matrix::Matrix<num_complex::Complex64>)
+    fn apply(&self, state: &mut cmatrix::CVector)
     {
-        let (n, m) = (state.rows(), state.cols());
-        self.apply_slice(&mut state.sub_slice_mut([0, 0], n, m));
+        self.apply_slice(&mut state.slice_mut(s![..]));
     }
 
     /// Apply a gate.
@@ -127,60 +114,71 @@ pub trait Gate
     /// of `r`/2<sup>`n`</sup> rows corresponds to qustates with basis states
     /// |00...0〉 for the affected qubits, the second block to |00...1〉, etc.,
     /// up until |11...1〉.
-    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
         let nr_bits = self.nr_affected_bits();
-        assert!(state.rows() % (1 << nr_bits) == 0,
+        assert!(state.len() % (1 << nr_bits) == 0,
             "The number of rows in the state is {}, which is not valid for a {}-bit gate.",
-            state.rows(), nr_bits);
+            state.len(), nr_bits);
 
         let mat = self.matrix();
-        let n = state.rows() >> nr_bits;
-        let m = state.cols();
+        let n = state.len() >> nr_bits;
         if nr_bits == 1
         {
-            let s0 = state.sub_slice([0, 0], n, m).into_matrix();
-            let s1 = state.sub_slice([n, 0], n, m).into_matrix();
+            let s0 = state.slice(s![..n]).to_owned();
+            let s1 = state.slice(s![n..]).to_owned();
 
-            state.sub_slice_mut([0, 0], n, m).set_to(&s0*mat[[0, 0]] + &s1*mat[[0, 1]]);
-            state.sub_slice_mut([n, 0], n, m).set_to(&s0*mat[[1, 0]] + &s1*mat[[1, 1]]);
+            state.slice_mut(s![..n]).assign(&(&s0*mat[[0, 0]] + &s1*mat[[0, 1]]));
+            state.slice_mut(s![n..]).assign(&(&s0*mat[[1, 0]] + &s1*mat[[1, 1]]));
         }
         else if nr_bits == 2
         {
-            let s0 = state.sub_slice([0, 0], n, m).into_matrix();
-            let s1 = state.sub_slice([n, 0], n, m).into_matrix();
-            let s2 = state.sub_slice([2*n, 0], n, m).into_matrix();
-            let s3 = state.sub_slice([3*n, 0], n, m).into_matrix();
+            let s0 = state.slice(s![     ..n]).to_owned();
+            let s1 = state.slice(s![  n..2*n]).to_owned();
+            let s2 = state.slice(s![2*n..3*n]).to_owned();
+            let s3 = state.slice(s![3*n..   ]).to_owned();
 
-            state.sub_slice_mut([0, 0], n, m).set_to(
-                &s0*mat[[0, 0]] + &s1*mat[[0, 1]] + &s2*mat[[0, 2]] + &s3*mat[[0, 3]]
+            state.slice_mut(s![..n]).assign(
+                &(&s0*mat[[0, 0]] + &s1*mat[[0, 1]] + &s2*mat[[0, 2]] + &s3*mat[[0, 3]])
             );
-            state.sub_slice_mut([n, 0], n, m).set_to(
-                &s0*mat[[1, 0]] + &s1*mat[[1, 1]] + &s2*mat[[1, 2]] + &s3*mat[[1, 3]]
+            state.slice_mut(s![n..2*n]).assign(
+                &(&s0*mat[[1, 0]] + &s1*mat[[1, 1]] + &s2*mat[[1, 2]] + &s3*mat[[1, 3]])
             );
-            state.sub_slice_mut([2*n, 0], n, m).set_to(
-                &s0*mat[[2, 0]] + &s1*mat[[2, 1]] + &s2*mat[[2, 2]] + &s3*mat[[2, 3]]
+            state.slice_mut(s![2*n..3*n]).assign(
+                &(&s0*mat[[2, 0]] + &s1*mat[[2, 1]] + &s2*mat[[2, 2]] + &s3*mat[[2, 3]])
             );
-            state.sub_slice_mut([3*n, 0], n, m).set_to(
-                &s0*mat[[3, 0]] + &s1*mat[[3, 1]] + &s2*mat[[3, 2]] + &s3*mat[[3, 3]]
+            state.slice_mut(s![3*n..]).assign(
+                &(&s0*mat[[3, 0]] + &s1*mat[[3, 1]] + &s2*mat[[3, 2]] + &s3*mat[[3, 3]])
             );
         }
         else
         {
-            let mut res = rulinalg::matrix::Matrix::zeros(state.rows(), state.cols());
+            let mut res = cmatrix::CVector::zeros(state.len());
 
             for i in 0..(1 << nr_bits)
             {
-                let mut slice = res.sub_slice_mut([i*n, 0], n, m);
+                let mut slice = res.slice_mut(s![i*n..(i+1)*n]);
                 for j in 0..(1 << nr_bits)
                 {
-                    slice += state.sub_slice([j*n, 0], n, m) * mat[[i,j]];
+                    let x = &state.slice(s![j*n..(j+1)*n]).to_owned() * mat[[i,j]];
+                    slice += &x;
                 }
             }
 
-            state.sub_slice_mut([0, 0], n << nr_bits, m).set_to(res);
+            state.assign(&res);
         }
     }
+}
+
+#[cfg(test)]
+fn gate_test<G>(gate: G, state: &mut cmatrix::CMatrix, result: &cmatrix::CMatrix)
+where G: Gate
+{
+    for i in 0..state.cols()
+    {
+        gate.apply_slice(&mut state.column_mut(i));
+    }
+    assert_complex_matrix_eq!(&*state, result);
 }
 
 pub use self::controlled::{C, CX, CZ, CH, CCX, CCZ};

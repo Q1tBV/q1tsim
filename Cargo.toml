@@ -6,4 +6,4 @@ authors = ["Gé Vissers <ge@q1t.nl>"]
 [dependencies]
 num-complex="*"
 rand="*"
-rulinalg="*"
+ndarray="*"

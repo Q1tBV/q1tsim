@@ -1,6 +1,4 @@
-extern crate rulinalg;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
+extern crate ndarray;
 
 use gates;
 use qustate;
@@ -23,7 +21,7 @@ pub struct Circuit
     /// The quantum state of the system
     q_state: qustate::QuState,
     /// The classial state of the system
-    c_state: rulinalg::matrix::Matrix<u8>,
+    c_state: ndarray::Array2<u8>,
     /// The operations to perform on the state
     ops: Vec<CircuitOp>
 }
@@ -39,7 +37,7 @@ impl Circuit
         Circuit
         {
             q_state: qustate::QuState::new(nr_qubits, nr_shots),
-            c_state: rulinalg::matrix::Matrix::zeros(nr_cbits, nr_shots),
+            c_state: ndarray::Array::zeros((nr_cbits, nr_shots)),
             ops: vec![]
         }
     }
@@ -48,7 +46,7 @@ impl Circuit
     ///
     /// Return a reference to the classical bit register, containing the results
     /// of any measurements made on the system.
-    pub fn cstate(&self) -> &rulinalg::matrix::Matrix<u8>
+    pub fn cstate(&self) -> &ndarray::Array2<u8>
     {
         &self.c_state
     }
@@ -88,7 +86,7 @@ impl Circuit
                 },
                 CircuitOp::Measure(qbit, cbit)          => {
                     let msr = self.q_state.measure(qbit);
-                    self.c_state.row_mut(cbit).raw_slice_mut().copy_from_slice(msr.data());
+                    self.c_state.row_mut(cbit).assign(&msr);
                 }
             }
         }
@@ -97,7 +95,7 @@ impl Circuit
     pub fn histogram(&self) -> ::std::collections::HashMap<String, usize>
     {
         let mut res = ::std::collections::HashMap::new();
-        for col in self.c_state.col_iter()
+        for col in self.c_state.gencolumns()
         {
             let key = col.iter().map(|&b| ::std::char::from_digit(b as u32, 10).unwrap()).collect();
             let count = res.entry(key).or_insert(0);
@@ -123,7 +121,7 @@ mod tests
         circuit.add_measurement(0, 0);
         circuit.add_measurement(1, 1);
         circuit.execute();
-        assert_matrix_eq!(circuit.cstate(), matrix![1, 1, 1, 1, 1; 0, 0, 0, 0, 0]);
+        assert_eq!(circuit.cstate(), &array![[1, 1, 1, 1, 1], [0, 0, 0, 0, 0]]);
     }
 
     #[test]

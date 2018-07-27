@@ -1,10 +1,7 @@
 extern crate num_complex;
-extern crate rulinalg;
 
 use cmatrix;
 use gates;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 /// The Pauli Z gate.
 ///
@@ -39,26 +36,23 @@ impl gates::Gate for Z
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
-        cmatrix::CMatrix::new(2, 2, vec![o, z, z, -o])
+        array![[o, z], [z, -o]]
     }
 
-    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
-        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+        assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
-        let n = state.rows() / 2;
-        let m = state.cols();
-        state.sub_slice_mut([n, 0], n, m).apply(&|c: num_complex::Complex64| -c);
+        let n = state.len() / 2;
+        state.slice_mut(s![n..]).iter_mut().for_each(|c| *c = -*c);
     }
 }
 
 #[cfg(test)]
 mod tests
 {
-    use gates::Gate;
-    use gates::Z;
+    use gates::{gate_test, Gate, Z};
     use cmatrix;
-    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -73,7 +67,7 @@ mod tests
         let gate = Z::new();
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
-        assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![o, z; z, -o]);
+        assert_complex_matrix_eq!(gate.matrix(), array![[o, z], [z, -o]]);
     }
 
     #[test]
@@ -82,9 +76,8 @@ mod tests
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
-        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
-
-        Z::new().apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![o, z, x, x; z, -o, -x, x]);
+        let mut state = array![[o, z, x, x], [z, o, x, -x]];
+        let result = array![[o, z, x, x], [ z, -o, -x, x]];
+        gate_test(Z::new(), &mut state, &result);
     }
 }

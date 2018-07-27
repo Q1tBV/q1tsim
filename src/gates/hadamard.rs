@@ -1,10 +1,7 @@
 extern crate num_complex;
-extern crate rulinalg;
 
 use cmatrix;
 use gates;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 /// The Hadamard gate.
 ///
@@ -23,17 +20,16 @@ impl H
         H { }
     }
 
-    pub fn transform(state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    pub fn transform(state: &mut cmatrix::CVecSliceMut)
     {
-        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+        assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
-        let n = state.rows() / 2;
-        let m = state.cols();
-        let s0 = state.sub_slice([0, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
-        let s1 = state.sub_slice([n, 0], n, m).into_matrix() * cmatrix::COMPLEX_HSQRT2;
+        let n = state.len() / 2;
+        let s0 = state.slice(s![..n]).to_owned() * cmatrix::COMPLEX_HSQRT2;
+        let s1 = state.slice(s![n..]).to_owned() * cmatrix::COMPLEX_HSQRT2;
 
-        state.sub_slice_mut([0, 0], n, m).set_to(&s0 + &s1);
-        state.sub_slice_mut([n, 0], n, m).set_to(&s0 - &s1);
+        state.slice_mut(s![..n]).assign(&(&s0 + &s1));
+        state.slice_mut(s![n..]).assign(&(s0 - s1));
     }
 }
 
@@ -51,11 +47,11 @@ impl gates::Gate for H
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let s = cmatrix::COMPLEX_HSQRT2;
-        cmatrix::CMatrix::from_matrix(matrix![s, s; s, -s])
+        let x = cmatrix::COMPLEX_HSQRT2;
+        array![[x, x], [x, -x]]
     }
 
-    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
         Self::transform(state);
     }
@@ -64,10 +60,8 @@ impl gates::Gate for H
 #[cfg(test)]
 mod tests
 {
-    use gates::Gate;
-    use gates::H;
+    use gates::{gate_test, Gate, H};
     use cmatrix;
-    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -81,7 +75,7 @@ mod tests
     {
         let h = H::new();
         let s = cmatrix::COMPLEX_HSQRT2;
-        assert_complex_matrix_eq!(h.matrix().as_ref(), matrix![s, s; s, -s]);
+        assert_complex_matrix_eq!(h.matrix(), array![[s, s], [s, -s]]);
     }
 
     #[test]
@@ -90,9 +84,8 @@ mod tests
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
-        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
-
-        H::new().apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![x, x, o, z; x, -x, z, o]);
+        let mut state = array![[o, z, x, x], [z, o, x, -x]];
+        let result = array![[x, x, o, z], [x, -x, z, o]];
+        gate_test(H::new(), &mut state, &result);
     }
 }

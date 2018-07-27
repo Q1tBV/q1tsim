@@ -1,10 +1,7 @@
 extern crate num_complex;
-extern crate rulinalg;
 
 use cmatrix;
 use gates;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
@@ -41,28 +38,26 @@ where G0: gates::Gate, G1: gates::Gate
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        self.g0.matrix().kron(&self.g1.matrix())
+        cmatrix::kron_mat(&self.g0.matrix(), &self.g1.matrix())
     }
 
-    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
-        assert!(state.rows() % 4 == 0, "Number of rows is not a multiple of four.");
+        assert!(state.len() % 4 == 0, "Number of rows is not a multiple of four.");
 
-        let n = state.rows() / 2;
-        let m = state.cols();
+        let n = state.len() / 2;
 
         self.g0.apply_slice(state);
-        self.g1.apply_slice(&mut state.sub_slice_mut([0, 0], n, m));
-        self.g1.apply_slice(&mut state.sub_slice_mut([n, 0], n, m));
+        self.g1.apply_slice(&mut state.slice_mut(s![..n]));
+        self.g1.apply_slice(&mut state.slice_mut(s![n..]));
     }
 }
 
 #[cfg(test)]
 mod tests
 {
-    use gates::{Gate, H, Identity, Kron};
+    use gates::{gate_test, Gate, H, Identity, Kron};
     use cmatrix;
-    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -83,31 +78,31 @@ mod tests
         let h = 0.5 * cmatrix::COMPLEX_ONE;
 
         let ih = Kron::new(Identity::new(), H::new());
-        assert_complex_matrix_eq!(ih.matrix().as_ref(), matrix![
-            s,  s, z,  z;
-            s, -s, z,  z;
-            z,  z, s,  s;
-            z,  z, s, -s
+        assert_complex_matrix_eq!(ih.matrix(), array![
+            [s,  s, z,  z],
+            [s, -s, z,  z],
+            [z,  z, s,  s],
+            [z,  z, s, -s]
         ]);
 
         let hh = Kron::new(H::new(), H::new());
-        assert_complex_matrix_eq!(hh.matrix().as_ref(), matrix![
-            h,  h,  h,  h;
-            h, -h,  h, -h;
-            h,  h, -h, -h;
-            h, -h, -h,  h
+        assert_complex_matrix_eq!(hh.matrix(), array![
+            [h,  h,  h,  h],
+            [h, -h,  h, -h],
+            [h,  h, -h, -h],
+            [h, -h, -h,  h]
         ]);
 
         let hih = Kron::new(H::new(), Kron::new(Identity::new(), H::new()));
-        assert_complex_matrix_eq!(hih.matrix().as_ref(), matrix![
-            h,  h,  z,  z,  h,  h,  z,  z;
-            h, -h,  z,  z,  h, -h,  z,  z;
-            z,  z,  h,  h,  z,  z,  h,  h;
-            z,  z,  h, -h,  z,  z,  h, -h;
-            h,  h,  z,  z, -h, -h,  z,  z;
-            h, -h,  z,  z, -h,  h,  z,  z;
-            z,  z,  h,  h,  z,  z, -h, -h;
-            z,  z,  h, -h,  z,  z, -h,  h
+        assert_complex_matrix_eq!(hih.matrix(), array![
+            [h,  h,  z,  z,  h,  h,  z,  z],
+            [h, -h,  z,  z,  h, -h,  z,  z],
+            [z,  z,  h,  h,  z,  z,  h,  h],
+            [z,  z,  h, -h,  z,  z,  h, -h],
+            [h,  h,  z,  z, -h, -h,  z,  z],
+            [h, -h,  z,  z, -h,  h,  z,  z],
+            [z,  z,  h,  h,  z,  z, -h, -h],
+            [z,  z,  h, -h,  z,  z, -h,  h]
         ]);
     }
 
@@ -119,49 +114,46 @@ mod tests
         let x = cmatrix::COMPLEX_HSQRT2;
         let h = o * 0.5;
 
-        let mut state = cmatrix::CMatrix::new(4, 4, vec![
-            o, z,  h,  z,
-            z, z, -h,  z,
-            z, o,  h,  x,
-            z, z, -h, -x
-        ]);
-        let ih = Kron::new(Identity::new(), H::new());
-        ih.apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![
-            x, z, z, z;
-            x, z, x, z;
-            z, x, z, z;
-            z, x, x, o
-        ]);
+        let mut state = array![
+            [o, z,  h,  z],
+            [z, z, -h,  z],
+            [z, o,  h,  x],
+            [z, z, -h, -x]
+        ];
+        let result = array![
+            [x, z, z, z],
+            [x, z, x, z],
+            [z, x, z, z],
+            [z, x, x, o]
+        ];
+        gate_test(Kron::new(Identity::new(), H::new()), &mut state, &result);
 
-        let mut state = cmatrix::CMatrix::new(4, 4, vec![
-            o, z,  h,  z,
-            z, z, -h,  z,
-            z, o,  h,  x,
-            z, z, -h, -x
-        ]);
-        let hi = Kron::new(H::new(), Identity::new());
-        hi.apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![
-            x,  x,  x,  h;
-            z,  z, -x, -h;
-            x, -x,  z, -h;
-            z,  z,  z,  h
-        ]);
+        let mut state = array![
+            [o, z,  h,  z],
+            [z, z, -h,  z],
+            [z, o,  h,  x],
+            [z, z, -h, -x]
+        ];
+        let result = array![
+            [x,  x,  x,  h],
+            [z,  z, -x, -h],
+            [x, -x,  z, -h],
+            [z,  z,  z,  h]
+        ];
+        gate_test(Kron::new(H::new(), Identity::new()), &mut state, &result);
 
-        let mut state = cmatrix::CMatrix::new(4, 4, vec![
-            o, z,  h,  z,
-            z, z, -h,  z,
-            z, o,  h,  x,
-            z, z, -h, -x
-        ]);
-        let hh = Kron::new(H::new(), H::new());
-        hh.apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![
-            h,  h, z,  z;
-            h,  h, o,  x;
-            h, -h, z,  z;
-            h, -h, z, -x
-        ]);
+        let mut state = array![
+            [o, z,  h,  z],
+            [z, z, -h,  z],
+            [z, o,  h,  x],
+            [z, z, -h, -x]
+        ];
+        let result = array![
+            [h,  h, z,  z],
+            [h,  h, o,  x],
+            [h, -h, z,  z],
+            [h, -h, z, -x]
+        ];
+        gate_test(Kron::new(H::new(), H::new()), &mut state, &result);
     }
 }

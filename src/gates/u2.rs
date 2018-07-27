@@ -1,5 +1,4 @@
 extern crate num_complex;
-extern crate rulinalg;
 
 use cmatrix;
 use gates;
@@ -45,12 +44,10 @@ impl gates::Gate for U2
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let x = ::std::f64::consts::FRAC_1_SQRT_2;
-        cmatrix::CMatrix::new(2, 2, vec![
-            num_complex::Complex::new(x, 0.0),
-            -num_complex::Complex::from_polar(&x, &self.lambda),
-            num_complex::Complex::from_polar(&x, &self.phi),
-            num_complex::Complex::from_polar(&x, &(self.phi+self.lambda))
-        ])
+        array![[ num_complex::Complex::new(x, 0.0),
+                -num_complex::Complex::from_polar(&x, &self.lambda)],
+               [ num_complex::Complex::from_polar(&x, &self.phi),
+                 num_complex::Complex::from_polar(&x, &(self.phi+self.lambda))]]
     }
 }
 
@@ -59,10 +56,8 @@ mod tests
 {
     extern crate num_complex;
 
-    use gates::Gate;
-    use gates::U2;
+    use gates::{gate_test, Gate, U2};
     use cmatrix;
-    use rulinalg::matrix::BaseMatrix;
     use self::num_complex::Complex;
 
     #[test]
@@ -76,9 +71,9 @@ mod tests
     fn test_matrix()
     {
         let gate = U2::new(::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
-        assert_complex_matrix_eq!(gate.matrix().as_ref(), matrix![
-            Complex::new(0.7071067811865476, 0.0), Complex::new(-0.5439340435069544, -0.4518138513969824);
-            Complex::new(               0.5, 0.5), Complex::new(0.06513881252516862,  0.7041000888388035)
+        assert_complex_matrix_eq!(gate.matrix(), array![
+            [Complex::new(0.7071067811865476, 0.0), Complex::new(-0.5439340435069544, -0.4518138513969824)],
+            [Complex::new(               0.5, 0.5), Complex::new(0.06513881252516862,  0.7041000888388035)]
         ]);
     }
 
@@ -89,16 +84,14 @@ mod tests
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
         let i = cmatrix::COMPLEX_I;
-        let mut state = cmatrix::CMatrix::new(4, 2, vec![x, x, z, -x, x, z, z, z]);
-
+        let mut state = array![[x, x], [z, -x], [x, z], [z, z]];
+        let result = array![
+            [    o-i,        o],
+            [      z,       -o],
+            [2.0*i*x,  (o+i)*x],
+            [      z, -(o+i)*x]
+        ] * (0.5 * o);
         let gate = U2::new(::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2);
-
-        gate.apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![
-                o-i,        o;
-                  z,       -o;
-            2.0*i*x,  (o+i)*x;
-                  z, -(o+i)*x
-        ] * (0.5 * o));
+        gate_test(gate, &mut state, &result);
     }
 }

@@ -1,10 +1,7 @@
 extern crate num_complex;
-extern crate rulinalg;
 
 use cmatrix;
 use gates;
-
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut};
 
 /// The Pauli Y gate.
 ///
@@ -39,25 +36,19 @@ impl gates::Gate for Y
     {
         let z = cmatrix::COMPLEX_ZERO;
         let i = cmatrix::COMPLEX_I;
-        cmatrix::CMatrix::new(2, 2, vec![z, -i, i, z])
+        array![[z, -i], [i, z]]
     }
 
-    fn apply_slice(&self, state: &mut rulinalg::matrix::MatrixSliceMut<num_complex::Complex64>)
+    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
-        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
-
-        let n = state.rows() / 2;
-        let m = state.cols();
-        for i in 0..n
+        gates::X::transform(state);
+        let n = state.len() / 2;
         {
-            state.swap_rows(i, i+n);
-        }
-        {
-            let mut slice = state.sub_slice_mut([0, 0], n, m);
+            let mut slice = state.slice_mut(s![..n]);
             slice *= -cmatrix::COMPLEX_I;
         }
         {
-            let mut slice = state.sub_slice_mut([n, 0], n, m);
+            let mut slice = state.slice_mut(s![n..]);
             slice *=  cmatrix::COMPLEX_I;
         }
     }
@@ -66,10 +57,8 @@ impl gates::Gate for Y
 #[cfg(test)]
 mod tests
 {
-    use gates::Gate;
-    use gates::Y;
+    use gates::{gate_test, Gate, Y};
     use cmatrix;
-    use rulinalg::matrix::BaseMatrix;
 
     #[test]
     fn test_description()
@@ -84,7 +73,7 @@ mod tests
         let y = Y::new();
         let z = cmatrix::COMPLEX_ZERO;
         let i = cmatrix::COMPLEX_I;
-        assert_complex_matrix_eq!(y.matrix().as_ref(), matrix![z, -i; i, z]);
+        assert_complex_matrix_eq!(y.matrix(), array![[z, -i], [i, z]]);
     }
 
     #[test]
@@ -94,9 +83,8 @@ mod tests
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
         let i = cmatrix::COMPLEX_I;
-        let mut state = cmatrix::CMatrix::new(2, 4, vec![o, z, x, x, z, o, x, -x]);
-
-        Y::new().apply(state.as_mut());
-        assert_complex_matrix_eq!(state.as_ref(), matrix![z, -i, -i*x, i*x; i, z, i*x, i*x]);
+        let mut state = array![[o, z, x, x], [z, o, x, -x]];
+        let result = array![[z, -i, -i*x, i*x], [i, z, i*x, i*x]];
+        gate_test(Y::new(), &mut state, &result);
     }
 }
