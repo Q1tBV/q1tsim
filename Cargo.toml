@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Gé Vissers <ge@q1t.nl>"]
 
 [dependencies]
-num-complex="*"
+num-complex="0.1"
+ndarray="0.11"
 rand="*"
-ndarray="*"
