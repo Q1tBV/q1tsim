@@ -39,7 +39,9 @@ pub struct QuState
     /// The number of separate runs for evolving this state
     nr_shots: usize,
     /// Coefficients of the basis states in this state
-    measurements: ::std::collections::LinkedList<Measurement>
+    measurements: ::std::collections::LinkedList<Measurement>,
+    /// Random number generator, for measurements
+    rng: rand::ThreadRng
 }
 
 impl QuState
@@ -58,7 +60,8 @@ impl QuState
         {
             nr_bits: nr_bits,
             nr_shots: nr_shots,
-            measurements: measurements
+            measurements: measurements,
+            rng: rand::thread_rng()
         }
     }
 
@@ -90,7 +93,8 @@ impl QuState
         {
             nr_bits: nr_bits,
             nr_shots: nr_shots,
-            measurements: measurements
+            measurements: measurements,
+            rng: rand::thread_rng()
         }
     }
 
@@ -173,11 +177,13 @@ impl QuState
             }
 
             // Compute how many times we measure 0
-            let mut n0 = 0;
-            for _ in 0..m.count
-            {
-                n0 += rand::thread_rng().gen_bool(w0) as usize;
-            }
+            let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
+            let n0 = self.rng.sample(distribution) as usize;
+            //let mut n0 = 0;
+            //for _ in 0..m.count
+            //{
+            //    n0 += self.rng.gen_bool(w0) as usize;
+            //}
 
             // Store the result
             res.slice_mut(s![res_start..res_start+n0]).fill(0);
