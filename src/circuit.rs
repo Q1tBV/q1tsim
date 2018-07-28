@@ -123,7 +123,7 @@ impl Circuit
     /// `histogram_string` may be better.
     pub fn histogram_vec(&self) -> Vec<usize>
     {
-        let mut res = vec![0; self.c_state.cols()];
+        let mut res = vec![0; 1 << self.c_state.rows()];
         for col in self.c_state.gencolumns()
         {
             let key = col.iter().fold(0, |k, &b| (k << 1) | b as usize);
@@ -185,6 +185,53 @@ mod tests
         circuit.execute();
 
         let hist = circuit.histogram();
+        // With this many shots, we expect all keys to be present
+        let mut keys: Vec<&u64> = hist.keys().collect();
+        keys.sort();
+        assert_eq!(keys, vec![&0, &1, &2, &3]);
+
+        assert_eq!(hist.values().sum::<usize>(), nr_shots);
+        assert!(*hist.values().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_histogram_vec()
+    {
+        let nr_shots = 4096;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 906;
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.add_gate(gates::H::new(), &[0]);
+        circuit.add_gate(gates::H::new(), &[1]);
+        circuit.add_measurement(0, 0);
+        circuit.add_measurement(1, 1);
+        circuit.execute();
+
+        let hist = circuit.histogram_vec();
+        println!("hist = {:?}", hist);
+        assert_eq!(hist.iter().sum::<usize>(), nr_shots);
+        println!("min = {}", *hist.iter().min().unwrap());
+        assert!(*hist.iter().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_histogram_string()
+    {
+        let nr_shots = 4096;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 906;
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.add_gate(gates::H::new(), &[0]);
+        circuit.add_gate(gates::H::new(), &[1]);
+        circuit.add_measurement(0, 0);
+        circuit.add_measurement(1, 1);
+        circuit.execute();
+
+        let hist = circuit.histogram_string();
         // With this many shots, we expect all keys to be present
         let mut keys: Vec<&String> = hist.keys().collect();
         keys.sort();
