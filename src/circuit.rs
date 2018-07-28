@@ -92,7 +92,52 @@ impl Circuit
         }
     }
 
-    pub fn histogram(&self) -> ::std::collections::HashMap<String, usize>
+    /// Create a histogram of measurements.
+    ///
+    /// Create a histogram of the measured classical bits. The `n` bits in the
+    /// classical register are collected in a single `u64` integer value. The
+    /// most significant bit `n-1` in the histogram key corresponds to the first
+    /// bit in the classical register, and the least significant bit in the key
+    /// to the last bit in the register. This function of course only works
+    /// when there are at most 64 bits in the register. If there are more, use
+    /// `histogram_string()`.
+    pub fn histogram(&self) -> ::std::collections::HashMap<u64, usize>
+    {
+        let mut res = ::std::collections::HashMap::new();
+        for col in self.c_state.gencolumns()
+        {
+            let key = col.iter().fold(0, |k, &b| (k << 1) | b as u64);
+            let count = res.entry(key).or_insert(0);
+            *count += 1;
+        }
+        res
+    }
+
+    /// Create a histogram of measurements.
+    ///
+    /// Create a histogram of the measured classical bits. The `n` bits in the
+    /// classical register are collected in a single `usize` integer value,
+    /// which is used as an index in a vector. The vector is of length
+    /// `2`<sub>`n`</sub>, so use this function only for reasonably small
+    /// numbers of `n`. For sparse collections, using `histogram()` or
+    /// `histogram_string` may be better.
+    pub fn histogram_vec(&self) -> Vec<usize>
+    {
+        let mut res = vec![0; self.c_state.cols()];
+        for col in self.c_state.gencolumns()
+        {
+            let key = col.iter().fold(0, |k, &b| (k << 1) | b as usize);
+            res[key] += 1;
+        }
+        res
+    }
+
+    /// Create a histogram of measurements.
+    ///
+    /// Create a histogram of the measured classical bits. The `n` bits in the
+    /// classical register are collected in a string key, with the first character
+    /// in the key corresponding to the first bit in the classical register.
+    pub fn histogram_string(&self) -> ::std::collections::HashMap<String, usize>
     {
         let mut res = ::std::collections::HashMap::new();
         for col in self.c_state.gencolumns()
