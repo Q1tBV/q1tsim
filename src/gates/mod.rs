@@ -184,7 +184,7 @@ where G: Gate
 pub use self::controlled::{C, CX, CZ, CH, CCX, CCZ};
 pub use self::custom::Custom;
 pub use self::hadamard::H;
-pub use self::identity::Identity;
+pub use self::identity::I;
 pub use self::kron::Kron;
 pub use self::u1::U1;
 pub use self::u2::U2;

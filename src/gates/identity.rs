@@ -6,20 +6,20 @@ use gates;
 /// The identity gate
 ///
 /// The identity gate leaves the qubits on which it acts unchanged.
-pub struct Identity
+pub struct I
 {
 }
 
-impl Identity
+impl I
 {
     /// Create a new identity gate.
     pub fn new() -> Self
     {
-        Identity { }
+        I { }
     }
 }
 
-impl gates::Gate for Identity
+impl gates::Gate for I
 {
     fn description(&self) -> &str
     {
@@ -45,13 +45,13 @@ impl gates::Gate for Identity
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, Identity};
+    use gates::{gate_test, Gate, I};
     use cmatrix;
 
     #[test]
     fn test_description()
     {
-        let i = Identity::new();
+        let i = I::new();
         assert_eq!(i.description(), "I");
     }
 
@@ -60,7 +60,7 @@ mod tests
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
-        let i = Identity::new();
+        let i = I::new();
         assert_complex_matrix_eq!(i.matrix(), array![[o, z], [z, o]]);
     }
 
@@ -73,7 +73,7 @@ mod tests
 
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[o, z, x, x], [z, o, x, -x]];
-        gate_test(Identity::new(), &mut state, &result);
+        gate_test(I::new(), &mut state, &result);
     }
 
 }

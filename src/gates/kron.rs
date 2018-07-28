@@ -56,17 +56,17 @@ where G0: gates::Gate, G1: gates::Gate
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, H, Identity, Kron};
+    use gates::{gate_test, Gate, H, I, Kron};
     use cmatrix;
 
     #[test]
     fn test_description()
     {
-        let ih = Kron::new(Identity::new(), H::new());
+        let ih = Kron::new(I::new(), H::new());
         assert_eq!(ih.description(), "I⊗H");
         let hh = Kron::new(H::new(), H::new());
         assert_eq!(hh.description(), "H⊗H");
-        let hih = Kron::new(H::new(), Kron::new(Identity::new(), H::new()));
+        let hih = Kron::new(H::new(), Kron::new(I::new(), H::new()));
         assert_eq!(hih.description(), "H⊗I⊗H");
     }
 
@@ -77,7 +77,7 @@ mod tests
         let s = cmatrix::COMPLEX_HSQRT2;
         let h = 0.5 * cmatrix::COMPLEX_ONE;
 
-        let ih = Kron::new(Identity::new(), H::new());
+        let ih = Kron::new(I::new(), H::new());
         assert_complex_matrix_eq!(ih.matrix(), array![
             [s,  s, z,  z],
             [s, -s, z,  z],
@@ -93,7 +93,7 @@ mod tests
             [h, -h, -h,  h]
         ]);
 
-        let hih = Kron::new(H::new(), Kron::new(Identity::new(), H::new()));
+        let hih = Kron::new(H::new(), Kron::new(I::new(), H::new()));
         assert_complex_matrix_eq!(hih.matrix(), array![
             [h,  h,  z,  z,  h,  h,  z,  z],
             [h, -h,  z,  z,  h, -h,  z,  z],
@@ -126,7 +126,7 @@ mod tests
             [z, x, z, z],
             [z, x, x, o]
         ];
-        gate_test(Kron::new(Identity::new(), H::new()), &mut state, &result);
+        gate_test(Kron::new(I::new(), H::new()), &mut state, &result);
 
         let mut state = array![
             [o, z,  h,  z],
@@ -140,7 +140,7 @@ mod tests
             [x, -x,  z, -h],
             [z,  z,  z,  h]
         ];
-        gate_test(Kron::new(H::new(), Identity::new()), &mut state, &result);
+        gate_test(Kron::new(H::new(), I::new()), &mut state, &result);
 
         let mut state = array![
             [o, z,  h,  z],
