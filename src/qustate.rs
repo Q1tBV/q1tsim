@@ -168,13 +168,18 @@ impl QuState
             let mut m = tail.pop_front().unwrap();
 
             // Compute chance of measuring 0
-            let mut w0 = 0.0;
+            let mut w0 = 0.0f64;
             let mut off = 0;
             for _ in 0..nr_blocks
             {
                 w0 += &m.coefs.slice(s![off..off+block_size]).iter().map(|c| c.norm_sqr()).sum();
                 off += 2 * block_size;
             }
+
+            // Sometimes, the sum may add up to slightly more than 1, die to
+            // numerical inaccuracies. This causes the Binomial distribution to
+            // panic, so cap w0.
+            w0 = w0.min(1.0);
 
             // Compute how many times we measure 0
             let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
