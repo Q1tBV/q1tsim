@@ -69,6 +69,71 @@ impl Circuit
         self.ops.push(CircuitOp::Measure(qbit, cbit));
     }
 
+    /// Add a Hadamard gate.
+    ///
+    /// Add a Hadamard operating on qubit `bit`, to this circuit.
+    pub fn h(&mut self, bit: usize)
+    {
+        self.add_gate(gates::H::new(), &[bit]);
+    }
+
+    /// Add a Pauli X gate.
+    ///
+    /// Add a Pauli X gate operating on qubit `bit`, to this circuit.
+    pub fn x(&mut self, bit: usize)
+    {
+        self.add_gate(gates::X::new(), &[bit]);
+    }
+
+    /// Add a Pauli Y gate.
+    ///
+    /// Add a Pauli Y gate operating on qubit `bit`, to this circuit.
+    pub fn y(&mut self, bit: usize)
+    {
+        self.add_gate(gates::Y::new(), &[bit]);
+    }
+
+    /// Add a Pauli Z gate.
+    ///
+    /// Add a Pauli Z gate operating on qubit `bit`, to this circuit.
+    pub fn z(&mut self, bit: usize)
+    {
+        self.add_gate(gates::Z::new(), &[bit]);
+    }
+
+    /// Add a U<sub>1</sub> gate.
+    ///
+    /// Add a `U`<sub>`1`</sub>`(λ)` gate operating on qubit `bit`, to this circuit.
+    pub fn u1(&mut self, lambda: f64, bit: usize)
+    {
+        self.add_gate(gates::U1::new(lambda), &[bit]);
+    }
+
+    /// Add a U<sub>2</sub> gate.
+    ///
+    /// Add a `U`<sub>`2`</sub>`(ϕ, λ)` gate operating on qubit `bit`, to this circuit.
+    pub fn u2(&mut self, phi: f64, lambda: f64, bit: usize)
+    {
+        self.add_gate(gates::U2::new(phi, lambda), &[bit]);
+    }
+
+    /// Add a U<sub>3</sub> gate.
+    ///
+    /// Add a `U`<sub>`3`</sub>`(θ, ϕ, λ)` gate operating on qubit `bit`, to this circuit.
+    pub fn u3(&mut self, theta: f64, phi: f64, lambda: f64, bit: usize)
+    {
+        self.add_gate(gates::U3::new(phi, theta, lambda), &[bit]);
+    }
+
+    /// Add a C<sub>X</sub> gate.
+    ///
+    /// Add a `C`<sub>`X`</sub> gate, controlled by qubit `control` and
+    /// operating on qubit `target`, to this circuit.
+    pub fn cx(&mut self, control: usize, target: usize)
+    {
+        self.add_gate(gates::CX::new(), &[control, target]);
+    }
+
     /// Execute this circuit
     ///
     /// Execute this circuit, performing its operations and measurements. Note
