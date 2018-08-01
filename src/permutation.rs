@@ -68,7 +68,7 @@ impl Permutation
     /// Return a matrix representation of the permutation. For a matrix
     /// representation `P` of permutation `perm`, the result of `P.dot(v)` for a
     /// vector `v` is the same as `perm.apply_vec(&mut v)`.
-    fn matrix<T>(&self) -> ndarray::Array2<T>
+    pub fn matrix<T>(&self) -> ndarray::Array2<T>
     where T: Clone + num_traits::Zero + num_traits::One
     {
         let n = self.size();
