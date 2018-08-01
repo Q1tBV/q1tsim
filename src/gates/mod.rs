@@ -45,9 +45,9 @@ fn get_sort_key(idx: usize, nr_bits: usize, affected_bits: &[usize]) -> usize
 /// gate `G` on bits `affected_bits` in a `nr_bits`-sized system.
 pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> permutation::Permutation
 {
-    let mut idxs = (0..(1 << nr_bits)).collect::<Vec<usize>>();
+    let mut idxs: Vec<usize> = (0..(1 << nr_bits)).collect();
     idxs.sort_by_key(|&i| get_sort_key(i, nr_bits, affected_bits));
-    permutation::Permutation::new(idxs)
+    permutation::Permutation::new(idxs).inverse()
 }
 
 pub trait Gate
