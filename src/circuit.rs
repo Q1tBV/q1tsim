@@ -275,9 +275,7 @@ mod tests
         circuit.execute();
 
         let hist = circuit.histogram_vec();
-        println!("hist = {:?}", hist);
         assert_eq!(hist.iter().sum::<usize>(), nr_shots);
-        println!("min = {}", *hist.iter().min().unwrap());
         assert!(*hist.iter().min().unwrap() >= min_count);
     }
 
