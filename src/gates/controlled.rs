@@ -113,6 +113,7 @@ macro_rules! declare_controlled
 }
 
 declare_controlled!(CX, gates::X, 1001.0);
+declare_controlled!(CY, gates::Y, 1001.0 + 2.0*gates::U1::cost());
 declare_controlled!(CZ, gates::Z, 1001.0 + 2.0*gates::U2::cost());
 declare_controlled!(CH, gates::H, 2.0*1001.0 + 5.0*gates::U1::cost() + 3.0*gates::U2::cost() + gates::U3::cost());
 declare_controlled!(CCX, gates::CX, 6.0*1001.0 + 7.0*gates::U1::cost() + 2.0*gates::U2::cost());
