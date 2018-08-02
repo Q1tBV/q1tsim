@@ -1,8 +1,6 @@
 extern crate ndarray;
 extern crate num_traits;
 
-use cmatrix;
-
 /// Struct for permutations
 ///
 /// Struct Permutation is used to represents permutations. It can be used to
