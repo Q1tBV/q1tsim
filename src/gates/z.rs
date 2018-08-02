@@ -22,6 +22,11 @@ impl Z
 
 impl gates::Gate for Z
 {
+    fn cost(&self) -> f64
+    {
+        gates::U1::cost()
+    }
+
     fn description(&self) -> &str
     {
         "Z"

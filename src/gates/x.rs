@@ -33,6 +33,11 @@ impl X
 
 impl gates::Gate for X
 {
+    fn cost(&self) -> f64
+    {
+        gates::U3::cost()
+    }
+
     fn description(&self) -> &str
     {
         "X"

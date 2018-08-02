@@ -29,6 +29,12 @@ where G: gates::Gate
 impl<G> gates::Gate for C<G>
 where G: gates::Gate
 {
+    fn cost(&self) -> f64
+    {
+        // Wild guess, probably wildly wrong
+        2.0 * self.gate.cost()
+    }
+
     fn description(&self) -> &str
     {
         &self.desc
@@ -72,6 +78,7 @@ macro_rules! declare_controlled
         }
         impl gates::Gate for $name
         {
+            fn cost(&self) -> f64 { self.0.cost() }
             fn description(&self) -> &str { self.0.description() }
             fn nr_affected_bits(&self) -> usize { self.0.nr_affected_bits() }
             fn matrix(&self) -> $crate::cmatrix::CMatrix { self.0.matrix() }
@@ -80,19 +87,41 @@ macro_rules! declare_controlled
                 self.0.apply_slice(state);
             }
         }
-    }
+    };
+    ($name:ident, $gate_type:ty, $cost:expr) => {
+        pub struct $name(gates::C<$gate_type>);
+        impl $name
+        {
+            pub fn new() -> Self
+            {
+                type T = $gate_type;
+                $name(gates::C::new(T::new()))
+            }
+        }
+        impl gates::Gate for $name
+        {
+            fn cost(&self) -> f64 { $cost }
+            fn description(&self) -> &str { self.0.description() }
+            fn nr_affected_bits(&self) -> usize { self.0.nr_affected_bits() }
+            fn matrix(&self) -> $crate::cmatrix::CMatrix { self.0.matrix() }
+            fn apply_slice(&self, state: &mut $crate::cmatrix::CVecSliceMut)
+            {
+                self.0.apply_slice(state);
+            }
+        }
+    };
 }
 
-declare_controlled!(CX, gates::X);
-declare_controlled!(CZ, gates::Z);
-declare_controlled!(CH, gates::H);
-declare_controlled!(CCX, gates::CX);
+declare_controlled!(CX, gates::X, 1001.0);
+declare_controlled!(CZ, gates::Z, 1001.0 + 2.0*gates::U2::cost());
+declare_controlled!(CH, gates::H, 2.0*1001.0 + 5.0*gates::U1::cost() + 3.0*gates::U2::cost() + gates::U3::cost());
+declare_controlled!(CCX, gates::CX, 6.0*1001.0 + 7.0*gates::U1::cost() + 2.0*gates::U2::cost());
 declare_controlled!(CCZ, gates::CZ);
 
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, C, CH, X, H};
+    use gates::{gate_test, Gate, C, CCX, CCZ, CH, CX, CZ, X, H};
     use cmatrix;
 
     #[test]
@@ -193,5 +222,15 @@ mod tests
             [z,  z, -x]
         ];
         gate_test(C::new(C::new(X::new())), &mut state, &result);
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        assert_eq!(CX::new().cost(), 1001.0);
+        assert_eq!(CZ::new().cost(), 1209.0);
+        assert_eq!(CH::new().cost(), 2550.0);
+        assert_eq!(CCX::new().cost(), 6263.0);
+        assert_eq!(CCZ::new().cost(), 2418.0);
     }
 }

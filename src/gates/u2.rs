@@ -27,10 +27,20 @@ impl U2
     {
         U2 { phi: phi, lambda: lambda, desc: format!("U2({:.4}, {:.4})", phi, lambda) }
     }
+
+    pub fn cost() -> f64
+    {
+        104.0
+    }
 }
 
 impl gates::Gate for U2
 {
+    fn cost(&self) -> f64
+    {
+        Self::cost()
+    }
+
     fn description(&self) -> &str
     {
         &self.desc

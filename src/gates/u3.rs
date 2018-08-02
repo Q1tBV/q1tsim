@@ -36,10 +36,20 @@ impl U3
             desc: format!("U3({:.4}, {:.4}, {:.4})", theta, phi, lambda)
         }
     }
+
+    pub fn cost() -> f64
+    {
+        201.0
+    }
 }
 
 impl gates::Gate for U3
 {
+    fn cost(&self) -> f64
+    {
+        Self::cost()
+    }
+
     fn description(&self) -> &str
     {
         &self.desc

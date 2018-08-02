@@ -26,6 +26,11 @@ where G0: gates::Gate, G1: gates::Gate
 impl<G0, G1> gates::Gate for Kron<G0, G1>
 where G0: gates::Gate, G1: gates::Gate
 {
+    fn cost(&self) -> f64
+    {
+        self.g0.cost() + self.g1.cost()
+    }
+
     fn description(&self) -> &str
     {
         &self.desc

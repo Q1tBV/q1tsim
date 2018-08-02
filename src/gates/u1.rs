@@ -20,10 +20,20 @@ impl U1
     {
         U1 { lambda: lambda, desc: format!("U1({:.4})", lambda) }
     }
+
+    pub fn cost() -> f64
+    {
+        7.0
+    }
 }
 
 impl gates::Gate for U1
 {
+    fn cost(&self) -> f64
+    {
+        Self::cost()
+    }
+
     fn description(&self) -> &str
     {
         &self.desc

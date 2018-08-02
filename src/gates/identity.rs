@@ -21,6 +21,11 @@ impl I
 
 impl gates::Gate for I
 {
+    fn cost(&self) -> f64
+    {
+        0.0
+    }
+
     fn description(&self) -> &str
     {
         "I"

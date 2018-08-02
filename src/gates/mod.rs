@@ -52,6 +52,9 @@ pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> permutation::
 
 pub trait Gate
 {
+    /// An estimate of the cost of using this gate
+    fn cost(&self) -> f64;
+
     /// Return a short description of the gate. This may be the name of the
     /// gate (e.g. `"H"`, `"CX"`), or the way the gate was constructed (like
     /// `"I⊗Z"`)

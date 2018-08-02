@@ -22,6 +22,11 @@ impl Y
 
 impl gates::Gate for Y
 {
+    fn cost(&self) -> f64
+    {
+        gates::U3::cost()
+    }
+
     fn description(&self) -> &str
     {
         "Y"

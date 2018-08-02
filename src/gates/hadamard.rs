@@ -35,6 +35,11 @@ impl H
 
 impl gates::Gate for H
 {
+    fn cost(&self) -> f64
+    {
+        gates::U2::cost()
+    }
+
     fn description(&self) -> &str
     {
         "H"

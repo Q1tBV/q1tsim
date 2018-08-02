@@ -68,6 +68,11 @@ impl Custom
 
 impl gates::Gate for Custom
 {
+    fn cost(&self) -> f64
+    {
+        self.ops.iter().map(|op| op.gate.cost()).sum()
+    }
+
     fn description(&self) -> &str
     {
         &self.name
