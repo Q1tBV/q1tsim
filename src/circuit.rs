@@ -101,6 +101,30 @@ impl Circuit
         self.add_gate(gates::Z::new(), &[bit]);
     }
 
+    /// Add a R<sub>X</sub> gate.
+    ///
+    /// Add a `R`<sub>`X`</sub>`(θ)` gate operating on qubit `bit`, to this circuit.
+    pub fn rx(&mut self, theta: f64, bit: usize)
+    {
+        self.add_gate(gates::RX::new(theta), &[bit]);
+    }
+
+    /// Add a R<sub>Y</sub> gate.
+    ///
+    /// Add a `R`<sub>`Y`</sub>`(θ)` gate operating on qubit `bit`, to this circuit.
+    pub fn ry(&mut self, theta: f64, bit: usize)
+    {
+        self.add_gate(gates::RY::new(theta), &[bit]);
+    }
+
+    /// Add a R<sub>Z</sub> gate.
+    ///
+    /// Add a `R`<sub>`Z`</sub>`(λ)` gate operating on qubit `bit`, to this circuit.
+    pub fn rz(&mut self, lambda: f64, bit: usize)
+    {
+        self.add_gate(gates::RZ::new(lambda), &[bit]);
+    }
+
     /// Add a U<sub>1</sub> gate.
     ///
     /// Add a `U`<sub>`1`</sub>`(λ)` gate operating on qubit `bit`, to this circuit.
