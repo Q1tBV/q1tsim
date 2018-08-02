@@ -17,7 +17,7 @@ use gates;
 /// ```
 pub struct U3
 {
-    theta: f64,
+    half_theta: f64,
     phi: f64,
     lambda: f64,
     desc: String
@@ -30,7 +30,7 @@ impl U3
     {
         U3
         {
-            theta: theta,
+            half_theta: 0.5 * theta,
             phi: phi,
             lambda: lambda,
             desc: format!("U3({:.4}, {:.4}, {:.4})", theta, phi, lambda)
@@ -62,7 +62,7 @@ impl gates::Gate for U3
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let (c, s) = (self.theta.cos(), self.theta.sin());
+        let (c, s) = (self.half_theta.cos(), self.half_theta.sin());
         array![[ num_complex::Complex::new(c, 0.0),
                 -num_complex::Complex::from_polar(&s, &self.lambda)],
                [ num_complex::Complex::from_polar(&s, &self.phi),
@@ -91,8 +91,8 @@ mod tests
     {
         let gate = U3::new(0.32, ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
         assert_complex_matrix_eq!(gate.matrix(), array![
-            [Complex::new(0.9492354180824408,                0.0), Complex::new(-0.2419768354941858, -0.2009958510568650)],
-            [Complex::new(0.2224321481461860, 0.2224321481461860), Complex::new(0.08744374907134395,  0.9451991693238490)]
+            [Complex::new(0.9872272833756269,                0.0), Complex::new( -0.1225537622232209, -0.1017981646382380)],
+            [Complex::new(0.1126549842634128, 0.1126549842634128), Complex::new(0.09094356700076842,  0.9830294892130130)]
         ]);
     }
 
@@ -110,7 +110,7 @@ mod tests
             [ 2.0*x,  (o+i)*x],
             [     z, -(o+i)*x]
         ] * (0.5 * o);
-        let gate = U3::new(3.0*::std::f64::consts::FRAC_PI_4,
+        let gate = U3::new(3.0*::std::f64::consts::FRAC_PI_2,
             ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2);
         gate_test(gate, &mut state, &result);
     }
