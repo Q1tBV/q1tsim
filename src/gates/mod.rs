@@ -12,6 +12,7 @@ mod rx;
 mod ry;
 mod rz;
 mod s;
+mod v;
 mod u1;
 mod u2;
 mod u3;
@@ -188,7 +189,7 @@ where G: Gate
     assert_complex_matrix_eq!(&*state, result);
 }
 
-pub use self::controlled::{C, CX, CY, CZ, CH, CCX, CCZ};
+pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCX, CCZ};
 pub use self::custom::Custom;
 pub use self::hadamard::H;
 pub use self::identity::I;
@@ -200,6 +201,7 @@ pub use self::s::{S, Sdg};
 pub use self::u1::U1;
 pub use self::u2::U2;
 pub use self::u3::U3;
+pub use self::v::{V, Vdg};
 pub use self::x::X;
 pub use self::y::Y;
 pub use self::z::Z;
