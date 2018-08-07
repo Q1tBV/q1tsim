@@ -5,14 +5,15 @@ use gates;
 
 /// Rotation around `x` axis.
 ///
-/// The `R`<sub>`X`</sub>`(λ)` gate rotates the qubit around the `x` axis of the
-/// Bloch sphere over an angle `theta`.
-
-/// ┌                                     ┐
-/// │       cos(θ/2)      -isin(θ/2)│
-/// │                                     │
+/// The `R`<sub>`X`</sub>`(θ)` gate rotates the qubit around the `x` axis of the
+/// Bloch sphere over an angle `θ`. The associated matrix is
+/// ```text
+/// ┌                     ┐
+/// │  cos(θ/2) -isin(θ/2)│
+/// │                     │
 /// │-isin(θ/2)   cos(θ/2)│
-/// └                                     ┘
+/// └                     ┘
+/// ```
 pub struct RX
 {
     half_theta: f64,

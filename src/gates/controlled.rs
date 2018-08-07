@@ -5,7 +5,7 @@ use gates;
 
 /// Controlled gates.
 ///
-/// A controlled gate is a gate which acts upon a control but: when
+/// A controlled gate is a gate which acts upon a control bit: when
 /// the control bit is zero, it leaves the target unchanged; when the control
 /// bit is one, the gate is applied.
 pub struct C<G>
@@ -66,7 +66,8 @@ where G: gates::Gate
 #[macro_export]
 macro_rules! declare_controlled_type
 {
-    ($name:ident, $gate_type:ty) => {
+    ($(#[$attr:meta])* $name:ident, $gate_type:ty) => {
+        $(#[$attr])*
         pub struct $name(gates::C<$gate_type>);
     }
 }
@@ -134,56 +135,88 @@ macro_rules! declare_controlled_impl_gate
 #[macro_export]
 macro_rules! declare_controlled
 {
-    ($name:ident, $gate_type:ty) => {
-        declare_controlled_type!($name, $gate_type);
+    ($(#[$attr:meta])* $name:ident, $gate_type:ty) => {
+        declare_controlled_type!($(#[$attr])* $name, $gate_type);
         declare_controlled_impl!($name, $gate_type);
         declare_controlled_impl_gate!($name, $gate_type);
     };
-    ($name:ident, $gate_type:ty, cost=$cost:expr $(, $arg:ident)*) => {
-        declare_controlled_type!($name, $gate_type);
+    ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, $arg:ident)*) => {
+        declare_controlled_type!($(#[$attr])* $name, $gate_type);
         declare_controlled_impl!($name, $gate_type, cost=$cost $(, $arg)*);
         declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost());
     };
 }
 
-declare_controlled!(CH, gates::H,
+declare_controlled!(
+    /// Controlled Hadamard gate.
+    CH, gates::H,
     cost=2.0*CX::cost() + 5.0*gates::U1::cost() + 3.0*gates::U2::cost() + gates::U3::cost());
 
-declare_controlled!(CRX, gates::RX,
+declare_controlled!(
+    /// Controlled `R`<sub>`X`</sub> gate.
+    CRX, gates::RX,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
     theta);
-declare_controlled!(CRY, gates::RY,
+declare_controlled!(
+    /// Controlled `R`<sub>`Y`</sub> gate.
+    CRY, gates::RY,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
     theta);
-declare_controlled!(CRZ, gates::RZ,
+declare_controlled!(
+    /// Controlled `R`<sub>`Z`</sub> gate.
+    CRZ, gates::RZ,
     cost=2.0*CX::cost() + 2.0*gates::U1::cost(),
     lambda);
 
-declare_controlled!(CS, gates::S, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
-declare_controlled!(CSdg, gates::Sdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+declare_controlled!(
+    /// Controlled `S` gate.
+    CS, gates::S, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+declare_controlled!(
+    /// Controlled `S`<sup>`†`</sup> gate.
+    CSdg, gates::Sdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
 
-declare_controlled!(CU1, gates::U1,
+declare_controlled!(
+    /// Controlled `U`<sub>`1`</sub> gate.
+    CU1, gates::U1,
     cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
     lambda);
-declare_controlled!(CU2, gates::U2,
+declare_controlled!(
+    /// Controlled `U`<sub>`2`</sub> gate.
+    CU2, gates::U2,
     cost=2.0*CX::cost() + 2.0*gates::U1::cost() + gates::U2::cost(),
     phi, lambda);
-declare_controlled!(CU3, gates::U3,
+declare_controlled!(
+    /// Controlled `U`<sub>`3`</sub> gate.
+    CU3, gates::U3,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
     theta, phi, lambda);
 
-declare_controlled!(CV, gates::V,
+declare_controlled!(
+    /// Controlled `V` gate.
+    CV, gates::V,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost());
-declare_controlled!(CVdg, gates::Vdg,
+declare_controlled!(
+    /// Controlled `V`<sup>`†`</sup> gate.
+    CVdg, gates::Vdg,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost());
 
-declare_controlled!(CX, gates::X, cost=1001.0);
-declare_controlled!(CY, gates::Y, cost=CX::cost() + 2.0*gates::U1::cost());
-declare_controlled!(CZ, gates::Z, cost=CX::cost() + 2.0*gates::U2::cost());
+declare_controlled!(
+    /// Controlled `X` gate.
+    CX, gates::X, cost=1001.0);
+declare_controlled!(
+    /// Controlled `Y` gate.
+    CY, gates::Y, cost=CX::cost() + 2.0*gates::U1::cost());
+declare_controlled!(
+    /// Controlled `Z` gate.
+    CZ, gates::Z, cost=CX::cost() + 2.0*gates::U2::cost());
 
-declare_controlled!(CCX, gates::CX,
+declare_controlled!(
+    /// Doubly controlled `X` gate.
+    CCX, gates::CX,
     cost=6.0*CX::cost() + 7.0*gates::U1::cost() + 2.0*gates::U2::cost());
-declare_controlled!(CCZ, gates::CZ);
+declare_controlled!(
+    /// Doubly controlled `Z` gate.
+    CCZ, gates::CZ);
 
 #[cfg(test)]
 mod tests

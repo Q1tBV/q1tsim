@@ -99,7 +99,8 @@ impl gates::Gate for Custom
 mod tests
 {
     use cmatrix;
-    use gates::{Gate, Custom, CCX, CX, H, X};
+    use super::Custom;
+    use gates::{Gate, CCX, CX, H, X};
 
     #[test]
     fn test_description()
