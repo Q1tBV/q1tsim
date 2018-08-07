@@ -146,7 +146,7 @@ impl Composite
     /// Parse the bit numbers on which the subgate operates from description
     /// string `desc`. Return the bits and the unparsed remainder of the
     /// description string on success, or an error string on failure.
-    fn parse_gate_bits(desc: &str) -> Result<(Vec<usize>, &str), String>
+    fn parse_gate_bits<'a>(desc: &'a str, name: &str) -> Result<(Vec<usize>, &'a str), String>
     {
         let re = regex::Regex::new(r"^\s*(\d+)").unwrap();
         let mut rest = desc;
@@ -169,7 +169,7 @@ impl Composite
 
         if bits.is_empty()
         {
-            Err("Unable to find the bits the gate operates on".to_string())
+            Err(format!("Unable to find the bits gate {} operates on", name))
         }
         else
         {
@@ -185,7 +185,7 @@ impl Composite
     {
         let (name, rest) = Self::parse_gate_name(desc)?;
         let (args, rest) = Self::parse_gate_args(rest)?;
-        let (bits, rest) = Self::parse_gate_bits(rest)?;
+        let (bits, rest) = Self::parse_gate_bits(rest, name)?;
 
         let rest = rest.trim();
         if !rest.is_empty()
