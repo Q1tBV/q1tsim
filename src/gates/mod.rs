@@ -4,7 +4,7 @@ use cmatrix;
 use permutation;
 
 #[macro_use] mod controlled;
-mod custom;
+mod composite;
 mod hadamard;
 mod identity;
 mod kron;
@@ -190,7 +190,7 @@ where G: Gate
 }
 
 pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCX, CCZ};
-pub use self::custom::Custom;
+pub use self::composite::Composite;
 pub use self::hadamard::H;
 pub use self::identity::I;
 pub use self::kron::Kron;

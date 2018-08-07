@@ -1,8 +1,8 @@
 use cmatrix;
 use gates;
 
-/// Operation in a Custom gate.
-struct CustomOp
+/// Operation in a composite gate.
+struct SubGate
 {
     /// The gate
     gate: Box<gates::Gate>,
@@ -10,13 +10,13 @@ struct CustomOp
     bits: Vec<usize>
 }
 
-impl CustomOp
+impl SubGate
 {
-    /// Create a new Custom gate operation
+    /// Create a new composite gate operation
     fn new<G>(gate: G, bits: &[usize]) -> Self
     where G: 'static + gates::Gate
     {
-        CustomOp
+        SubGate
         {
             gate: Box::new(gate),
             bits: bits.to_owned()
@@ -24,30 +24,30 @@ impl CustomOp
     }
 }
 
-/// Custom gate.
+/// Compsite gate.
 ///
-/// Struct Custom provides for user-defined gates that are made out of a
+/// Struct Composite provides for user-defined gates that are made out of a
 /// sequence of more primitive gates.
-pub struct Custom
+pub struct Composite
 {
     // The name of the gate
     name: String,
     // The number of gates on which this gate operates
     nr_bits: usize,
     // The operations making up the gate
-    ops: Vec<CustomOp>
+    ops: Vec<SubGate>
 }
 
-impl Custom
+impl Composite
 {
-    /// Create a new custom gate.
+    /// Create a new composite gate.
     ///
-    /// Initialize a new custom gate with name `name` for operating on `nr_bits`
+    /// Initialize a new composite gate with name `name` for operating on `nr_bits`
     /// qubits at a time. The gates making up the operation should be added
-    /// using the `add_gate()`, `add_gate()` and `add_gate()` functions.
+    /// using the `add_gate()` function.
     pub fn new(name: &str, nr_bits: usize) -> Self
     {
-        Custom
+        Composite
         {
             name: name.to_owned(),
             nr_bits: nr_bits,
@@ -57,16 +57,16 @@ impl Custom
 
     /// Add a gate.
     ///
-    /// Append a `n`-ary gate `gate`, operating on the `n` qubits in `bits`, to
-    /// this gate.
+    /// Append a `n`-ary subgate `gate`, operating on the `n` qubits in `bits`,
+    /// to this composite gate.
     pub fn add_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
     where G: gates::Gate
     {
-        self.ops.push(CustomOp::new(gate, bits));
+        self.ops.push(SubGate::new(gate, bits));
     }
 }
 
-impl gates::Gate for Custom
+impl gates::Gate for Composite
 {
     fn cost(&self) -> f64
     {
@@ -99,13 +99,13 @@ impl gates::Gate for Custom
 mod tests
 {
     use cmatrix;
-    use super::Custom;
+    use super::Composite;
     use gates::{Gate, CCX, CX, H, X};
 
     #[test]
     fn test_description()
     {
-        let gate = Custom::new("G", 3);
+        let gate = Composite::new("G", 3);
         assert_eq!(gate.description(), "G");
     }
 
@@ -115,7 +115,7 @@ mod tests
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
 
-        let mut gate = Custom::new("CZ", 2);
+        let mut gate = Composite::new("CZ", 2);
         gate.add_gate(H::new(), &[1]);
         gate.add_gate(CX::new(), &[0, 1]);
         gate.add_gate(H::new(), &[1]);
@@ -126,7 +126,7 @@ mod tests
             [z, z, z, -o]
         ]);
 
-        let mut gate = Custom::new("Inc", 2);
+        let mut gate = Composite::new("Inc", 2);
         gate.add_gate(H::new(), &[0]);
         gate.add_gate(H::new(), &[1]);
         gate.add_gate(CX::new(), &[0, 1]);
@@ -140,7 +140,7 @@ mod tests
             [z, z, o, z]
         ]);
 
-        let mut gate = Custom::new("Inc", 3);
+        let mut gate = Composite::new("Inc", 3);
         gate.add_gate(H::new(), &[0]);
         gate.add_gate(H::new(), &[2]);
         gate.add_gate(CCX::new(), &[0, 1, 2]);
