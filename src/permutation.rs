@@ -24,7 +24,7 @@ impl Permutation
     {
         let n = idxs.len();
         assert!(n > 0, "Empty permutation");
-        assert!(*idxs.iter().max().unwrap() < n, "Invalid element in permuation");
+        assert!(*idxs.iter().max().unwrap() < n, "Invalid element in permutation");
         let mut seen = vec![false; n];
         for &pi in idxs.iter()
         {
