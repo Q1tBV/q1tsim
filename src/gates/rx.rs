@@ -52,6 +52,46 @@ impl gates::Gate for RX
         let si = num_complex::Complex::new(0.0, self.half_theta.sin());
         array![[c, -si], [-si, c]]
     }
+
+    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    {
+        let c  = num_complex::Complex::new(self.half_theta.cos(), 0.0);
+        let si = num_complex::Complex::new(0.0, self.half_theta.sin());
+
+        let mut s = state.to_owned();
+        s *= si;
+        *state *= c;
+
+        let n = state.len() / 2;
+        {
+            let mut slice = state.slice_mut(s![..n]);
+            slice -= &s.slice(s![n..]);
+        }
+        {
+            let mut slice = state.slice_mut(s![n..]);
+            slice -= &s.slice(s![..n]);
+        }
+    }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        let cos_t   = num_complex::Complex::new(self.half_theta.cos(), 0.0);
+        let sin_t_i = num_complex::Complex::new(0.0, self.half_theta.sin());
+
+        let mut s = state.to_owned();
+        s *= sin_t_i;
+        *state *= cos_t;
+
+        let n = state.rows() / 2;
+        {
+            let mut slice = state.slice_mut(s![..n, ..]);
+            slice -= &s.slice(s![n.., ..]);
+        }
+        {
+            let mut slice = state.slice_mut(s![n.., ..]);
+            slice -= &s.slice(s![..n, ..]);
+        }
+    }
 }
 
 #[cfg(test)]

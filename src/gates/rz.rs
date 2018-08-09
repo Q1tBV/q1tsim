@@ -61,6 +61,21 @@ impl gates::Gate for RZ
             slice *= num_complex::Complex::from_polar(&1.0, &( 0.5*self.lambda));
         }
     }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        assert!(state.len() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        {
+            let mut slice = state.slice_mut(s![..n, ..]);
+            slice *= num_complex::Complex::from_polar(&1.0, &(-0.5*self.lambda));
+        }
+        {
+            let mut slice = state.slice_mut(s![n.., ..]);
+            slice *= num_complex::Complex::from_polar(&1.0, &( 0.5*self.lambda));
+        }
+    }
 }
 
 #[cfg(test)]

@@ -144,12 +144,12 @@ pub trait Gate
     /// up until |11...1〉.
     fn apply(&self, state: &mut cmatrix::CVector)
     {
-        self.apply_slice(&mut state.slice_mut(s![..]));
+        self.apply_slice(&mut state.view_mut());
     }
 
     fn apply_mat(&self, state: &mut cmatrix::CMatrix)
     {
-        self.apply_mat_slice(&mut state.slice_mut(s![.., ..]));
+        self.apply_mat_slice(&mut state.view_mut());
     }
 
     /// Apply a gate.
