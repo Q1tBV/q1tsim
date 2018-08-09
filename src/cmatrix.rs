@@ -9,7 +9,7 @@ pub const COMPLEX_I:      num_complex::Complex64 = num_complex::Complex { re: 0.
 pub type CVector = ndarray::Array1<num_complex::Complex64>;
 pub type CMatrix = ndarray::Array2<num_complex::Complex64>;
 pub type CVecSliceMut<'a> = ndarray::ArrayViewMut1<'a, num_complex::Complex64>;
-pub type CSliceMut<'a> = ndarray::ArrayViewMut2<'a, num_complex::Complex64>;
+pub type CMatSliceMut<'a> = ndarray::ArrayViewMut2<'a, num_complex::Complex64>;
 
 /// Compute the Kronecker product `v0` ⊗ `v1`.
 pub fn kron_vec(v0: &CVector, v1: &CVector) -> CVector

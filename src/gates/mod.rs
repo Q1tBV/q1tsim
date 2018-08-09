@@ -1,3 +1,4 @@
+extern crate ndarray;
 extern crate num_complex;
 
 use cmatrix;
@@ -53,6 +54,38 @@ pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> permutation::
     let mut idxs: Vec<usize> = (0..(1 << nr_bits)).collect();
     idxs.sort_by_key(|&i| get_sort_key(i, nr_bits, affected_bits));
     permutation::Permutation::new(idxs).inverse()
+}
+
+/// Apply a gate
+///
+/// Apply gate `gate` operating on the bits in `bits` to a matrix `matrix`. The
+/// number of rows in `matrix` must be 2^`nr_bits`.
+fn apply_gate<G>(matrix: &mut cmatrix::CMatrix, gate: &G, bits: &[usize], nr_bits: usize)
+where G: Gate + ?Sized
+{
+    let gate_bits = gate.nr_affected_bits();
+    assert!(gate_bits == bits.len(),
+        "The number of bits affected by the gate does not match the provided number of bits.");
+
+    if gate_bits == 1
+    {
+        let block_size = 1 << (nr_bits - bits[0]);
+        let nr_blocks = 1 << bits[0];
+        for i in 0..nr_blocks
+        {
+            gate.apply_mat_slice(&mut matrix.slice_mut(s![i*block_size..(i+1)*block_size, ..]));
+        }
+    }
+    else
+    {
+        let perm = bit_permutation(nr_bits, bits);
+        let inv_perm = perm.inverse();
+
+        // FIXME: see if we can find a cleaner way to do this
+        *matrix = matrix.select(ndarray::Axis(0), inv_perm.indices());
+        gate.apply_mat(matrix);
+        *matrix = matrix.select(ndarray::Axis(0), perm.indices());
+    }
 }
 
 pub trait Gate
@@ -114,6 +147,11 @@ pub trait Gate
         self.apply_slice(&mut state.slice_mut(s![..]));
     }
 
+    fn apply_mat(&self, state: &mut cmatrix::CMatrix)
+    {
+        self.apply_mat_slice(&mut state.slice_mut(s![.., ..]));
+    }
+
     /// Apply a gate.
     ///
     /// Apply a gate to quantum state `state`. The number of rows `r` in `state`
@@ -169,6 +207,61 @@ pub trait Gate
                 for j in 0..(1 << nr_bits)
                 {
                     let x = &state.slice(s![j*n..(j+1)*n]).to_owned() * mat[[i,j]];
+                    slice += &x;
+                }
+            }
+
+            state.assign(&res);
+        }
+    }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        let nr_bits = self.nr_affected_bits();
+        assert!(state.len() % (1 << nr_bits) == 0,
+            "The number of rows in the state is {}, which is not valid for a {}-bit gate.",
+            state.len(), nr_bits);
+
+        let mat = self.matrix();
+        let n = state.rows() >> nr_bits;
+        if nr_bits == 1
+        {
+            let s0 = state.slice(s![..n, ..]).to_owned();
+            let s1 = state.slice(s![n.., ..]).to_owned();
+
+            state.slice_mut(s![..n, ..]).assign(&(&s0*mat[[0, 0]] + &s1*mat[[0, 1]]));
+            state.slice_mut(s![n.., ..]).assign(&(&s0*mat[[1, 0]] + &s1*mat[[1, 1]]));
+        }
+        else if nr_bits == 2
+        {
+            let s0 = state.slice(s![     ..n, ..]).to_owned();
+            let s1 = state.slice(s![  n..2*n, ..]).to_owned();
+            let s2 = state.slice(s![2*n..3*n, ..]).to_owned();
+            let s3 = state.slice(s![3*n..   , ..]).to_owned();
+
+            state.slice_mut(s![..n, ..]).assign(
+                &(&s0*mat[[0, 0]] + &s1*mat[[0, 1]] + &s2*mat[[0, 2]] + &s3*mat[[0, 3]])
+            );
+            state.slice_mut(s![n..2*n, ..]).assign(
+                &(&s0*mat[[1, 0]] + &s1*mat[[1, 1]] + &s2*mat[[1, 2]] + &s3*mat[[1, 3]])
+            );
+            state.slice_mut(s![2*n..3*n, ..]).assign(
+                &(&s0*mat[[2, 0]] + &s1*mat[[2, 1]] + &s2*mat[[2, 2]] + &s3*mat[[2, 3]])
+            );
+            state.slice_mut(s![3*n.., ..]).assign(
+                &(&s0*mat[[3, 0]] + &s1*mat[[3, 1]] + &s2*mat[[3, 2]] + &s3*mat[[3, 3]])
+            );
+        }
+        else
+        {
+            let mut res = cmatrix::CMatrix::zeros((state.rows(), state.cols()));
+
+            for i in 0..(1 << nr_bits)
+            {
+                let mut slice = res.slice_mut(s![i*n..(i+1)*n, ..]);
+                for j in 0..(1 << nr_bits)
+                {
+                    let x = &state.slice(s![j*n..(j+1)*n, ..]).to_owned() * mat[[i,j]];
                     slice += &x;
                 }
             }

@@ -1,6 +1,8 @@
+extern crate ndarray;
+extern crate regex;
+
 use cmatrix;
 use gates;
-extern crate regex;
 
 use super::*;
 
@@ -399,7 +401,7 @@ impl gates::Gate for Composite
         let mut res = cmatrix::CMatrix::eye(1 << self.nr_bits);
         for op in self.ops.iter()
         {
-            res = op.gate.expanded_matrix(&op.bits, self.nr_bits).dot(&res);
+            apply_gate(&mut res, &*op.gate, &op.bits, self.nr_bits);
         }
 
         res
