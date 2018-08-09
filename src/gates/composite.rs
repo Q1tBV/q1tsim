@@ -249,113 +249,113 @@ impl Composite
         let mut composite = Self::new(name, max_bit+1);
         for gate in gates
         {
-            match gate.name.to_uppercase().as_str()
+            match gate.name.to_lowercase().as_str()
             {
-                "CCX" => {
+                "ccx" => {
                     Self::assert_nr_args_bits(0, 3, &gate)?;
                     composite.add_gate(CCX::new(), &gate.bits);
                 },
-                "CCZ" => {
+                "ccz" => {
                     Self::assert_nr_args_bits(0, 3, &gate)?;
                     composite.add_gate(CCZ::new(), &gate.bits);
                 },
-                "CH" => {
+                "ch" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CH::new(), &gate.bits);
                 },
-                "CRX" => {
+                "crx" => {
                     Self::assert_nr_args_bits(1, 2, &gate)?;
                     composite.add_gate(CRX::new(gate.args[0]), &gate.bits);
                 },
-                "CRY" => {
+                "cry" => {
                     Self::assert_nr_args_bits(1, 2, &gate)?;
                     composite.add_gate(CRY::new(gate.args[0]), &gate.bits);
                 },
-                "CRZ" => {
+                "crz" => {
                     Self::assert_nr_args_bits(1, 2, &gate)?;
                     composite.add_gate(CRZ::new(gate.args[0]), &gate.bits);
                 },
-                "CS" => {
+                "cs" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CS::new(), &gate.bits);
                 },
-                "CSdg" => {
+                "csdg" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CSdg::new(), &gate.bits);
                 },
-                "CV" => {
+                "cv" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CV::new(), &gate.bits);
                 },
-                "CVdg" => {
+                "cvdg" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CVdg::new(), &gate.bits);
                 },
-                "CX" => {
+                "cx" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CX::new(), &gate.bits);
                 },
-                "CY" => {
+                "cy" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CY::new(), &gate.bits);
                 },
-                "CZ" => {
+                "cz" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CZ::new(), &gate.bits);
                 },
-                "H" => {
+                "h" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(H::new(), &gate.bits);
                 },
-                "RX" => {
+                "rx" => {
                     Self::assert_nr_args_bits(1, 1, &gate)?;
                     composite.add_gate(RX::new(gate.args[0]), &gate.bits);
                 },
-                "RY" => {
+                "ry" => {
                     Self::assert_nr_args_bits(1, 1, &gate)?;
                     composite.add_gate(RY::new(gate.args[0]), &gate.bits);
                 },
-                "RZ" => {
+                "rz" => {
                     Self::assert_nr_args_bits(1, 1, &gate)?;
                     composite.add_gate(RZ::new(gate.args[0]), &gate.bits);
                 },
-                "S" => {
+                "s" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(S::new(), &gate.bits);
                 },
-                "Sdg" => {
+                "sdg" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Sdg::new(), &gate.bits);
                 },
-                "U1" => {
+                "u1" => {
                     Self::assert_nr_args_bits(1, 1, &gate)?;
                     composite.add_gate(U1::new(gate.args[0]), &gate.bits);
                 },
-                "U2" => {
+                "u2" => {
                     Self::assert_nr_args_bits(2, 1, &gate)?;
                     composite.add_gate(U2::new(gate.args[0], gate.args[1]), &gate.bits);
                 },
-                "U3" => {
+                "u3" => {
                     Self::assert_nr_args_bits(3, 1, &gate)?;
                     composite.add_gate(U3::new(gate.args[0], gate.args[1], gate.args[2]), &gate.bits);
                 },
-                "V" => {
+                "v" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(V::new(), &gate.bits);
                 },
-                "Vdg" => {
+                "vdg" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Vdg::new(), &gate.bits);
                 },
-                "X" => {
+                "x" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(X::new(), &gate.bits);
                 },
-                "Y" => {
+                "y" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Y::new(), &gate.bits);
                 },
-                "Z" => {
+                "z" => {
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Z::new(), &gate.bits);
                 },
