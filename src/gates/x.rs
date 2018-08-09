@@ -29,6 +29,21 @@ impl X
             state.swap(i, i+n);
         }
     }
+
+    pub fn transform_mat(state: &mut cmatrix::CMatSliceMut)
+    {
+        assert!(state.len() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        let m = state.cols();
+        for i in 0..n
+        {
+            for j in 0..m
+            {
+                state.swap((i, j), (i+n, j));
+            }
+        }
+    }
 }
 
 impl gates::Gate for X
@@ -58,6 +73,11 @@ impl gates::Gate for X
     fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
         Self::transform(state);
+    }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        Self::transform_mat(state);
     }
 }
 

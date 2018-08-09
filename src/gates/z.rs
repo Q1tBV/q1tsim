@@ -49,7 +49,15 @@ impl gates::Gate for Z
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
         let n = state.len() / 2;
-        state.slice_mut(s![n..]).iter_mut().for_each(|c| *c = -*c);
+        state.slice_mut(s![n..]).mapv_inplace(|c| -c);
+    }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        state.slice_mut(s![n.., ..]).mapv_inplace(|c| -c);
     }
 }
 

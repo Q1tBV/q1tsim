@@ -57,6 +57,20 @@ impl gates::Gate for Y
             slice *=  cmatrix::COMPLEX_I;
         }
     }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        gates::X::transform_mat(state);
+        let n = state.rows() / 2;
+        {
+            let mut slice = state.slice_mut(s![..n, ..]);
+            slice *= -cmatrix::COMPLEX_I;
+        }
+        {
+            let mut slice = state.slice_mut(s![n.., ..]);
+            slice *=  cmatrix::COMPLEX_I;
+        }
+    }
 }
 
 #[cfg(test)]

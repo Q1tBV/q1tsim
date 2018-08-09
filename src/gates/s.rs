@@ -49,9 +49,18 @@ impl gates::Gate for S
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
-        let i = cmatrix::COMPLEX_I;
         let n = state.len() / 2;
-        state.slice_mut(s![n..]).iter_mut().for_each(|c| *c *= i);
+        let mut slice = state.slice_mut(s![n..]);
+        slice *= cmatrix::COMPLEX_I;
+    }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        let mut slice = state.slice_mut(s![n.., ..]);
+        slice *= cmatrix::COMPLEX_I;
     }
 }
 
@@ -101,9 +110,18 @@ impl gates::Gate for Sdg
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
-        let i = cmatrix::COMPLEX_I;
         let n = state.len() / 2;
-        state.slice_mut(s![n..]).iter_mut().for_each(|c| *c *= -i);
+        let mut slice = state.slice_mut(s![n..]);
+        slice *= -cmatrix::COMPLEX_I;
+    }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        let mut slice = state.slice_mut(s![n.., ..]);
+        slice *= -cmatrix::COMPLEX_I;
     }
 }
 

@@ -61,6 +61,12 @@ where G: gates::Gate
         let n = state.len() / 2;
         self.gate.apply_slice(&mut state.slice_mut(s![n..]));
     }
+
+    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    {
+        let n = state.len() / 2;
+        self.gate.apply_mat_slice(&mut state.slice_mut(s![n.., ..]));
+    }
 }
 
 #[macro_export]
