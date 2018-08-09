@@ -80,8 +80,7 @@ macro_rules! declare_controlled_impl
         {
             pub fn new($($arg: f64, )*) -> Self
             {
-                type T = $gate_type;
-                $name(gates::C::new(T::new($($arg, )*)))
+                $name(gates::C::new(<$gate_type>::new($($arg, )*)))
             }
         }
     };
@@ -90,8 +89,7 @@ macro_rules! declare_controlled_impl
         {
             pub fn new($($arg: f64, )*) -> Self
             {
-                type T = $gate_type;
-                $name(gates::C::new(T::new($($arg, )*)))
+                $name(gates::C::new(<$gate_type>::new($($arg, )*)))
             }
             pub fn cost() -> f64
             {
