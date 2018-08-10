@@ -14,6 +14,7 @@ mod ry;
 mod rz;
 mod s;
 mod swap;
+mod t;
 mod v;
 mod u1;
 mod u2;
@@ -283,7 +284,7 @@ where G: Gate
     assert_complex_matrix_eq!(&*state, result);
 }
 
-pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCX, CCZ};
+pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCX, CCZ};
 pub use self::composite::Composite;
 pub use self::hadamard::H;
 pub use self::identity::I;
@@ -292,6 +293,7 @@ pub use self::rx::RX;
 pub use self::ry::RY;
 pub use self::rz::RZ;
 pub use self::s::{S, Sdg};
+pub use self::t::{T, Tdg};
 pub use self::swap::Swap;
 pub use self::u1::U1;
 pub use self::u2::U2;

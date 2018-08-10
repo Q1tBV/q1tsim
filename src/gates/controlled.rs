@@ -180,6 +180,13 @@ declare_controlled!(
     CSdg, gates::Sdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
 
 declare_controlled!(
+    /// Controlled `T` gate.
+    CT, gates::T, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+declare_controlled!(
+    /// Controlled `T`<sup>`†`</sup> gate.
+    CTdg, gates::Tdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+
+declare_controlled!(
     /// Controlled `U`<sub>`1`</sub> gate.
     CU1, gates::U1,
     cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
