@@ -329,6 +329,10 @@ impl Composite
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Sdg::new(), &gate.bits);
                 },
+                "swap" => {
+                    Self::assert_nr_args_bits(0, 2, &gate)?;
+                    composite.add_gate(Swap::new(), &gate.bits);
+                },
                 "u1" => {
                     Self::assert_nr_args_bits(1, 1, &gate)?;
                     composite.add_gate(U1::new(gate.args[0]), &gate.bits);
