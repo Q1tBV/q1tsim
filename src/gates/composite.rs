@@ -285,6 +285,14 @@ impl Composite
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CSdg::new(), &gate.bits);
                 },
+                "ct" => {
+                    Self::assert_nr_args_bits(0, 2, &gate)?;
+                    composite.add_gate(CT::new(), &gate.bits);
+                },
+                "ctdg" => {
+                    Self::assert_nr_args_bits(0, 2, &gate)?;
+                    composite.add_gate(CTdg::new(), &gate.bits);
+                },
                 "cv" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CV::new(), &gate.bits);
