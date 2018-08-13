@@ -31,13 +31,19 @@ impl H
         state.slice_mut(s![..n]).assign(&(&s0 + &s1));
         state.slice_mut(s![n..]).assign(&(s0 - s1));
     }
+
+    pub fn cost() -> f64
+    {
+        gates::U2::cost()
+    }
+
 }
 
 impl gates::Gate for H
 {
     fn cost(&self) -> f64
     {
-        gates::U2::cost()
+        Self::cost()
     }
 
     fn description(&self) -> &str

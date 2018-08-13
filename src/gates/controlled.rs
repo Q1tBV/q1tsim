@@ -227,7 +227,8 @@ declare_controlled!(
     cost=6.0*CX::cost() + 7.0*gates::U1::cost() + 2.0*gates::U2::cost());
 declare_controlled!(
     /// Doubly controlled `Z` gate.
-    CCZ, gates::CZ);
+    CCZ, gates::CZ,
+    cost=CCX::cost() + 2.0*gates::H::cost());
 
 #[cfg(test)]
 mod tests
@@ -347,6 +348,6 @@ mod tests
         assert_eq!(CRY::cost(), 2411.0);
         assert_eq!(CRZ::cost(), 2016.0);
         assert_eq!(CCX::new().cost(), 6263.0);
-        assert_eq!(CCZ::new().cost(), 2418.0);
+        assert_eq!(CCZ::new().cost(), 6471.0);
     }
 }
