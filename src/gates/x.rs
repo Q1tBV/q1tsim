@@ -79,6 +79,11 @@ impl gates::Gate for X
     {
         Self::transform_mat(state);
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("x {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -112,5 +117,13 @@ mod tests
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[z, o, x, -x],[o, z, x, x]];
         gate_test(X::new(), &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = X::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "x qb");
     }
 }

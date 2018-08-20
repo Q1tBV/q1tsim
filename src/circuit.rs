@@ -64,7 +64,7 @@ impl Circuit
     /// Add a measurement.
     ///
     /// Add measurement of qubit `qbit` into classical bit `cbit` to this circuit.
-    pub fn add_measurement(&mut self, qbit: usize, cbit: usize)
+    pub fn measure(&mut self, qbit: usize, cbit: usize)
     {
         self.ops.push(CircuitOp::Measure(qbit, cbit));
     }
@@ -237,6 +237,43 @@ impl Circuit
         }
         res
     }
+
+    pub fn open_qasm(&self) -> String
+    {
+        let mut res = String::new();
+
+        let mut bit_names = vec![];
+        let nr_qbits = self.q_state.nr_bits();
+        if nr_qbits > 0
+        {
+            res += &format!("qreg q[{}];\n", nr_qbits);
+            for i in 0..nr_qbits
+            {
+                bit_names.push(format!("q[{}]", i));
+            }
+        }
+        let nr_cbits = self.c_state.rows();
+        if nr_cbits > 0
+        {
+            res += &format!("creg c[{}];\n", nr_cbits);
+        }
+
+        for op in self.ops.iter()
+        {
+            match *op
+            {
+                CircuitOp::Gate(ref gate, ref bits) => {
+                    res += &format!("{};\n", gate.open_qasm(&bit_names, bits));
+                },
+                CircuitOp::Measure(qbit, cbit)      => {
+                    res += &format!("measure q[{}] -> c[{}];\n", qbit, cbit);
+                }
+            }
+        }
+
+
+        res
+    }
 }
 
 #[cfg(test)]
@@ -252,8 +289,8 @@ mod tests
         circuit.add_gate(gates::X::new(), &[0]);
         circuit.add_gate(gates::X::new(), &[1]);
         circuit.add_gate(gates::CX::new(), &[0, 1]);
-        circuit.add_measurement(0, 0);
-        circuit.add_measurement(1, 1);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
         circuit.execute();
         assert_eq!(circuit.cstate(), &array![[1, 1, 1, 1, 1], [0, 0, 0, 0, 0]]);
     }
@@ -269,8 +306,8 @@ mod tests
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.add_gate(gates::H::new(), &[0]);
         circuit.add_gate(gates::H::new(), &[1]);
-        circuit.add_measurement(0, 0);
-        circuit.add_measurement(1, 1);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
         circuit.execute();
 
         let hist = circuit.histogram();
@@ -294,8 +331,8 @@ mod tests
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.add_gate(gates::H::new(), &[0]);
         circuit.add_gate(gates::H::new(), &[1]);
-        circuit.add_measurement(0, 0);
-        circuit.add_measurement(1, 1);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
         circuit.execute();
 
         let hist = circuit.histogram_vec();
@@ -314,8 +351,8 @@ mod tests
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.add_gate(gates::H::new(), &[0]);
         circuit.add_gate(gates::H::new(), &[1]);
-        circuit.add_measurement(0, 0);
-        circuit.add_measurement(1, 1);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
         circuit.execute();
 
         let hist = circuit.histogram_string();

@@ -17,7 +17,7 @@ use gates;
 /// ```
 pub struct U3
 {
-    half_theta: f64,
+    theta: f64,
     phi: f64,
     lambda: f64,
     desc: String
@@ -30,7 +30,7 @@ impl U3
     {
         U3
         {
-            half_theta: 0.5 * theta,
+            theta: theta,
             phi: phi,
             lambda: lambda,
             desc: format!("U3({:.4}, {:.4}, {:.4})", theta, phi, lambda)
@@ -62,11 +62,16 @@ impl gates::Gate for U3
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let (c, s) = (self.half_theta.cos(), self.half_theta.sin());
+        let (c, s) = ((0.5 * self.theta).cos(), (0.5 * self.theta).sin());
         array![[ num_complex::Complex::new(c, 0.0),
                 -num_complex::Complex::from_polar(&s, &self.lambda)],
                [ num_complex::Complex::from_polar(&s, &self.phi),
                  num_complex::Complex::from_polar(&c, &(self.phi+self.lambda))]]
+    }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("u3({}, {}, {}) {}", self.theta, self.phi, self.lambda, bit_names[bits[0]])
     }
 }
 
@@ -113,5 +118,13 @@ mod tests
         let gate = U3::new(3.0*::std::f64::consts::FRAC_PI_2,
             ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2);
         gate_test(gate, &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = U3::new(1.0, 2.25, 3.5).open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "u3(1, 2.25, 3.5) qb");
     }
 }

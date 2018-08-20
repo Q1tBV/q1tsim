@@ -66,6 +66,11 @@ impl gates::Gate for H
     {
         Self::transform(state);
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("h {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -98,5 +103,13 @@ mod tests
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[x, x, o, z], [x, -x, z, o]];
         gate_test(H::new(), &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = H::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "h qb");
     }
 }

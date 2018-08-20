@@ -59,6 +59,11 @@ impl gates::Gate for U2
                [ num_complex::Complex::from_polar(&x, &self.phi),
                  num_complex::Complex::from_polar(&x, &(self.phi+self.lambda))]]
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("u2({}, {}) {}", self.phi, self.lambda, bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -103,5 +108,13 @@ mod tests
         ] * (0.5 * o);
         let gate = U2::new(::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2);
         gate_test(gate, &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = U2::new(1.0, 2.25).open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "u2(1, 2.25) qb");
     }
 }

@@ -63,6 +63,11 @@ impl gates::Gate for T
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("t {}", bit_names[bits[0]])
+    }
 }
 
 /// Conjugate of `T` gate
@@ -124,6 +129,11 @@ impl gates::Gate for Tdg
         let n = state.rows() / 2;
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= num_complex::Complex::from_polar(&1.0, &-::std::f64::consts::FRAC_PI_4);
+    }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("tdg {}", bit_names[bits[0]])
     }
 }
 
@@ -197,5 +207,15 @@ mod tests
             [z, z, td*x,  td*h,  z],
             [z, z,    z, -td*h, td]
         ]);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = T::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "t qb");
+        let qasm = Tdg::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "tdg qb");
     }
 }

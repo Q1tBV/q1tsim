@@ -60,6 +60,11 @@ impl gates::Gate for U1
         let mut slice = state.slice_mut(s![n..]);
         slice *= num_complex::Complex::from_polar(&1.0, &self.lambda);
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("u1({}) {}", self.lambda, bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -96,5 +101,13 @@ mod tests
         let result = array![[o, z, x, x], [z, x*(o+i), 0.5*(o+i), -0.5*(o+i)]];
         let gate = U1::new(::std::f64::consts::FRAC_PI_4);
         gate_test(gate, &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = U1::new(::std::f64::consts::PI).open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "u1(3.141592653589793) qb");
     }
 }

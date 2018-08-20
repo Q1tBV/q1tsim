@@ -67,6 +67,11 @@ where G: gates::Gate
         let n = state.len() / 2;
         self.gate.apply_mat_slice(&mut state.slice_mut(s![n.., ..]));
     }
+
+    fn open_qasm(&self, _bit_names: &[String], _bits: &[usize]) -> String
+    {
+        panic!("Unable to generate OpenQasm code for a general controlled operation");
+    }
 }
 
 #[macro_export]
@@ -106,25 +111,55 @@ macro_rules! declare_controlled_impl
 }
 
 #[macro_export]
-macro_rules! declare_controlled_impl_gate
+macro_rules! declare_controlled_cost
 {
-    ($name:ident, $gate_type:ty) => {
-        impl gates::Gate for $name
+    ($cost:expr) => {
+        fn cost(&self) -> f64 { $cost }
+    };
+    () => {
+        fn cost(&self) -> f64 { self.0.cost() }
+    };
+}
+
+#[macro_export]
+macro_rules! declare_controlled_open_qasm
+{
+    ($name:ident) => {
+        fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
         {
-            fn cost(&self) -> f64 { self.0.cost() }
-            fn description(&self) -> &str { self.0.description() }
-            fn nr_affected_bits(&self) -> usize { self.0.nr_affected_bits() }
-            fn matrix(&self) -> $crate::cmatrix::CMatrix { self.0.matrix() }
-            fn apply_slice(&self, state: &mut $crate::cmatrix::CVecSliceMut)
+            let mut res = stringify!($name).to_lowercase();
+            if bits.len() > 0
             {
-                self.0.apply_slice(state);
+                res += &format!(" {}", bit_names[bits[0]]);
+                for &bit in bits[1..].iter()
+                {
+                    res += &format!(", {}", &bit_names[bit]);
+                }
             }
+            res
         }
     };
-    ($name:ident, $gate_type:ty, cost=$cost:expr) => {
+    ($name:ident, $qasm:expr) => {
+        fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+        {
+            let mut res = String::from($qasm);
+            for (i, &bit) in bits.iter().enumerate()
+            {
+                let pattern = format!("{{{}}}", i);
+                res = res.replace(&pattern, &bit_names[bit]);
+            }
+            res
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! declare_controlled_impl_gate
+{
+    ($name:ident, $gate_type:ty $(, cost=$cost:expr)* $(, qasm=$qasm:expr)*) => {
         impl gates::Gate for $name
         {
-            fn cost(&self) -> f64 { $cost }
+            declare_controlled_cost!($($cost)*);
             fn description(&self) -> &str { self.0.description() }
             fn nr_affected_bits(&self) -> usize { self.0.nr_affected_bits() }
             fn matrix(&self) -> $crate::cmatrix::CMatrix { self.0.matrix() }
@@ -132,8 +167,9 @@ macro_rules! declare_controlled_impl_gate
             {
                 self.0.apply_slice(state);
             }
+            declare_controlled_open_qasm!($name $(, $qasm)*);
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -144,10 +180,10 @@ macro_rules! declare_controlled
         declare_controlled_impl!($name, $gate_type);
         declare_controlled_impl_gate!($name, $gate_type);
     };
-    ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, $arg:ident)*) => {
+    ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, arg=$arg:ident)* $(, qasm=$qasm:expr)*) => {
         declare_controlled_type!($(#[$attr])* $name, $gate_type);
         declare_controlled_impl!($name, $gate_type, cost=$cost $(, $arg)*);
-        declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost());
+        declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost() $(, qasm=$qasm)*);
     };
 }
 
@@ -160,17 +196,17 @@ declare_controlled!(
     /// Controlled `R`<sub>`X`</sub> gate.
     CRX, gates::RX,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
-    theta);
+    arg=theta);
 declare_controlled!(
     /// Controlled `R`<sub>`Y`</sub> gate.
     CRY, gates::RY,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
-    theta);
+    arg=theta);
 declare_controlled!(
     /// Controlled `R`<sub>`Z`</sub> gate.
     CRZ, gates::RZ,
     cost=2.0*CX::cost() + 2.0*gates::U1::cost(),
-    lambda);
+    arg=lambda);
 
 declare_controlled!(
     /// Controlled `S` gate.
@@ -190,17 +226,17 @@ declare_controlled!(
     /// Controlled `U`<sub>`1`</sub> gate.
     CU1, gates::U1,
     cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
-    lambda);
+    arg=lambda);
 declare_controlled!(
     /// Controlled `U`<sub>`2`</sub> gate.
     CU2, gates::U2,
     cost=2.0*CX::cost() + 2.0*gates::U1::cost() + gates::U2::cost(),
-    phi, lambda);
+    arg=phi, arg=lambda);
 declare_controlled!(
     /// Controlled `U`<sub>`3`</sub> gate.
     CU3, gates::U3,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
-    theta, phi, lambda);
+    arg=theta, arg=phi, arg=lambda);
 
 declare_controlled!(
     /// Controlled `V` gate.
@@ -228,7 +264,8 @@ declare_controlled!(
 declare_controlled!(
     /// Doubly controlled `Z` gate.
     CCZ, gates::CZ,
-    cost=CCX::cost() + 2.0*gates::H::cost());
+    cost=CCX::cost() + 2.0*gates::H::cost(),
+    qasm="h {2}; ccx {0} {1} {2}; h {2}");
 
 #[cfg(test)]
 mod tests
@@ -349,5 +386,17 @@ mod tests
         assert_eq!(CRZ::cost(), 2016.0);
         assert_eq!(CCX::new().cost(), 6263.0);
         assert_eq!(CCZ::new().cost(), 6471.0);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CX::new().open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, "cx qb0, qb1");
+
+        let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
+        let qasm = CCZ::new().open_qasm(&bit_names, &[0, 1, 2]);
+        assert_eq!(qasm, "h qb2; ccx qb0 qb1 qb2; h qb2");
     }
 }

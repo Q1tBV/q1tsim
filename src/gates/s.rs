@@ -62,6 +62,11 @@ impl gates::Gate for S
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= cmatrix::COMPLEX_I;
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("s {}", bit_names[bits[0]])
+    }
 }
 
 /// Conjugate of Clifford `S` gate
@@ -123,6 +128,11 @@ impl gates::Gate for Sdg
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= -cmatrix::COMPLEX_I;
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("sdg {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -181,5 +191,15 @@ mod tests
             [z, -i, -x*i, x*i]
         ];
         gate_test(Sdg::new(), &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = S::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "s qb");
+        let qasm = Sdg::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "sdg qb");
     }
 }

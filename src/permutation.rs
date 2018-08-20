@@ -131,11 +131,11 @@ mod tests
         assert_eq!(perm.indices(), &[0, 1, 2, 3]);
         let perm = Permutation::new(vec![3, 1, 0, 2]);
         assert_eq!(perm.indices(), &[3, 1, 0, 2]);
-        let result = ::std::panic::catch_unwind(|| { let perm = Permutation::new(vec![]); });
+        let result = ::std::panic::catch_unwind(|| { let _perm = Permutation::new(vec![]); });
         assert!(result.is_err());
-        let result = ::std::panic::catch_unwind(|| { let perm = Permutation::new(vec![0, 2, 3, 4]); });
+        let result = ::std::panic::catch_unwind(|| { let _perm = Permutation::new(vec![0, 2, 3, 4]); });
         assert!(result.is_err());
-        let result = ::std::panic::catch_unwind(|| { let perm = Permutation::new(vec![0, 2, 3, 2]); });
+        let result = ::std::panic::catch_unwind(|| { let _perm = Permutation::new(vec![0, 2, 3, 2]); });
         assert!(result.is_err());
     }
 

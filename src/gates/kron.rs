@@ -56,6 +56,13 @@ where G0: gates::Gate, G1: gates::Gate
         self.g1.apply_slice(&mut state.slice_mut(s![..n]));
         self.g1.apply_slice(&mut state.slice_mut(s![n..]));
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let n0 = self.g0.nr_affected_bits();
+        format!("{}; {}", self.g0.open_qasm(bit_names, &bits[..n0]),
+            self.g1.open_qasm(bit_names, &bits[n0..]))
+    }
 }
 
 #[cfg(test)]
@@ -160,5 +167,13 @@ mod tests
             [h, -h, z, -x]
         ];
         gate_test(Kron::new(H::new(), H::new()), &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = Kron::new(H::new(), I::new()).open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, "h qb0; id qb1");
     }
 }

@@ -76,6 +76,11 @@ impl gates::Gate for RZ
             slice *= num_complex::Complex::from_polar(&1.0, &( 0.5*self.lambda));
         }
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("rz({}) {}", self.lambda, bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -118,5 +123,13 @@ mod tests
         ];
         let gate = RZ::new(::std::f64::consts::FRAC_PI_2);
         gate_test(gate, &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = RZ::new(2.25).open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "rz(2.25) qb");
     }
 }

@@ -426,6 +426,22 @@ impl gates::Gate for Composite
 
         res
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let mut res = String::new();
+        if self.ops.len() > 0
+        {
+            let gate_bits: Vec<usize> = self.ops[0].bits.iter().map(|&b| bits[b]).collect();
+            res = self.ops[0].gate.open_qasm(bit_names, &gate_bits);
+            for op in self.ops[1..].iter()
+            {
+                let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
+                res += &format!("; {}", op.gate.open_qasm(bit_names, &gate_bits));
+            }
+        }
+        res
+    }
 }
 
 #[cfg(test)]
@@ -530,5 +546,16 @@ mod tests
             },
             Err(err) => { panic!(err); }
         }
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let mut gate = Composite::new("Inc2", 2);
+        gate.add_gate(CX::new(), &[0, 1]);
+        gate.add_gate(X::new(), &[1]);
+        let qasm = gate.open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, "cx qb0, qb1; x qb1");
     }
 }

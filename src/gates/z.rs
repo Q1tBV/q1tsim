@@ -59,6 +59,11 @@ impl gates::Gate for Z
         let n = state.rows() / 2;
         state.slice_mut(s![n.., ..]).mapv_inplace(|c| -c);
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("z {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -92,5 +97,13 @@ mod tests
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[o, z, x, x], [ z, -o, -x, x]];
         gate_test(Z::new(), &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = Z::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "z qb");
     }
 }

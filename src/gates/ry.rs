@@ -9,7 +9,7 @@ use gates;
 /// Bloch sphere over an angle `theta`.
 pub struct RY
 {
-    half_theta: f64,
+    theta: f64,
     desc: String
 }
 
@@ -18,7 +18,7 @@ impl RY
     /// Create a new `R`<sub>`Y`</sub> gate.
     pub fn new(theta: f64) -> Self
     {
-        RY { half_theta: 0.5 * theta, desc: format!("RY({:.4})", theta) }
+        RY { theta: theta, desc: format!("RY({:.4})", theta) }
     }
 }
 
@@ -41,15 +41,15 @@ impl gates::Gate for RY
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let c = num_complex::Complex::new(self.half_theta.cos(), 0.0);
-        let s = num_complex::Complex::new(self.half_theta.sin(), 0.0);
+        let c = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
+        let s = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
         array![[c, -s], [s, c]]
     }
 
     fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
-        let cos_t = num_complex::Complex::new(self.half_theta.cos(), 0.0);
-        let sin_t = num_complex::Complex::new(self.half_theta.sin(), 0.0);
+        let cos_t = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
+        let sin_t = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
 
         let mut s = state.to_owned();
         s *= sin_t;
@@ -68,8 +68,8 @@ impl gates::Gate for RY
 
     fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
     {
-        let cos_t = num_complex::Complex::new(self.half_theta.cos(), 0.0);
-        let sin_t = num_complex::Complex::new(self.half_theta.sin(), 0.0);
+        let cos_t = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
+        let sin_t = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
 
         let mut s = state.to_owned();
         s *= sin_t;
@@ -84,6 +84,11 @@ impl gates::Gate for RY
             let mut slice = state.slice_mut(s![n.., ..]);
             slice += &s.slice(s![..n, ..]);
         }
+    }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("ry({}) {}", self.theta, bit_names[bits[0]])
     }
 }
 
@@ -130,5 +135,13 @@ mod tests
         ];
         let gate = RY::new(::std::f64::consts::FRAC_PI_2);
         gate_test(gate, &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = RY::new(2.25).open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "ry(2.25) qb");
     }
 }

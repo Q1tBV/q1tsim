@@ -98,6 +98,12 @@ impl QuState
         }
     }
 
+    /// Return the number of qubits in this state
+    pub fn nr_bits(&self) -> usize
+    {
+        self.nr_bits
+    }
+
     /// Apply a n-ary quantum gate `gate` on the qubits from `bits` in this state.
     pub fn apply_gate<G>(&mut self, gate: &G, bits: &[usize])
     where G: gates::Gate + ?Sized

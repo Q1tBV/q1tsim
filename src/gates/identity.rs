@@ -45,6 +45,11 @@ impl gates::Gate for I
     {
         // Identity, leave state unchanged, so do nothing
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("id {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -81,4 +86,11 @@ mod tests
         gate_test(I::new(), &mut state, &result);
     }
 
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = I::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "id qb");
+    }
 }

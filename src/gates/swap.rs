@@ -83,6 +83,13 @@ impl gates::Gate for Swap
     {
         Self::transform_mat(state);
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let b0 = &bit_names[bits[0]];
+        let b1 = &bit_names[bits[1]];
+        format!("cx {}, {}; cx {}, {}; cx {}, {}", b0, b1, b1, b0, b0, b1)
+    }
 }
 
 #[cfg(test)]
@@ -133,5 +140,13 @@ mod tests
             [z, z, z,  z, z, -h, z]
         ];
         assert_complex_matrix_eq!(&state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = Swap::new().open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, "cx qb0, qb1; cx qb1, qb0; cx qb0, qb1");
     }
 }

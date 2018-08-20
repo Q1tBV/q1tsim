@@ -16,7 +16,7 @@ use gates;
 /// ```
 pub struct RX
 {
-    half_theta: f64,
+    theta: f64,
     desc: String
 }
 
@@ -25,7 +25,7 @@ impl RX
     /// Create a new `R`<sub>`X`</sub> gate.
     pub fn new(theta: f64) -> Self
     {
-        RX { half_theta: 0.5 * theta, desc: format!("RX({:.4})", theta) }
+        RX { theta: theta, desc: format!("RX({:.4})", theta) }
     }
 }
 
@@ -48,15 +48,15 @@ impl gates::Gate for RX
 
     fn matrix(&self) -> cmatrix::CMatrix
     {
-        let c  = num_complex::Complex::new(self.half_theta.cos(), 0.0);
-        let si = num_complex::Complex::new(0.0, self.half_theta.sin());
+        let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
+        let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
         array![[c, -si], [-si, c]]
     }
 
     fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
     {
-        let c  = num_complex::Complex::new(self.half_theta.cos(), 0.0);
-        let si = num_complex::Complex::new(0.0, self.half_theta.sin());
+        let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
+        let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
 
         let mut s = state.to_owned();
         s *= si;
@@ -75,8 +75,8 @@ impl gates::Gate for RX
 
     fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
     {
-        let cos_t   = num_complex::Complex::new(self.half_theta.cos(), 0.0);
-        let sin_t_i = num_complex::Complex::new(0.0, self.half_theta.sin());
+        let cos_t   = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
+        let sin_t_i = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
 
         let mut s = state.to_owned();
         s *= sin_t_i;
@@ -91,6 +91,11 @@ impl gates::Gate for RX
             let mut slice = state.slice_mut(s![n.., ..]);
             slice -= &s.slice(s![..n, ..]);
         }
+    }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("rx({}) {}", self.theta, bit_names[bits[0]])
     }
 }
 
@@ -139,5 +144,13 @@ mod tests
         ];
         let gate = RX::new(::std::f64::consts::FRAC_PI_2);
         gate_test(gate, &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = RX::new(2.25).open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "rx(2.25) qb");
     }
 }

@@ -42,6 +42,11 @@ impl gates::Gate for V
         let hi = 0.5 * cmatrix::COMPLEX_I;
         array![[h+hi, h-hi], [h-hi, h+hi]]
     }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]])
+    }
 }
 
 /// Conjugate of `V` gate.
@@ -82,6 +87,11 @@ impl gates::Gate for Vdg
         let h = 0.5 * cmatrix::COMPLEX_ONE;
         let hi = 0.5 * cmatrix::COMPLEX_I;
         array![[h-hi, h+hi], [h+hi, h-hi]]
+    }
+
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]])
     }
 }
 
@@ -142,5 +152,15 @@ mod tests
             [h+hi, h-hi, x,  x*i]
         ];
         gate_test(Vdg::new(), &mut state, &result);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = V::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "u3(pi/2, -pi/2, pi/2) qb");
+        let qasm = Vdg::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "u3(pi/2, pi/2, -pi/2) qb");
     }
 }
