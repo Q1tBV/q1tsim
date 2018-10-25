@@ -51,7 +51,7 @@ impl gates::Gate for V
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let name = &bit_names[bits[0]];
-        format!("sdag {}\nh {}\nsdag {}", name, name, name)
+        format!("x90 {}", name)
     }
 }
 
@@ -103,7 +103,7 @@ impl gates::Gate for Vdg
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let name = &bit_names[bits[0]];
-        format!("s {}\nh {}\ns {}", name, name, name)
+        format!("mx90 {}", name)
     }
 }
 
@@ -181,8 +181,8 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = V::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "sdag qb\nh qb\nsdag qb");
+        assert_eq!(qasm, "x90 qb");
         let qasm = Vdg::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "s qb\nh qb\ns qb");
+        assert_eq!(qasm, "mx90 qb");
     }
 }
