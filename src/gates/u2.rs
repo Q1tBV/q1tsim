@@ -64,6 +64,13 @@ impl gates::Gate for U2
     {
         format!("u2({}, {}) {}", self.phi, self.lambda, bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let name = &bit_names[bits[0]];
+        format!("rz {}, {}\nh {}\nrz {} {}", name, self.lambda + ::std::f64::consts::PI,
+            name, name, self.phi)
+    }
 }
 
 #[cfg(test)]
@@ -116,5 +123,13 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = U2::new(1.0, 2.25).open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "u2(1, 2.25) qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = U2::new(1.0, 2.25).c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "rz qb, 5.391592653589793\nh qb\nrz qb 1");
     }
 }

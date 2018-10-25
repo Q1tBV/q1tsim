@@ -97,6 +97,11 @@ impl gates::Gate for RX
     {
         format!("rx({}) {}", self.theta, bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("rx {}, {}", bit_names[bits[0]], self.theta)
+    }
 }
 
 #[cfg(test)]
@@ -116,7 +121,6 @@ mod tests
     fn test_matrix()
     {
         let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
         let i = cmatrix::COMPLEX_I;
 
@@ -152,5 +156,13 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = RX::new(2.25).open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "rx(2.25) qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = RX::new(2.25).c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "rx qb, 2.25");
     }
 }

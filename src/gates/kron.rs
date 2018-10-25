@@ -63,6 +63,13 @@ where G0: gates::Gate, G1: gates::Gate
         format!("{}; {}", self.g0.open_qasm(bit_names, &bits[..n0]),
             self.g1.open_qasm(bit_names, &bits[n0..]))
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let n0 = self.g0.nr_affected_bits();
+        format!("{{ {} | {} }}", self.g0.c_qasm(bit_names, &bits[..n0]),
+            self.g1.c_qasm(bit_names, &bits[n0..]))
+    }
 }
 
 #[cfg(test)]
@@ -175,5 +182,13 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Kron::new(H::new(), I::new()).open_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "h qb0; id qb1");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = Kron::new(H::new(), I::new()).c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, "{ h qb0 | i qb1 }");
     }
 }

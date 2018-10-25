@@ -67,6 +67,11 @@ impl gates::Gate for S
     {
         format!("s {}", bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("s {}", bit_names[bits[0]])
+    }
 }
 
 /// Conjugate of Clifford `S` gate
@@ -132,6 +137,11 @@ impl gates::Gate for Sdg
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("sdg {}", bit_names[bits[0]])
+    }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("sdag {}", bit_names[bits[0]])
     }
 }
 
@@ -201,5 +211,15 @@ mod tests
         assert_eq!(qasm, "s qb");
         let qasm = Sdg::new().open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "sdg qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = S::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "s qb");
+        let qasm = Sdg::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "sdag qb");
     }
 }

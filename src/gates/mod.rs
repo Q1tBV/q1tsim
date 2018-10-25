@@ -277,6 +277,11 @@ pub trait Gate
     /// Return an OpenQasm instruction string for this gate operating on qubits
     /// `bits`. The array `bit_names` contains the names of all qubits.
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
+    /// cQasm representation
+    ///
+    /// Return an cQasm instruction string for this gate operating on qubits
+    /// `bits`. The array `bit_names` contains the names of all qubits.
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
 }
 
 #[cfg(test)]

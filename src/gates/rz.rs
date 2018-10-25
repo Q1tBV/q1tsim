@@ -81,6 +81,11 @@ impl gates::Gate for RZ
     {
         format!("rz({}) {}", self.lambda, bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("rz {}, {}", bit_names[bits[0]], self.lambda)
+    }
 }
 
 #[cfg(test)]
@@ -101,7 +106,6 @@ mod tests
     {
         let gate = RZ::new(::std::f64::consts::PI);
         let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
         let i = cmatrix::COMPLEX_I;
         assert_complex_matrix_eq!(gate.matrix(), array![[-i, z], [z, i]]);
     }
@@ -131,5 +135,13 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = RZ::new(2.25).open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "rz(2.25) qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = RZ::new(2.25).c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "rz qb, 2.25");
     }
 }

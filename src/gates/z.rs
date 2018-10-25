@@ -64,6 +64,11 @@ impl gates::Gate for Z
     {
         format!("z {}", bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("z {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -104,6 +109,14 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = Z::new().open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "z qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = Z::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "z qb");
     }
 }

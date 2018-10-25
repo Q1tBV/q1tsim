@@ -47,6 +47,12 @@ impl gates::Gate for V
     {
         format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let name = &bit_names[bits[0]];
+        format!("sdag {}\nh {}\nsdag {}", name, name, name)
+    }
 }
 
 /// Conjugate of `V` gate.
@@ -92,6 +98,12 @@ impl gates::Gate for Vdg
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]])
+    }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        let name = &bit_names[bits[0]];
+        format!("s {}\nh {}\ns {}", name, name, name)
     }
 }
 
@@ -162,5 +174,15 @@ mod tests
         assert_eq!(qasm, "u3(pi/2, -pi/2, pi/2) qb");
         let qasm = Vdg::new().open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "u3(pi/2, pi/2, -pi/2) qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = V::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "sdag qb\nh qb\nsdag qb");
+        let qasm = Vdg::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "s qb\nh qb\ns qb");
     }
 }

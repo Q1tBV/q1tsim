@@ -90,6 +90,11 @@ impl gates::Gate for RY
     {
         format!("ry({}) {}", self.theta, bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("ry {}, {}", bit_names[bits[0]], self.theta)
+    }
 }
 
 #[cfg(test)]
@@ -143,5 +148,13 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = RY::new(2.25).open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "ry(2.25) qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = RY::new(2.25).c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "ry qb, 2.25");
     }
 }

@@ -6,7 +6,15 @@ use gates;
 /// Phase gate.
 ///
 /// The `U`<sub>`1`</sub>`(λ)` gate shifts the phase of the |1〉 component of a
-/// qubit over an angle `λ`.
+/// qubit over an angle `λ`. The associated matrix is
+/// ```text
+/// ┌              ┐
+/// │ 1          0 │
+/// │              │
+/// │ 0    exp(iλ) │
+/// └              ┘
+/// ```
+
 pub struct U1
 {
     lambda: f64,
@@ -65,6 +73,12 @@ impl gates::Gate for U1
     {
         format!("u1({}) {}", self.lambda, bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        // U1 is R_Z up to a phase
+        format!("rz {}, {}", bit_names[bits[0]], self.lambda)
+    }
 }
 
 #[cfg(test)]
@@ -109,5 +123,13 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = U1::new(::std::f64::consts::PI).open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "u1(3.141592653589793) qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = U1::new(::std::f64::consts::PI).c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "rz qb, 3.141592653589793");
     }
 }

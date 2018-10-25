@@ -50,6 +50,11 @@ impl gates::Gate for I
     {
         format!("id {}", bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("i {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -92,5 +97,13 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = I::new().open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "id qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = I::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "i qb");
     }
 }

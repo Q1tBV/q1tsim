@@ -68,6 +68,11 @@ impl gates::Gate for T
     {
         format!("t {}", bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("t {}", bit_names[bits[0]])
+    }
 }
 
 /// Conjugate of `T` gate
@@ -135,6 +140,11 @@ impl gates::Gate for Tdg
     {
         format!("tdg {}", bit_names[bits[0]])
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("tdag {}", bit_names[bits[0]])
+    }
 }
 
 #[cfg(test)]
@@ -174,7 +184,6 @@ mod tests
     {
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
-        let i = cmatrix::COMPLEX_I;
         let h = 0.5 * o;
         let x = cmatrix::COMPLEX_HSQRT2;
         let t = num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
@@ -217,5 +226,15 @@ mod tests
         assert_eq!(qasm, "t qb");
         let qasm = Tdg::new().open_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "tdg qb");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb")];
+        let qasm = T::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "t qb");
+        let qasm = Tdg::new().c_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "tdag qb");
     }
 }

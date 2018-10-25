@@ -3,13 +3,19 @@ extern crate ndarray;
 use gates;
 use qustate;
 
+use gates::Gate;
+
 /// A single operation in a circuit
 enum CircuitOp
 {
     /// Apply a gate to the state
     Gate(Box<gates::Gate>, Vec<usize>),
-    /// Measure a qubit
-    Measure(usize, usize)
+    /// Measure a qubit in the Pauli X basis
+    MeasureX(usize, usize),
+    /// Measure a qubit in the Pauli Y basis
+    MeasureY(usize, usize),
+    /// Measure a qubit in the Pauli Z basis
+    MeasureZ(usize, usize)
 }
 
 /// A quantum circuit
@@ -63,10 +69,39 @@ impl Circuit
 
     /// Add a measurement.
     ///
+    /// Add measurement of qubit `qbit` in the Pauli `X` basis, into classical
+    /// bit `cbit` to this circuit.
+    pub fn measure_x(&mut self, qbit: usize, cbit: usize)
+    {
+        self.ops.push(CircuitOp::MeasureX(qbit, cbit));
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add measurement of qubit `qbit` in the Pauli `Y` basis, into classical
+    /// bit `cbit` to this circuit.
+    pub fn measure_y(&mut self, qbit: usize, cbit: usize)
+    {
+        self.ops.push(CircuitOp::MeasureY(qbit, cbit));
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add measurement of qubit `qbit` in the Pauli `Z` basis, into classical
+    /// bit `cbit` to this circuit.
+    pub fn measure_z(&mut self, qbit: usize, cbit: usize)
+    {
+        self.ops.push(CircuitOp::MeasureZ(qbit, cbit));
+    }
+
+    /// Add a measurement.
+    ///
     /// Add measurement of qubit `qbit` into classical bit `cbit` to this circuit.
+    /// This is an alias for `measure_z()`.
+    #[inline(always)]
     pub fn measure(&mut self, qbit: usize, cbit: usize)
     {
-        self.ops.push(CircuitOp::Measure(qbit, cbit));
+        self.measure_z(qbit, cbit);
     }
 
     /// Add a Hadamard gate.
@@ -173,7 +208,18 @@ impl Circuit
                 CircuitOp::Gate(ref gate, ref bits) => {
                     self.q_state.apply_gate(&**gate, bits.as_slice());
                 },
-                CircuitOp::Measure(qbit, cbit)          => {
+                CircuitOp::MeasureX(qbit, cbit)     => {
+                    self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                    let msr = self.q_state.measure(qbit);
+                    self.c_state.row_mut(cbit).assign(&msr);
+                }
+                CircuitOp::MeasureY(qbit, cbit)     => {
+                    self.q_state.apply_gate(&gates::Sdg::new(), &[qbit]);
+                    self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                    let msr = self.q_state.measure(qbit);
+                    self.c_state.row_mut(cbit).assign(&msr);
+                }
+                CircuitOp::MeasureZ(qbit, cbit)     => {
                     let msr = self.q_state.measure(qbit);
                     self.c_state.row_mut(cbit).assign(&msr);
                 }
@@ -240,7 +286,7 @@ impl Circuit
 
     pub fn open_qasm(&self) -> String
     {
-        let mut res = String::new();
+        let mut res = String::from("OPENQASM 2.0;\ninclude \"qelib1.inc\";\n");
 
         let mut bit_names = vec![];
         let nr_qbits = self.q_state.nr_bits();
@@ -255,7 +301,7 @@ impl Circuit
         let nr_cbits = self.c_state.rows();
         if nr_cbits > 0
         {
-            res += &format!("creg c[{}];\n", nr_cbits);
+            res += &format!("creg b[{}];\n", nr_cbits);
         }
 
         for op in self.ops.iter()
@@ -265,14 +311,74 @@ impl Circuit
                 CircuitOp::Gate(ref gate, ref bits) => {
                     res += &format!("{};\n", gate.open_qasm(&bit_names, bits));
                 },
-                CircuitOp::Measure(qbit, cbit)      => {
-                    res += &format!("measure q[{}] -> c[{}];\n", qbit, cbit);
+                CircuitOp::MeasureX(qbit, cbit)   => {
+                    res += &format!("{};\n", gates::H::new().open_qasm(&bit_names, &[qbit]));
+                    res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
+                }
+                CircuitOp::MeasureY(qbit, cbit)   => {
+                    res += &format!("{};\n", gates::Sdg::new().open_qasm(&bit_names, &[qbit]));
+                    res += &format!("{};\n", gates::H::new().open_qasm(&bit_names, &[qbit]));
+                    res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
+                }
+                CircuitOp::MeasureZ(qbit, cbit)   => {
+                    res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
                 }
             }
         }
 
-
         res
+    }
+
+    fn check_c_qasm_measurement(qbit: usize, cbit: usize) -> Result<(), String>
+    {
+        if qbit != cbit
+        {
+            Err(String::from("In cQasm, no classical registers can be specified. Measurements must be made to a classical bit with the same index as the qubit"))
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+
+    pub fn c_qasm(&self) -> Result<String, String>
+    {
+        let mut res = String::from("version 1.0\n");
+
+        let mut bit_names = vec![];
+        let nr_qbits = self.q_state.nr_bits();
+        if nr_qbits > 0
+        {
+            res += &format!("qubits {}\n", nr_qbits);
+            for i in 0..nr_qbits
+            {
+                bit_names.push(format!("q[{}]", i));
+            }
+        }
+
+        for op in self.ops.iter()
+        {
+            match *op
+            {
+                CircuitOp::Gate(ref gate, ref bits) => {
+                    res += &format!("{}\n", gate.c_qasm(&bit_names, bits));
+                },
+                CircuitOp::MeasureX(qbit, cbit)     => {
+                    Self::check_c_qasm_measurement(qbit, cbit)?;
+                    res += &format!("measure_x q[{}]\n", qbit);
+                }
+                CircuitOp::MeasureY(qbit, cbit)     => {
+                    Self::check_c_qasm_measurement(qbit, cbit)?;
+                    res += &format!("measure_y q[{}]\n", qbit);
+                }
+                CircuitOp::MeasureZ(qbit, cbit)     => {
+                    Self::check_c_qasm_measurement(qbit, cbit)?;
+                    res += &format!("measure q[{}]\n", qbit);
+                }
+            }
+        }
+
+        Ok(res)
     }
 }
 
@@ -363,5 +469,100 @@ mod tests
 
         assert_eq!(hist.values().sum::<usize>(), nr_shots);
         assert!(*hist.values().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_measure()
+    {
+        let nr_shots = 1024;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 196;
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.x(0);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist, vec![0, 0, 1024, 0]);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.x(0);
+        circuit.measure_x(0, 0);
+        circuit.measure_x(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert!(*hist.iter().min().unwrap() >= min_count);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.x(0);
+        circuit.h(0);
+        circuit.h(1);
+        circuit.measure_x(0, 0);
+        circuit.measure_x(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist, vec![0, 0, 1024, 0]);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.x(0);
+        circuit.measure_y(0, 0);
+        circuit.measure_y(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert!(*hist.iter().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_open_qasm()
+    {
+        let mut circuit = Circuit::new(2, 2, 10);
+        circuit.x(0);
+        circuit.cx(0, 1);
+        circuit.cx(1, 0);
+        circuit.cx(0, 1);
+
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
+
+        let asm = circuit.open_qasm();
+        assert_eq!(asm, concat!(
+            "OPENQASM 2.0;\n",
+            "include \"qelib1.inc\";\n",
+            "qreg q[2];\n",
+            "creg b[2];\n",
+            "x q[0];\n",
+            "cx q[0], q[1];\n",
+            "cx q[1], q[0];\n",
+            "cx q[0], q[1];\n",
+            "measure q[0] -> b[0];\n",
+            "measure q[1] -> b[1];\n"
+        ));
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let mut circuit = Circuit::new(2, 2, 10);
+        circuit.x(0);
+        circuit.cx(0, 1);
+        circuit.cx(1, 0);
+        circuit.cx(0, 1);
+
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
+
+        let asm = circuit.c_qasm();
+        assert_eq!(asm, Ok(String::from(concat!(
+            "version 1.0\n",
+            "qubits 2\n",
+            "x q[0]\n",
+            "cnot q[0], q[1]\n",
+            "cnot q[1], q[0]\n",
+            "cnot q[0], q[1]\n",
+            "measure q[0]\n",
+            "measure q[1]\n"
+        ))));
     }
 }

@@ -72,6 +72,11 @@ where G: gates::Gate
     {
         panic!("Unable to generate OpenQasm code for a general controlled operation");
     }
+
+    fn c_qasm(&self, _bit_names: &[String], _bits: &[usize]) -> String
+    {
+        panic!("Unable to generate cQasm code for a general controlled operation");
+    }
 }
 
 #[macro_export]
@@ -122,12 +127,12 @@ macro_rules! declare_controlled_cost
 }
 
 #[macro_export]
-macro_rules! declare_controlled_open_qasm
+macro_rules! declare_controlled_qasm
 {
-    ($name:ident) => {
-        fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    ($method_name:ident, $op_name:ident) => {
+        fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
         {
-            let mut res = stringify!($name).to_lowercase();
+            let mut res = stringify!($op_name).to_lowercase();
             if bits.len() > 0
             {
                 res += &format!(" {}", bit_names[bits[0]]);
@@ -139,8 +144,8 @@ macro_rules! declare_controlled_open_qasm
             res
         }
     };
-    ($name:ident, $qasm:expr) => {
-        fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    ($method_name:ident, $op_name:ident, $qasm:expr) => {
+        fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
         {
             let mut res = String::from($qasm);
             for (i, &bit) in bits.iter().enumerate()
@@ -156,7 +161,7 @@ macro_rules! declare_controlled_open_qasm
 #[macro_export]
 macro_rules! declare_controlled_impl_gate
 {
-    ($name:ident, $gate_type:ty $(, cost=$cost:expr)* $(, qasm=$qasm:expr)*) => {
+    ($name:ident, $gate_type:ty $(, cost=$cost:expr)* $(, open_qasm=$open_qasm:expr)* $(, c_qasm=$c_qasm:expr)*) => {
         impl gates::Gate for $name
         {
             declare_controlled_cost!($($cost)*);
@@ -167,7 +172,8 @@ macro_rules! declare_controlled_impl_gate
             {
                 self.0.apply_slice(state);
             }
-            declare_controlled_open_qasm!($name $(, $qasm)*);
+            declare_controlled_qasm!(open_qasm, $name $(, $open_qasm)*);
+            declare_controlled_qasm!(c_qasm, $name $(, $c_qasm)*);
         }
     };
 }
@@ -180,10 +186,10 @@ macro_rules! declare_controlled
         declare_controlled_impl!($name, $gate_type);
         declare_controlled_impl_gate!($name, $gate_type);
     };
-    ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, arg=$arg:ident)* $(, qasm=$qasm:expr)*) => {
+    ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, arg=$arg:ident)* $(, open_qasm=$open_qasm:expr)* $(, c_qasm=$c_qasm:expr)*) => {
         declare_controlled_type!($(#[$attr])* $name, $gate_type);
         declare_controlled_impl!($name, $gate_type, cost=$cost $(, $arg)*);
-        declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost() $(, qasm=$qasm)*);
+        declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost() $(, open_qasm=$open_qasm)* $(, c_qasm=$c_qasm)*);
     };
 }
 
@@ -249,7 +255,8 @@ declare_controlled!(
 
 declare_controlled!(
     /// Controlled `X` gate.
-    CX, gates::X, cost=1001.0);
+    CX, gates::X, cost=1001.0,
+    c_qasm="cnot {0}, {1}");
 declare_controlled!(
     /// Controlled `Y` gate.
     CY, gates::Y, cost=CX::cost() + 2.0*gates::U1::cost());
@@ -260,12 +267,14 @@ declare_controlled!(
 declare_controlled!(
     /// Doubly controlled `X` gate.
     CCX, gates::CX,
-    cost=6.0*CX::cost() + 7.0*gates::U1::cost() + 2.0*gates::U2::cost());
+    cost=6.0*CX::cost() + 7.0*gates::U1::cost() + 2.0*gates::U2::cost(),
+    c_qasm="toffoli {0}, {1}, {2}");
 declare_controlled!(
     /// Doubly controlled `Z` gate.
     CCZ, gates::CZ,
     cost=CCX::cost() + 2.0*gates::H::cost(),
-    qasm="h {2}; ccx {0} {1} {2}; h {2}");
+    open_qasm="h {2}; ccx {0}, {1}, {2}; h {2}",
+    c_qasm="h {2}\ntoffoli {0}, {1}, {2}\nh {2}");
 
 #[cfg(test)]
 mod tests
@@ -392,11 +401,23 @@ mod tests
     fn test_open_qasm()
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
-        let qasm = CX::new().open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "cx qb0, qb1");
+        let open_qasm = CX::new().open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(open_qasm, "cx qb0, qb1");
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
-        let qasm = CCZ::new().open_qasm(&bit_names, &[0, 1, 2]);
-        assert_eq!(qasm, "h qb2; ccx qb0 qb1 qb2; h qb2");
+        let open_qasm = CCZ::new().open_qasm(&bit_names, &[0, 1, 2]);
+        assert_eq!(open_qasm, "h qb2; ccx qb0, qb1, qb2; h qb2");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let open_qasm = CX::new().c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(open_qasm, "cnot qb0, qb1");
+
+        let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
+        let open_qasm = CCZ::new().c_qasm(&bit_names, &[0, 1, 2]);
+        assert_eq!(open_qasm, "h qb2\ntoffoli qb0, qb1, qb2\nh qb2");
     }
 }

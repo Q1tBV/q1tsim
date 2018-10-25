@@ -90,6 +90,11 @@ impl gates::Gate for Swap
         let b1 = &bit_names[bits[1]];
         format!("cx {}, {}; cx {}, {}; cx {}, {}", b0, b1, b1, b0, b0, b1)
     }
+
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    {
+        format!("swap {}, {}", bit_names[bits[0]], bit_names[bits[1]])
+    }
 }
 
 #[cfg(test)]
@@ -148,5 +153,13 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Swap::new().open_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "cx qb0, qb1; cx qb1, qb0; cx qb0, qb1");
+    }
+
+    #[test]
+    fn test_c_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = Swap::new().c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, "swap qb0, qb1");
     }
 }
