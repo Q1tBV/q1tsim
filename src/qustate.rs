@@ -137,6 +137,143 @@ impl QuState
         }
     }
 
+    fn split_measurement(&mut self, idx: usize, new_count: usize)
+    {
+        let mut tail = self.measurements.split_off(idx);
+        let mut m = tail.pop_front().unwrap();
+        let mut new_m = m.clone();
+        new_m.count = m.count - new_count;
+        m.count = new_count;
+        self.measurements.push_back(m);
+        self.measurements.push_back(new_m);
+        self.measurements.append(&mut tail);
+    }
+
+    /// Apply a conditional n-ary quantum gate `gate`, controlled by classical
+    /// bit `control`, on the qubits from `bits` in this state.
+    pub fn apply_conditional_gate<G>(&mut self, control: &[bool], gate: &G,
+        bits: &[usize])
+    where G: gates::Gate + ?Sized
+    {
+        assert!(control.len() == self.nr_shots
+            "The number of control bits does not match the number of runs");
+
+        let gate_bits = gate.nr_affected_bits();
+        assert!(gate_bits == bits.len(),
+            "The number of bits affected by the gate does not match the provided number of bits.");
+
+        // Create a list of ranges of runs that should have the gate applied
+        let mut ranges = vec![];
+        let mut begin = self.nr_shots;
+        for (end, &cbit) in control.iter().enumerate()
+        {
+            if !cbit
+            {
+                if begin < self.nr_shots
+                {
+                    ranges.push((begin, end));
+                    begin = self.nr_shots;
+                }
+            }
+            else
+            {
+                if begin >= self.nr_shots
+                {
+                    begin = end;
+                }
+            }
+        }
+        if begin < self.nr_shots
+        {
+            ranges.push((begin, self.nr_shots));
+        }
+
+        if ranges.is_empty()
+        {
+            return;
+        }
+
+        // Now apply the gate for the runs in the collected ranges
+        let mut new_measurements = ::std::collections::LinkedList::new();
+        let mut range_idx = 0;
+        let mut off = 0;
+        while !self.measurements.is_empty()
+        {
+            let (begin, end) = ranges[range_idx];
+            let mut m = self.measurements.pop_front().unwrap();
+
+            if begin >= off + m.count
+            {
+                // Next range starts after this collection of runs. Append
+                // the runs to the result unchanged, and move to the next run.
+                off += m.count;
+                new_measurements.push_back(m);
+                continue;
+            }
+
+            if begin > off
+            {
+                // The current range starts in the middle of this collection of
+                // runs. Append the first part of the runs to the result
+                // unchanged, and continue with the remaining runs.
+                let mut new_m = m.clone();
+                new_m.count = begin - off;
+                m.count -= new_m.count;
+                off = begin;
+                new_measurements.push_back(new_m);
+            }
+
+            if end < off + m.count
+            {
+                // The current range ends in the middle of this collection of
+                // runs. Push the last part of the runs back on the stack to
+                // process later, and continue with the remaining runs.
+                let mut new_m = m.clone();
+                m.count = end - off;
+                new_m.count -= m.count;
+                self.measurements.push_front(new_m);
+            }
+
+            // Now apply the gate to the runs in this range
+            if gate_bits == 1
+            {
+                let block_size = 1 << (self.nr_bits - bits[0]);
+                let nr_blocks = 1 << bits[0];
+                for i in 0..nr_blocks
+                {
+                    gate.apply_slice(&mut m.coefs.slice_mut(s![i*block_size..(i+1)*block_size]));
+                }
+            }
+            else
+            {
+                let perm = gates::bit_permutation(self.nr_bits, bits);
+                let inv_perm = perm.inverse();
+                inv_perm.apply_vec(&mut m.coefs);
+                gate.apply(&mut m.coefs);
+                perm.apply_vec(&mut m.coefs);
+            }
+
+            off += m.count;
+            new_measurements.push_back(m);
+
+            if end > off
+            {
+                ranges[range_idx].0 = off;
+            }
+            else
+            {
+                range_idx += 1;
+                if range_idx >= ranges.len()
+                {
+                    break;
+                }
+            }
+        }
+
+        new_measurements.append(&mut self.measurements);
+        self.measurements = new_measurements;
+    }
+
     fn collapse(coefs: &mut cmatrix::CVector, block_size: usize, nr_blocks: usize,
         offset: usize, norm_sq: f64)
     {
@@ -163,26 +300,24 @@ impl QuState
         let nr_blocks = 1 << bit;
         let mut res = ndarray::Array1::zeros(self.nr_shots);
         let mut res_start = 0;
-        let mut msr_idx = 0;
 
-        // The below approach with splitting the list and stitching it back
-        // together again is awful, but unfortunately, it's the best we can do
-        // until IterMut::insert_next() stabilizes.
-        while msr_idx < self.measurements.len()
+        let mut new_measurements = ::std::collections::LinkedList::new();
+        while !self.measurements.is_empty()
         {
-            let mut tail = self.measurements.split_off(msr_idx);
-            let mut m = tail.pop_front().unwrap();
+            let mut m = self.measurements.pop_front().unwrap();
 
             // Compute chance of measuring 0
             let mut w0 = 0.0f64;
             let mut off = 0;
             for _ in 0..nr_blocks
             {
-                w0 += &m.coefs.slice(s![off..off+block_size]).iter().map(|c| c.norm_sqr()).sum();
+                w0 += m.coefs.slice(s![off..off+block_size])
+                    .iter().map(|c| c.norm_sqr())
+                    .sum::<f64>();
                 off += 2 * block_size;
             }
 
-            // Sometimes, the sum may add up to slightly more than 1, die to
+            // Sometimes, the sum may add up to slightly more than 1, due to
             // numerical inaccuracies. This causes the Binomial distribution to
             // panic, so cap w0.
             w0 = w0.min(1.0);
@@ -190,11 +325,6 @@ impl QuState
             // Compute how many times we measure 0
             let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
             let n0 = self.rng.sample(distribution) as usize;
-            //let mut n0 = 0;
-            //for _ in 0..m.count
-            //{
-            //    n0 += self.rng.gen_bool(w0) as usize;
-            //}
 
             // Store the result
             res.slice_mut(s![res_start..res_start+n0]).fill(0);
@@ -205,34 +335,25 @@ impl QuState
             if n0 == m.count
             {
                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
-                self.measurements.push_back(m);
-                msr_idx += 1;
+                new_measurements.push_back(m);
             }
             else if n0 == 0
             {
                 Self::collapse(&mut m.coefs, block_size, nr_blocks, 0, 1.0 - w0);
-                self.measurements.push_back(m);
-                msr_idx += 1;
+                new_measurements.push_back(m);
             }
             else
             {
                 let mut m1 = m.clone();
                 m1.count = m.count - n0;
                 m.count = n0;
-
                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
-                self.measurements.push_back(m);
-                msr_idx += 1;
-
                 Self::collapse(&mut m1.coefs, block_size, nr_blocks, 0, 1.0 - w0);
-                self.measurements.push_back(m1);
-                msr_idx += 1;
-
+                new_measurements.push_back(m);
+                new_measurements.push_back(m1);
             }
-
-            // Re-append te unprocessed runs
-            self.measurements.append(&mut tail);
         }
+        self.measurements = new_measurements;
 
         res
     }

@@ -10,6 +10,8 @@ enum CircuitOp
 {
     /// Apply a gate to the state
     Gate(Box<gates::Gate>, Vec<usize>),
+    /// Conditionally apply a gate, depending on classical bits
+    ConditionalGate(Vec<usize>, u64, Box<gates::Gate>, Vec<usize>),
     /// Measure a qubit in the Pauli X basis
     MeasureX(usize, usize),
     /// Measure a qubit in the Pauli Y basis
@@ -25,9 +27,9 @@ enum CircuitOp
 pub struct Circuit
 {
     /// The quantum state of the system
-    q_state: qustate::QuState,
+    pub q_state: qustate::QuState,
     /// The classial state of the system
-    c_state: ndarray::Array2<u8>,
+    pub c_state: ndarray::Array2<u8>,
     /// The operations to perform on the state
     ops: Vec<CircuitOp>
 }
@@ -65,6 +67,21 @@ impl Circuit
     where G: gates::Gate
     {
         self.ops.push(CircuitOp::Gate(Box::new(gate), bits.to_owned()));
+    }
+
+    /// Add a conditional gate.
+    ///
+    /// Append a `n`-ary gate `gate`, that will operate on the `n` qubits in
+    /// `bits` to this circuit. The gate will only be applied only when the
+    /// classical bits with indices from `control` form the target word `target`.
+    /// The bit at the position of the first index in `control` is interpreted
+    /// as the most significant bit to check.
+    pub fn add_conditional_gate<G: 'static>(&mut self, control: &[usize],
+        target: u64, gate: G, bits: &[usize])
+    where G: gates::Gate
+    {
+        self.ops.push(CircuitOp::ConditionalGate(control.to_owned(), target,
+            Box::new(gate), bits.to_owned()));
     }
 
     /// Add a measurement.
@@ -208,6 +225,20 @@ impl Circuit
                 CircuitOp::Gate(ref gate, ref bits) => {
                     self.q_state.apply_gate(&**gate, bits.as_slice());
                 },
+                CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
+                    let nr_shots = self.c_state.cols();
+                    let mut cbits = vec![0; nr_shots];
+                    for &i in control
+                    {
+                        for (cb, &sb) in cbits.iter_mut().zip(self.c_state.row(i).iter())
+                        {
+                            *cb = (*cb << 1) | sb as u64;
+                        }
+                    }
+                    let apply_gate: Vec<bool> = cbits.iter().map(|&b| b == target).collect();
+                    self.q_state.apply_conditional_gate(&apply_gate, &**gate,
+                        bits.as_slice());
+                },
                 CircuitOp::MeasureX(qbit, cbit)     => {
                     self.q_state.apply_gate(&gates::H::new(), &[qbit]);
                     let msr = self.q_state.measure(qbit);
@@ -288,20 +319,25 @@ impl Circuit
     {
         let mut res = String::from("OPENQASM 2.0;\ninclude \"qelib1.inc\";\n");
 
-        let mut bit_names = vec![];
+        let mut qbit_names = vec![];
         let nr_qbits = self.q_state.nr_bits();
         if nr_qbits > 0
         {
             res += &format!("qreg q[{}];\n", nr_qbits);
             for i in 0..nr_qbits
             {
-                bit_names.push(format!("q[{}]", i));
+                qbit_names.push(format!("q[{}]", i));
             }
         }
+        let mut cbit_names = vec![];
         let nr_cbits = self.c_state.rows();
         if nr_cbits > 0
         {
             res += &format!("creg b[{}];\n", nr_cbits);
+            for i in 0..nr_qbits
+            {
+                cbit_names.push(format!("b[{}]", i));
+            }
         }
 
         for op in self.ops.iter()
@@ -309,15 +345,24 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    res += &format!("{};\n", gate.open_qasm(&bit_names, bits));
+                    res += &format!("{};\n", gate.open_qasm(&qbit_names, bits));
+                },
+                CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
+                    let instrs = gate.open_qasm(&qbit_names, bits);
+                    for instr in instrs.split(';')
+                    {
+                    // XXX
+//                         let s = instr.strip();
+//                         res += &format!("if ({} == 1) {};\n", cbit_names[control], s);
+                    }
                 },
                 CircuitOp::MeasureX(qbit, cbit)   => {
-                    res += &format!("{};\n", gates::H::new().open_qasm(&bit_names, &[qbit]));
+                    res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
                     res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
                 }
                 CircuitOp::MeasureY(qbit, cbit)   => {
-                    res += &format!("{};\n", gates::Sdg::new().open_qasm(&bit_names, &[qbit]));
-                    res += &format!("{};\n", gates::H::new().open_qasm(&bit_names, &[qbit]));
+                    res += &format!("{};\n", gates::Sdg::new().open_qasm(&qbit_names, &[qbit]));
+                    res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
                     res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
                 }
                 CircuitOp::MeasureZ(qbit, cbit)   => {
@@ -341,18 +386,33 @@ impl Circuit
         }
     }
 
+    fn check_c_asm_binary_controlled_gate<G>(gate: &G) -> Result<(), String>
+    where G: gates::Gate
+    {
+        if gate.nr_affected_bits() != 1
+        {
+            Err(String::from("Binary control can only be used with single-bit quantum operations"))
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+
     pub fn c_qasm(&self) -> Result<String, String>
     {
         let mut res = String::from("version 1.0\n");
 
-        let mut bit_names = vec![];
+        let mut qbit_names = vec![];
+        let mut cbit_names = vec![];
         let nr_qbits = self.q_state.nr_bits();
         if nr_qbits > 0
         {
             res += &format!("qubits {}\n", nr_qbits);
             for i in 0..nr_qbits
             {
-                bit_names.push(format!("q[{}]", i));
+                qbit_names.push(format!("q[{}]", i));
+                cbit_names.push(format!("b[{}]", i));
             }
         }
 
@@ -361,7 +421,16 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    res += &format!("{}\n", gate.c_qasm(&bit_names, bits));
+                    res += &format!("{}\n", gate.c_qasm(&qbit_names, bits));
+                },
+                CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
+                // XXX
+//                     Self::check_c_asm_binary_controlled_gate(gate)?;
+//                     let instrs = gate.open_qasm(&qbit_names, bits);
+//                     for instr in instrs.split('\n')
+//                     {
+//                         res += &format!("c-{}, {};\n", instr.strip(), cbit_names[control]);
+//                     }
                 },
                 CircuitOp::MeasureX(qbit, cbit)     => {
                     Self::check_c_qasm_measurement(qbit, cbit)?;
