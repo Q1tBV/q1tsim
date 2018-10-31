@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
@@ -56,14 +57,22 @@ where G0: gates::Gate, G1: gates::Gate
         self.g1.apply_slice(&mut state.slice_mut(s![..n]));
         self.g1.apply_slice(&mut state.slice_mut(s![n..]));
     }
+}
 
+impl<G0, G1> qasm::OpenQasm for Kron<G0, G1>
+where G0: gates::Gate+qasm::OpenQasm, G1: qasm::OpenQasm
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let n0 = self.g0.nr_affected_bits();
         format!("{}; {}", self.g0.open_qasm(bit_names, &bits[..n0]),
             self.g1.open_qasm(bit_names, &bits[n0..]))
     }
+}
 
+impl<G0, G1> qasm::CQasm for Kron<G0, G1>
+where G0: gates::Gate+qasm::CQasm, G1: qasm::CQasm
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let n0 = self.g0.nr_affected_bits();

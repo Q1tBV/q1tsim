@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The Pauli Z gate.
 ///
@@ -59,12 +60,18 @@ impl gates::Gate for Z
         let n = state.rows() / 2;
         state.slice_mut(s![n.., ..]).mapv_inplace(|c| -c);
     }
+}
 
+impl qasm::OpenQasm for Z
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("z {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for Z
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("z {}", bit_names[bits[0]])

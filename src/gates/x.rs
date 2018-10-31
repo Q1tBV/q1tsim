@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The Pauli X gate.
 ///
@@ -79,12 +80,18 @@ impl gates::Gate for X
     {
         Self::transform_mat(state);
     }
+}
 
+impl qasm::OpenQasm for X
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("x {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for X
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("x {}", bit_names[bits[0]])

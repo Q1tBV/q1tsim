@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The Clifford `S` gate
 ///
@@ -62,12 +63,18 @@ impl gates::Gate for S
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= cmatrix::COMPLEX_I;
     }
+}
 
+impl qasm::OpenQasm for S
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("s {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for S
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("s {}", bit_names[bits[0]])
@@ -133,12 +140,18 @@ impl gates::Gate for Sdg
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= -cmatrix::COMPLEX_I;
     }
+}
 
+impl qasm::OpenQasm for Sdg
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("sdg {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for Sdg
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("sdag {}", bit_names[bits[0]])

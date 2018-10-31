@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The Pauli Y gate.
 ///
@@ -71,12 +72,18 @@ impl gates::Gate for Y
             slice *=  cmatrix::COMPLEX_I;
         }
     }
+}
 
+impl qasm::OpenQasm for Y
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("y {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for Y
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("y {}", bit_names[bits[0]])

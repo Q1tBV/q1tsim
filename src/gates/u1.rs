@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// Phase gate.
 ///
@@ -68,12 +69,18 @@ impl gates::Gate for U1
         let mut slice = state.slice_mut(s![n..]);
         slice *= num_complex::Complex::from_polar(&1.0, &self.lambda);
     }
+}
 
+impl qasm::OpenQasm for U1
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("u1({}) {}", self.lambda, bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for U1
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         // U1 is R_Z up to a phase

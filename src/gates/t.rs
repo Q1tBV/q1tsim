@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The `T` gate
 ///
@@ -63,12 +64,18 @@ impl gates::Gate for T
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
     }
+}
 
+impl qasm::OpenQasm for T
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("t {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for T
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("t {}", bit_names[bits[0]])
@@ -135,12 +142,18 @@ impl gates::Gate for Tdg
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= num_complex::Complex::from_polar(&1.0, &-::std::f64::consts::FRAC_PI_4);
     }
+}
 
+impl qasm::OpenQasm for Tdg
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("tdg {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for Tdg
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("tdag {}", bit_names[bits[0]])

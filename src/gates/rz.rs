@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// Rotation around `z` axis.
 ///
@@ -76,12 +77,18 @@ impl gates::Gate for RZ
             slice *= num_complex::Complex::from_polar(&1.0, &( 0.5*self.lambda));
         }
     }
+}
 
+impl qasm::OpenQasm for RZ
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("rz({}) {}", self.lambda, bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for RZ
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("rz {}, {}", bit_names[bits[0]], self.lambda)

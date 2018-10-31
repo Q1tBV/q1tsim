@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// Rotation around `y` axis.
 ///
@@ -85,12 +86,18 @@ impl gates::Gate for RY
             slice += &s.slice(s![..n, ..]);
         }
     }
+}
 
+impl qasm::OpenQasm for RY
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("ry({}) {}", self.theta, bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for RY
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("ry {}, {}", bit_names[bits[0]], self.theta)

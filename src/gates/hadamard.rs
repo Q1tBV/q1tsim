@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The Hadamard gate.
 ///
@@ -66,12 +67,18 @@ impl gates::Gate for H
     {
         Self::transform(state);
     }
+}
 
+impl qasm::OpenQasm for H
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("h {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for H
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("h {}", bit_names[bits[0]])

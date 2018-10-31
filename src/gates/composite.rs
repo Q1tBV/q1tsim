@@ -3,7 +3,9 @@ extern crate regex;
 
 use cmatrix;
 use gates;
+use qasm;
 
+use qasm::CircuitGate;
 use super::*;
 
 /// Strucutre for a description of a subgate.
@@ -36,7 +38,7 @@ impl SubGateDesc
 struct SubGate
 {
     /// The gate
-    gate: Box<gates::Gate>,
+    gate: Box<CircuitGate>,
     /// The bits on which the gate acts
     bits: Vec<usize>
 }
@@ -45,7 +47,7 @@ impl SubGate
 {
     /// Create a new composite gate operation
     fn new<G>(gate: G, bits: &[usize]) -> Self
-    where G: 'static + gates::Gate
+    where G: 'static + CircuitGate
     {
         SubGate
         {
@@ -393,7 +395,7 @@ impl Composite
     /// Append a `n`-ary subgate `gate`, operating on the `n` qubits in `bits`,
     /// to this composite gate.
     pub fn add_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
-    where G: gates::Gate
+    where G: CircuitGate
     {
         self.ops.push(SubGate::new(gate, bits));
     }
@@ -426,7 +428,10 @@ impl gates::Gate for Composite
 
         res
     }
+}
 
+impl qasm::OpenQasm for Composite
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let mut res = String::new();
@@ -442,7 +447,10 @@ impl gates::Gate for Composite
         }
         res
     }
+}
 
+impl qasm::CQasm for Composite
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let mut res = String::new();

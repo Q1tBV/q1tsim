@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// U<sub>2</sub> gate.
 ///
@@ -59,12 +60,18 @@ impl gates::Gate for U2
                [ num_complex::Complex::from_polar(&x, &self.phi),
                  num_complex::Complex::from_polar(&x, &(self.phi+self.lambda))]]
     }
+}
 
+impl qasm::OpenQasm for U2
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("u2({}, {}) {}", self.phi, self.lambda, bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for U2
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let name = &bit_names[bits[0]];

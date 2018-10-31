@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The identity gate
 ///
@@ -45,12 +46,18 @@ impl gates::Gate for I
     {
         // Identity, leave state unchanged, so do nothing
     }
+}
 
+impl qasm::OpenQasm for I
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("id {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for I
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("i {}", bit_names[bits[0]])

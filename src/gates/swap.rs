@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The `Swap` gate
 ///
@@ -83,14 +84,20 @@ impl gates::Gate for Swap
     {
         Self::transform_mat(state);
     }
+}
 
+impl qasm::OpenQasm for Swap
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let b0 = &bit_names[bits[0]];
         let b1 = &bit_names[bits[1]];
         format!("cx {}, {}; cx {}, {}; cx {}, {}", b0, b1, b1, b0, b0, b1)
     }
+}
 
+impl qasm::CQasm for Swap
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("swap {}, {}", bit_names[bits[0]], bit_names[bits[1]])

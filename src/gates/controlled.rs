@@ -2,6 +2,7 @@ extern crate num_complex;
 
 pub use cmatrix;
 use gates;
+use qasm;
 
 /// Controlled gates.
 ///
@@ -67,16 +68,6 @@ where G: gates::Gate
         let n = state.len() / 2;
         self.gate.apply_mat_slice(&mut state.slice_mut(s![n.., ..]));
     }
-
-    fn open_qasm(&self, _bit_names: &[String], _bits: &[usize]) -> String
-    {
-        panic!("Unable to generate OpenQasm code for a general controlled operation");
-    }
-
-    fn c_qasm(&self, _bit_names: &[String], _bits: &[usize]) -> String
-    {
-        panic!("Unable to generate cQasm code for a general controlled operation");
-    }
 }
 
 #[macro_export]
@@ -129,31 +120,37 @@ macro_rules! declare_controlled_cost
 #[macro_export]
 macro_rules! declare_controlled_qasm
 {
-    ($method_name:ident, $op_name:ident) => {
-        fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
+    ($trait_name:ident, $gate_name:ident, $method_name: ident) => {
+        impl qasm::$trait_name for $gate_name
         {
-            let mut res = stringify!($op_name).to_lowercase();
-            if bits.len() > 0
+            fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
             {
-                res += &format!(" {}", bit_names[bits[0]]);
-                for &bit in bits[1..].iter()
+                let mut res = stringify!($op_name).to_lowercase();
+                if bits.len() > 0
                 {
-                    res += &format!(", {}", &bit_names[bit]);
+                    res += &format!(" {}", bit_names[bits[0]]);
+                    for &bit in bits[1..].iter()
+                    {
+                        res += &format!(", {}", &bit_names[bit]);
+                    }
                 }
+                res
             }
-            res
         }
     };
-    ($method_name:ident, $op_name:ident, $qasm:expr) => {
-        fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
+    ($trait_name:ident, $gate_name:ident, $method_name: ident, $qasm:expr) => {
+        impl qasm::$trait_name for $gate_name
         {
-            let mut res = String::from($qasm);
-            for (i, &bit) in bits.iter().enumerate()
+            fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
             {
-                let pattern = format!("{{{}}}", i);
-                res = res.replace(&pattern, &bit_names[bit]);
+                let mut res = String::from($qasm);
+                for (i, &bit) in bits.iter().enumerate()
+                {
+                    let pattern = format!("{{{}}}", i);
+                    res = res.replace(&pattern, &bit_names[bit]);
+                }
+                res
             }
-            res
         }
     };
 }
@@ -172,9 +169,9 @@ macro_rules! declare_controlled_impl_gate
             {
                 self.0.apply_slice(state);
             }
-            declare_controlled_qasm!(open_qasm, $name $(, $open_qasm)*);
-            declare_controlled_qasm!(c_qasm, $name $(, $c_qasm)*);
         }
+        declare_controlled_qasm!(OpenQasm, $name, open_qasm $(, $open_qasm)*);
+        declare_controlled_qasm!(CQasm, $name, c_qasm $(, $c_qasm)*);
     };
 }
 

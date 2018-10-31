@@ -2,6 +2,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use qasm;
 
 /// The `V` gate
 ///
@@ -42,12 +43,18 @@ impl gates::Gate for V
         let hi = 0.5 * cmatrix::COMPLEX_I;
         array![[h+hi, h-hi], [h-hi, h+hi]]
     }
+}
 
+impl qasm::OpenQasm for V
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for V
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let name = &bit_names[bits[0]];
@@ -94,12 +101,18 @@ impl gates::Gate for Vdg
         let hi = 0.5 * cmatrix::COMPLEX_I;
         array![[h-hi, h+hi], [h+hi, h-hi]]
     }
+}
 
+impl qasm::OpenQasm for Vdg
+{
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]])
     }
+}
 
+impl qasm::CQasm for Vdg
+{
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let name = &bit_names[bits[0]];

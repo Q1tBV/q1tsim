@@ -1,17 +1,18 @@
 extern crate ndarray;
 
 use gates;
+use qasm;
 use qustate;
 
-use gates::Gate;
+use qasm::{CircuitGate, OpenQasm};
 
 /// A single operation in a circuit
 enum CircuitOp
 {
     /// Apply a gate to the state
-    Gate(Box<gates::Gate>, Vec<usize>),
+    Gate(Box<CircuitGate>, Vec<usize>),
     /// Conditionally apply a gate, depending on classical bits
-    ConditionalGate(Vec<usize>, u64, Box<gates::Gate>, Vec<usize>),
+    ConditionalGate(Vec<usize>, u64, Box<CircuitGate>, Vec<usize>),
     /// Measure a qubit in the Pauli X basis
     MeasureX(usize, usize),
     /// Measure a qubit in the Pauli Y basis
@@ -64,7 +65,7 @@ impl Circuit
     /// Append a `n`-ary gate `gate`, operating on the `n` qubits in `bits`, to
     /// this circuit.
     pub fn add_gate<G: 'static>(&mut self, gate: G, bits: &[usize])
-    where G: gates::Gate
+    where G: CircuitGate
     {
         self.ops.push(CircuitOp::Gate(Box::new(gate), bits.to_owned()));
     }
@@ -78,7 +79,7 @@ impl Circuit
     /// as the most significant bit to check.
     pub fn add_conditional_gate<G: 'static>(&mut self, control: &[usize],
         target: u64, gate: G, bits: &[usize])
-    where G: gates::Gate
+    where G: CircuitGate
     {
         self.ops.push(CircuitOp::ConditionalGate(control.to_owned(), target,
             Box::new(gate), bits.to_owned()));
@@ -387,7 +388,7 @@ impl Circuit
     }
 
     fn check_c_asm_binary_controlled_gate<G>(gate: &G) -> Result<(), String>
-    where G: gates::Gate
+    where G: CircuitGate
     {
         if gate.nr_affected_bits() != 1
         {
