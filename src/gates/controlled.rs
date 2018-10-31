@@ -73,9 +73,13 @@ where G: gates::Gate
 #[macro_export]
 macro_rules! declare_controlled_type
 {
-    ($(#[$attr:meta])* $name:ident, $gate_type:ty) => {
+    ($(#[$attr:meta])* $name:ident, $gate_type:ty $(, $arg:ident)*) => {
         $(#[$attr])*
-        pub struct $name(gates::C<$gate_type>);
+        pub struct $name
+        {
+            $( #[allow(dead_code)] $arg: f64, )*
+            cgate: gates::C<$gate_type>
+        }
     }
 }
 
@@ -87,7 +91,11 @@ macro_rules! declare_controlled_impl
         {
             pub fn new($($arg: f64, )*) -> Self
             {
-                $name(gates::C::new(<$gate_type>::new($($arg, )*)))
+                $name
+                {
+                    $( $arg: $arg, )*
+                    cgate: gates::C::new(<$gate_type>::new($($arg, )*))
+                }
             }
         }
     };
@@ -96,7 +104,11 @@ macro_rules! declare_controlled_impl
         {
             pub fn new($($arg: f64, )*) -> Self
             {
-                $name(gates::C::new(<$gate_type>::new($($arg, )*)))
+                $name
+                {
+                    $( $arg: $arg, )*
+                    cgate: gates::C::new(<$gate_type>::new($($arg, )*))
+                }
             }
             pub fn cost() -> f64
             {
@@ -113,19 +125,19 @@ macro_rules! declare_controlled_cost
         fn cost(&self) -> f64 { $cost }
     };
     () => {
-        fn cost(&self) -> f64 { self.0.cost() }
+        fn cost(&self) -> f64 { self.cgate.cost() }
     };
 }
 
 #[macro_export]
 macro_rules! declare_controlled_qasm
 {
-    ($trait_name:ident, $gate_name:ident, $method_name: ident) => {
+    ($trait_name:ident, $gate_name:ident, $method_name: ident $(, arg=$arg:ident)*) => {
         impl qasm::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
             {
-                let mut res = stringify!($op_name).to_lowercase();
+                let mut res = stringify!($gate_name).to_lowercase();
                 if bits.len() > 0
                 {
                     res += &format!(" {}", bit_names[bits[0]]);
@@ -138,7 +150,7 @@ macro_rules! declare_controlled_qasm
             }
         }
     };
-    ($trait_name:ident, $gate_name:ident, $method_name: ident, $qasm:expr) => {
+    ($trait_name:ident, $gate_name:ident, $method_name: ident, qasm=$qasm:expr $(, arg=$arg:ident)*) => {
         impl qasm::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
@@ -149,6 +161,11 @@ macro_rules! declare_controlled_qasm
                     let pattern = format!("{{{}}}", i);
                     res = res.replace(&pattern, &bit_names[bit]);
                 }
+                $(
+                    let pattern = concat!("{", stringify!($arg), "}");
+                    res = res.replace(pattern, &self.$arg.to_string());
+                )*
+
                 res
             }
         }
@@ -158,20 +175,18 @@ macro_rules! declare_controlled_qasm
 #[macro_export]
 macro_rules! declare_controlled_impl_gate
 {
-    ($name:ident, $gate_type:ty $(, cost=$cost:expr)* $(, open_qasm=$open_qasm:expr)* $(, c_qasm=$c_qasm:expr)*) => {
+    ($name:ident, $gate_type:ty $(, cost=$cost:expr)*) => {
         impl gates::Gate for $name
         {
             declare_controlled_cost!($($cost)*);
-            fn description(&self) -> &str { self.0.description() }
-            fn nr_affected_bits(&self) -> usize { self.0.nr_affected_bits() }
-            fn matrix(&self) -> $crate::cmatrix::CMatrix { self.0.matrix() }
+            fn description(&self) -> &str { self.cgate.description() }
+            fn nr_affected_bits(&self) -> usize { self.cgate.nr_affected_bits() }
+            fn matrix(&self) -> $crate::cmatrix::CMatrix { self.cgate.matrix() }
             fn apply_slice(&self, state: &mut $crate::cmatrix::CVecSliceMut)
             {
-                self.0.apply_slice(state);
+                self.cgate.apply_slice(state);
             }
         }
-        declare_controlled_qasm!(OpenQasm, $name, open_qasm $(, $open_qasm)*);
-        declare_controlled_qasm!(CQasm, $name, c_qasm $(, $c_qasm)*);
     };
 }
 
@@ -182,11 +197,15 @@ macro_rules! declare_controlled
         declare_controlled_type!($(#[$attr])* $name, $gate_type);
         declare_controlled_impl!($name, $gate_type);
         declare_controlled_impl_gate!($name, $gate_type);
+        declare_controlled_qasm!(OpenQasm, $name, open_qasm);
+        declare_controlled_qasm!(CQasm, $name, c_qasm);
     };
     ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, arg=$arg:ident)* $(, open_qasm=$open_qasm:expr)* $(, c_qasm=$c_qasm:expr)*) => {
-        declare_controlled_type!($(#[$attr])* $name, $gate_type);
+        declare_controlled_type!($(#[$attr])* $name, $gate_type $(, $arg)*);
         declare_controlled_impl!($name, $gate_type, cost=$cost $(, $arg)*);
-        declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost() $(, open_qasm=$open_qasm)* $(, c_qasm=$c_qasm)*);
+        declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost());
+        declare_controlled_qasm!(OpenQasm, $name, open_qasm $(, qasm=$open_qasm)* $(, arg=$arg)*);
+        declare_controlled_qasm!(CQasm, $name, c_qasm $(, qasm=$c_qasm)* $(, arg=$arg)*);
     };
 }
 
@@ -204,7 +223,8 @@ declare_controlled!(
     /// Controlled `R`<sub>`Y`</sub> gate.
     CRY, gates::RY,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
-    arg=theta);
+    arg=theta,
+    open_qasm="cx {0}, {1}; u3(-{theta}/2, 0, 0) {1}; cx {0}, {1}; U3({theta}/2, 0, 0) {1}");
 declare_controlled!(
     /// Controlled `R`<sub>`Z`</sub> gate.
     CRZ, gates::RZ,
