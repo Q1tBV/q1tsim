@@ -137,18 +137,6 @@ impl QuState
         }
     }
 
-    fn split_measurement(&mut self, idx: usize, new_count: usize)
-    {
-        let mut tail = self.measurements.split_off(idx);
-        let mut m = tail.pop_front().unwrap();
-        let mut new_m = m.clone();
-        new_m.count = m.count - new_count;
-        m.count = new_count;
-        self.measurements.push_back(m);
-        self.measurements.push_back(new_m);
-        self.measurements.append(&mut tail);
-    }
-
     /// Apply a conditional n-ary quantum gate `gate`, controlled by classical
     /// bit `control`, on the qubits from `bits` in this state.
     pub fn apply_conditional_gate<G>(&mut self, control: &[bool], gate: &G,
