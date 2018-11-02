@@ -1,7 +1,6 @@
 extern crate ndarray;
 
 use gates;
-use qasm;
 use qustate;
 
 use qasm::{CircuitGate, OpenQasm};
@@ -316,7 +315,46 @@ impl Circuit
         res
     }
 
-    pub fn open_qasm(&self) -> String
+    fn is_full_register(&self, control: &[usize]) -> bool
+    {
+        let n = control.len();
+        if n != self.c_state.rows()
+        {
+            return false;
+        }
+
+        let mut scontrol = vec![0; n];
+        scontrol.copy_from_slice(control);
+        scontrol.sort();
+        for i in 0..n
+        {
+            if scontrol[i] != i
+            {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    fn check_open_qasm_condition_bits(&self, control: &[usize]) -> Result<(), String>
+    {
+        if !self.is_full_register(control)
+        {
+            Err(String::from("OpenQasm can only perform conditional operations based on a complete classical register"))
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+
+    /// Export to OpenQasm
+    ///
+    /// Export this circuit to a program in OpenQasm format. On a successful
+    /// conversion, the result is `Ok` with the program text. When the conversion
+    /// to OpenQasm fails, `Err` with an error message is returned.
+    pub fn open_qasm(&self) -> Result<String, String>
     {
         let mut res = String::from("OPENQASM 2.0;\ninclude \"qelib1.inc\";\n");
 
@@ -349,13 +387,19 @@ impl Circuit
                     res += &format!("{};\n", gate.open_qasm(&qbit_names, bits));
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
-                    let instrs = gate.open_qasm(&qbit_names, bits);
-                    for instr in instrs.split(';')
+                    // We do require that the control bits span the entire classical
+                    // register, but not necessarily in the order 0..#bits.
+                    self.check_open_qasm_condition_bits(control)?;
+                    let mut starget = 0;
+                    let mut shift = 1 << (control.len() - 1);
+                    for idx in control.iter()
                     {
-                    // XXX
-//                         let s = instr.strip();
-//                         res += &format!("if ({} == 1) {};\n", cbit_names[control], s);
+                        starget |= ((target >> shift) & 0x01) << idx;
+                        shift -= 1;
                     }
+                    let condition = format!("b == {}", starget);
+                    res += &format!("{};\n",
+                        gate.conditional_open_qasm(&condition, &qbit_names, bits));
                 },
                 CircuitOp::MeasureX(qbit, cbit)   => {
                     res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
@@ -372,7 +416,7 @@ impl Circuit
             }
         }
 
-        res
+        Ok(res)
     }
 
     fn check_c_qasm_measurement(qbit: usize, cbit: usize) -> Result<(), String>
@@ -400,6 +444,11 @@ impl Circuit
         }
     }
 
+    /// Export to c-Qasm
+    ///
+    /// Export this circuit to a program in c-Qasm format. On a successful
+    /// conversion, the result is `Ok` with the program text. When the conversion
+    /// to OpenQasm fails, `Err` with an error message is returned.
     pub fn c_qasm(&self) -> Result<String, String>
     {
         let mut res = String::from("version 1.0\n");

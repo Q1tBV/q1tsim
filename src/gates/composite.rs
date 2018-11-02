@@ -447,6 +447,25 @@ impl qasm::OpenQasm for Composite
         }
         res
     }
+
+    fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> String
+    {
+        let mut res = String::new();
+        if self.ops.len() > 0
+        {
+            let gate_bits: Vec<usize> = self.ops[0].bits.iter().map(|&b| bits[b]).collect();
+            let instr = self.ops[0].gate.open_qasm(bit_names, &gate_bits);
+            res = format!("if ({}) {}", condition, instr);
+            for op in self.ops[1..].iter()
+            {
+                let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
+                let instr = op.gate.open_qasm(bit_names, &gate_bits);
+                res += &format!("; if ({}) {}", condition, instr);
+            }
+        }
+        res
+    }
 }
 
 impl qasm::CQasm for Composite
@@ -474,6 +493,7 @@ mod tests
     use cmatrix;
     use super::Composite;
     use gates::{Gate, CCX, CX, H, X};
+    use qasm::{OpenQasm, CQasm};
 
     #[test]
     fn test_description()

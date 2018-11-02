@@ -124,6 +124,7 @@ impl qasm::CQasm for Vdg
 mod tests
 {
     use gates::{gate_test, Gate, V, Vdg};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

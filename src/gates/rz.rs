@@ -99,6 +99,7 @@ impl qasm::CQasm for RZ
 mod tests
 {
     use gates::{gate_test, Gate, RZ};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

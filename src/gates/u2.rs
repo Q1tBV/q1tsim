@@ -86,6 +86,7 @@ mod tests
     extern crate num_complex;
 
     use gates::{gate_test, Gate, U2};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
     use self::num_complex::Complex;
 

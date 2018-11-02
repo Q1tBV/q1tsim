@@ -108,6 +108,7 @@ impl qasm::CQasm for RY
 mod tests
 {
     use gates::{gate_test, Gate, RY};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

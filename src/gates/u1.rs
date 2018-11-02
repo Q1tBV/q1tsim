@@ -92,6 +92,7 @@ impl qasm::CQasm for U1
 mod tests
 {
     use gates::{gate_test, Gate, U1};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

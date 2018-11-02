@@ -167,6 +167,7 @@ mod tests
 
     use super::{T, Tdg};
     use gates::Gate;
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

@@ -85,6 +85,7 @@ where G0: gates::Gate+qasm::CQasm, G1: qasm::CQasm
 mod tests
 {
     use gates::{gate_test, Gate, H, I, Kron};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

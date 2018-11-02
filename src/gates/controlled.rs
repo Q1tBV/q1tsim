@@ -297,6 +297,7 @@ declare_controlled!(
 mod tests
 {
     use gates::{gate_test, Gate, H, X};
+    use qasm::{OpenQasm, CQasm};
     use super::{C, CCX, CCZ, CH, CRX, CRY, CRZ, CX, CY, CZ};
     use cmatrix;
 

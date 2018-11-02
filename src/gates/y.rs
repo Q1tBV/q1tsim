@@ -94,6 +94,7 @@ impl qasm::CQasm for Y
 mod tests
 {
     use gates::{gate_test, Gate, Y};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

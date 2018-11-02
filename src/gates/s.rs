@@ -162,6 +162,7 @@ impl qasm::CQasm for Sdg
 mod tests
 {
     use gates::{gate_test, Gate, S, Sdg};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

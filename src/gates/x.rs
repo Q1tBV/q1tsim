@@ -102,6 +102,7 @@ impl qasm::CQasm for X
 mod tests
 {
     use gates::{gate_test, Gate, X};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

@@ -108,6 +108,7 @@ impl qasm::CQasm for Swap
 mod tests
 {
     use gates::{Gate, Swap};
+    use qasm::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
