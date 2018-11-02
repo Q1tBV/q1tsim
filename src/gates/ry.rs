@@ -92,7 +92,10 @@ impl qasm::OpenQasm for RY
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
-        format!("ry({}) {}", self.theta, bit_names[bits[0]])
+        // For some reason, the web interface on QX claims RY is not a defined
+        // gate, even though it is defined in the specification. Replace by U3.
+        //format!("ry({}) {}", self.theta, bit_names[bits[0]])
+        format!("u3({}, 0, 0) {}", self.theta, bit_names[bits[0]])
     }
 }
 
@@ -155,7 +158,8 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = RY::new(2.25).open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "ry(2.25) qb");
+        //assert_eq!(qasm, "ry(2.25) qb");
+        assert_eq!(qasm, "u3(2.25, 0, 0) qb");
     }
 
     #[test]
