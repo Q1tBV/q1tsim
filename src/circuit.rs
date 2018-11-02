@@ -387,19 +387,26 @@ impl Circuit
                     res += &format!("{};\n", gate.open_qasm(&qbit_names, bits));
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
-                    // We do require that the control bits span the entire classical
-                    // register, but not necessarily in the order 0..#bits.
-                    self.check_open_qasm_condition_bits(control)?;
-                    let mut starget = 0;
-                    let mut shift = 1 << (control.len() - 1);
-                    for idx in control.iter()
+                    if control.is_empty()
                     {
-                        starget |= ((target >> shift) & 0x01) << idx;
-                        shift -= 1;
+                        res += &format!("{};\n", gate.open_qasm(&qbit_names, bits));
                     }
-                    let condition = format!("b == {}", starget);
-                    res += &format!("{};\n",
-                        gate.conditional_open_qasm(&condition, &qbit_names, bits));
+                    else
+                    {
+                        // We do require that the control bits span the entire classical
+                        // register, but not necessarily in the order 0..#bits.
+                        self.check_open_qasm_condition_bits(control)?;
+                        let mut starget = 0;
+                        let mut shift = control.len() - 1;
+                        for idx in control.iter()
+                        {
+                            starget |= ((target >> shift) & 0x01) << idx;
+                            shift -= 1;
+                        }
+                        let condition = format!("b == {}", starget);
+                        let gate_qasm = gate.conditional_open_qasm(&condition, &qbit_names, bits)?;
+                        res += &format!("{};\n", gate_qasm);
+                    }
                 },
                 CircuitOp::MeasureX(qbit, cbit)   => {
                     res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
@@ -424,19 +431,6 @@ impl Circuit
         if qbit != cbit
         {
             Err(String::from("In cQasm, no classical registers can be specified. Measurements must be made to a classical bit with the same index as the qubit"))
-        }
-        else
-        {
-            Ok(())
-        }
-    }
-
-    fn check_c_asm_binary_controlled_gate<G>(gate: &G) -> Result<(), String>
-    where G: CircuitGate
-    {
-        if gate.nr_affected_bits() != 1
-        {
-            Err(String::from("Binary control can only be used with single-bit quantum operations"))
         }
         else
         {
@@ -474,13 +468,32 @@ impl Circuit
                     res += &format!("{}\n", gate.c_qasm(&qbit_names, bits));
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
-                // XXX
-//                     Self::check_c_asm_binary_controlled_gate(gate)?;
-//                     let instrs = gate.open_qasm(&qbit_names, bits);
-//                     for instr in instrs.split('\n')
-//                     {
-//                         res += &format!("c-{}, {};\n", instr.strip(), cbit_names[control]);
-//                     }
+                    if control.is_empty()
+                    {
+                        res += &format!("{}\n", gate.c_qasm(&qbit_names, bits));
+                    }
+                    else
+                    {
+                        let n: usize = *control.iter().max().unwrap();
+                        let mut condition = String::new();
+                        for &idx in control.iter()
+                        {
+                            if target & (1 << (n - idx)) == 0
+                            {
+                                res += &format!("not {}", cbit_names[idx]);
+                            }
+                            condition += &format!("{}, ", &cbit_names[idx]);
+                        }
+                        let gate_qasm = gate.conditional_c_qasm(&condition, &qbit_names, bits)?;
+                        res += &format!("{}\n", gate_qasm);
+                        for idx in control.iter()
+                        {
+                            if target & (1 << (n - idx)) == 0
+                            {
+                                res += &format!("not b[{}]", idx);
+                            }
+                        }
+                    }
                 },
                 CircuitOp::MeasureX(qbit, cbit)     => {
                     Self::check_c_qasm_measurement(qbit, cbit)?;
@@ -646,7 +659,7 @@ mod tests
         circuit.measure(1, 1);
 
         let asm = circuit.open_qasm();
-        assert_eq!(asm, concat!(
+        assert_eq!(asm, Ok(String::from(concat!(
             "OPENQASM 2.0;\n",
             "include \"qelib1.inc\";\n",
             "qreg q[2];\n",
@@ -657,7 +670,7 @@ mod tests
             "cx q[0], q[1];\n",
             "measure q[0] -> b[0];\n",
             "measure q[1] -> b[1];\n"
-        ));
+        ))));
     }
 
     #[test]

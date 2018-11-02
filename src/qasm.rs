@@ -10,6 +10,20 @@ pub trait OpenQasm
     /// Return an OpenQasm instruction string for this gate operating on qubits
     /// `bits`. The array `bit_names` contains the names of all qubits.
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
+
+    /// OpenQasm representation of conditional gate.
+    ///
+    /// Return the OpenQasm representation of a gate that is only executed when
+    /// the condition `condition` on the classical bits of the program state
+    /// holds. The default implementation only works for a single gate,
+    /// composite gates (like `Composite` or `Kron`) should overwrite this
+    /// default. On success, returns `Ok` with the instruction string. On error,
+    /// returns `Err` with an error message.
+    fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> Result<String, String>
+    {
+        Ok(format!("if ({}) {}", condition, self.open_qasm(bit_names, bits)))
+    }
 }
 
 /// Trait for gates that can be represented in c-Qasm.
@@ -20,6 +34,29 @@ pub trait CQasm
     /// Return an cQasm instruction string for this gate operating on qubits
     /// `bits`. The array `bit_names` contains the names of all qubits.
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
+
+    /// cQasm representation of conditional gate.
+    ///
+    /// Return the cQasm representation of a gate that is only executed when
+    /// the condition `condition` on the classical bits of the program state
+    /// holds. The default implementation only works for a single gate,
+    /// composite gates (like `Composite` or `Kron`) should overwrite this
+    /// default. On success, returns `Ok` with the instruction string. On error,
+    /// returns `Err` with an error message.
+    fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> Result<String, String>
+    {
+        let unc_qasm = self.c_qasm(bit_names, bits);
+        let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
+        if parts.len() != 2
+        {
+            Err(format!("Unable to find instruction name or argument in \"{}\"", unc_qasm))
+        }
+        else
+        {
+            Ok(format!("c-{} {} {}", parts[0], condition, parts[1]))
+        }
+    }
 }
 
 

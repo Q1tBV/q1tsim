@@ -449,7 +449,7 @@ impl qasm::OpenQasm for Composite
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> String
+        bits: &[usize]) -> Result<String, String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -464,7 +464,7 @@ impl qasm::OpenQasm for Composite
                 res += &format!("; if ({}) {}", condition, instr);
             }
         }
-        res
+        Ok(res)
     }
 }
 

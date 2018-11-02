@@ -164,6 +164,8 @@ macro_rules! declare_controlled_qasm
                 $(
                     let pattern = concat!("{", stringify!($arg), "}");
                     res = res.replace(pattern, &self.$arg.to_string());
+                    let pattern = concat!("{half_", stringify!($arg), "}");
+                    res = res.replace(pattern, &(0.5 * self.$arg).to_string());
                 )*
 
                 res
@@ -222,9 +224,10 @@ declare_controlled!(
 declare_controlled!(
     /// Controlled `R`<sub>`Y`</sub> gate.
     CRY, gates::RY,
-    cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
+    cost=2.0*CX::cost() + 2.0*gates::U3::cost(),
     arg=theta,
-    open_qasm="cx {0}, {1}; u3(-{theta}/2, 0, 0) {1}; cx {0}, {1}; U3({theta}/2, 0, 0) {1}");
+    open_qasm="cx {0}, {1}; u3(-{theta}/2, 0, 0) {1}; cx {0}, {1}; u3({theta}/2, 0, 0) {1}",
+    c_qasm="cnot {0}, {1}\nry {1}, -{half_theta}\ncnot {0}, {1}\nry {1}, {half_theta}");
 declare_controlled!(
     /// Controlled `R`<sub>`Z`</sub> gate.
     CRZ, gates::RZ,
@@ -409,7 +412,7 @@ mod tests
         assert_eq!(CZ::new().cost(), 1209.0);
         assert_eq!(CH::new().cost(), 2550.0);
         assert_eq!(CRX::cost(), 2411.0);
-        assert_eq!(CRY::cost(), 2411.0);
+        assert_eq!(CRY::cost(), 2404.0);
         assert_eq!(CRZ::cost(), 2016.0);
         assert_eq!(CCX::new().cost(), 6263.0);
         assert_eq!(CCZ::new().cost(), 6471.0);

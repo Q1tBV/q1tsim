@@ -68,6 +68,16 @@ where G0: gates::Gate+qasm::OpenQasm, G1: qasm::OpenQasm
         format!("{}; {}", self.g0.open_qasm(bit_names, &bits[..n0]),
             self.g1.open_qasm(bit_names, &bits[n0..]))
     }
+
+    fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> Result<String, String>
+    {
+        let n0 = self.g0.nr_affected_bits();
+        let res = format!("if ({}) {}; if ({}) {}",
+            condition, self.g0.open_qasm(bit_names, &bits[..n0]),
+            condition, self.g1.open_qasm(bit_names, &bits[n0..]));
+        Ok(res)
+    }
 }
 
 impl<G0, G1> qasm::CQasm for Kron<G0, G1>
