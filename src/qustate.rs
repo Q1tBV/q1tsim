@@ -345,6 +345,13 @@ impl QuState
 
         res
     }
+
+    pub fn reset(&mut self, bit: usize)
+    {
+        let measurement = self.measure(bit);
+        let control: Vec<bool> = measurement.iter().map(|&b| b != 0).collect();
+        self.apply_conditional_gate(&control, &gates::X::new(), &[bit]);
+    }
 }
 
 #[cfg(test)]
@@ -491,15 +498,15 @@ mod tests
 //         s.apply_gate(&cx, &[0, 1]);
 //         assert_close_l2!(s.coefs.as_ref(), array![o; z; z; z; z; z; z; z]);
 //
-//         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
+//         let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
 //         s.apply_gate(&cx, &[0, 1]);
 //         assert_close_l2!(s.coefs.as_ref(), array![z; z; z; z; z; z; o; z]);
 //
-//         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
+//         let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
 //         s.apply_gate(&cx, &[0, 2]);
 //         assert_close_l2!(s.coefs.as_ref(), array![z; z; z; z; z; o; z; z]);
 //
-//         let mut s = QuState::from_qubit_coefs(&vec![z, o, o, z, o, z], 1);
+//         let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
 //         let hh = gates::Kron::new(gates::H::new(), gates::H::new());
 //         s.apply_gate(&hh, &[1, 2]);
 //         assert_close_l2!(s.coefs.as_ref(), array![z; z; z; z; h; h; h; h]);
@@ -518,15 +525,47 @@ mod tests
 //         s.apply_gate(&ccx, &[0, 1, 2]);
 //         assert_close_l2!(s.coefs.as_ref(), array![o; z; z; z; z; z; z; z]);
 //
-//         let mut s = QuState::from_qubit_coefs(&vec![z, o, z, o, o, z], 1);
+//         let mut s = QuState::from_qubit_coefs(&[z, o, z, o, o, z], 1);
 //         let ccx = gates::CCX::new();
 //         s.apply_gate(&ccx, &[0, 2, 1]);
 //         assert_close_l2!(s.coefs.as_ref(), array![z; z; z; z; z; z; o; z]);
 //         s.apply_gate(&ccx, &[0, 1, 2]);
 //         assert_close_l2!(s.coefs.as_ref(), array![z; z; z; z; z; z; z; o]);
 //
-//         let mut s = QuState::from_qubit_coefs(&vec![x, -x, x, -x, x, -x], 1);
+//         let mut s = QuState::from_qubit_coefs(&[x, -x, x, -x, x, -x], 1);
 //         s.apply_gate(&ccx, &[0, 2, 1]);
 //         assert_close_l2!(s.coefs.as_ref(), array![hx; -hx; -hx; hx; -hx; -hx; hx; hx]);
 //     }
+
+    #[test]
+    fn test_reset()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+
+        let mut s = QuState::from_qubit_coefs(&[o, z], 10);
+        s.reset(0);
+        assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![o, z]);
+
+        let mut s = QuState::from_qubit_coefs(&[z, o], 10);
+        s.reset(0);
+        assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![o, z]);
+
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], 10);
+        s.reset(0);
+        assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![z, o, z, z]);
+
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], 10);
+        s.reset(1);
+        assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![z, z, o, z]);
+
+        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], 10);
+        s.reset(0);
+        assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![o, z, z, z]);
+
+        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], 10);
+        s.reset(1);
+        assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![x, z, -x, z]);
+    }
 }

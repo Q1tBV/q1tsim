@@ -12,6 +12,8 @@ enum CircuitOp
     Gate(Box<CircuitGate>, Vec<usize>),
     /// Conditionally apply a gate, depending on classical bits
     ConditionalGate(Vec<usize>, u64, Box<CircuitGate>, Vec<usize>),
+    /// Reset a qubit
+    Reset(usize),
     /// Measure a qubit in the Pauli X basis
     MeasureX(usize, usize),
     /// Measure a qubit in the Pauli Y basis
@@ -119,6 +121,16 @@ impl Circuit
     pub fn measure(&mut self, qbit: usize, cbit: usize)
     {
         self.measure_z(qbit, cbit);
+    }
+
+    /// Reset a qubit
+    ///
+    /// Reset the qubit `qbit` to |0〉. This is done by measuring the bit, and
+    /// flipping it if the result is `1`, so this is potentially an expensive
+    /// operation.
+    pub fn reset(&mut self, qbit: usize)
+    {
+        self.ops.push(CircuitOp::Reset(qbit));
     }
 
     /// Add a Hadamard gate.
@@ -253,6 +265,9 @@ impl Circuit
                 CircuitOp::MeasureZ(qbit, cbit)     => {
                     let msr = self.q_state.measure(qbit);
                     self.c_state.row_mut(cbit).assign(&msr);
+                },
+                CircuitOp::Reset(bit) => {
+                    self.q_state.reset(bit);
                 }
             }
         }
@@ -410,15 +425,18 @@ impl Circuit
                 },
                 CircuitOp::MeasureX(qbit, cbit)   => {
                     res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
-                    res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
+                    res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
                 }
                 CircuitOp::MeasureY(qbit, cbit)   => {
                     res += &format!("{};\n", gates::Sdg::new().open_qasm(&qbit_names, &[qbit]));
                     res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
-                    res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
+                    res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
                 }
                 CircuitOp::MeasureZ(qbit, cbit)   => {
-                    res += &format!("measure q[{}] -> b[{}];\n", qbit, cbit);
+                    res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
+                },
+                CircuitOp::Reset(qbit) => {
+                    res += &format!("reset {}", qbit_names[qbit]);
                 }
             }
         }
@@ -506,6 +524,9 @@ impl Circuit
                 CircuitOp::MeasureZ(qbit, cbit)     => {
                     Self::check_c_qasm_measurement(qbit, cbit)?;
                     res += &format!("measure q[{}]\n", qbit);
+                },
+                CircuitOp::Reset(qbit) => {
+                    res += &format!("prep_z {}", qbit_names[qbit]);
                 }
             }
         }
@@ -617,7 +638,7 @@ mod tests
         circuit.measure(1, 1);
         circuit.execute();
         let hist = circuit.histogram_vec();
-        assert_eq!(hist, vec![0, 0, 1024, 0]);
+        assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.x(0);
@@ -635,7 +656,7 @@ mod tests
         circuit.measure_x(1, 1);
         circuit.execute();
         let hist = circuit.histogram_vec();
-        assert_eq!(hist, vec![0, 0, 1024, 0]);
+        assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.x(0);
@@ -644,6 +665,50 @@ mod tests
         circuit.execute();
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_reset()
+    {
+        let nr_shots = 1024;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 443;
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.h(0);
+        circuit.z(0);
+        circuit.reset(0);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist, vec![nr_shots, 0, 0, 0]);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.h(0);
+        circuit.z(0);
+        circuit.x(1);
+        circuit.reset(0);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist, vec![0, nr_shots, 0, 0]);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.h(0);
+        circuit.z(0);
+        circuit.h(1);
+        circuit.reset(0);
+        circuit.measure(0, 0);
+        circuit.measure(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert!(hist[0] > min_count);
+        assert!(hist[1] > min_count);
+        assert_eq!(hist[2], 0);
+        assert_eq!(hist[3], 0);
     }
 
     #[test]
