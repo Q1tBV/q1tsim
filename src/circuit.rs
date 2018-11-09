@@ -277,9 +277,9 @@ impl Circuit
     ///
     /// Create a histogram of the measured classical bits. The `n` bits in the
     /// classical register are collected in a single `u64` integer value. The
-    /// most significant bit `n-1` in the histogram key corresponds to the first
+    /// most significant bit `n-1` in the histogram key corresponds to the last
     /// bit in the classical register, and the least significant bit in the key
-    /// to the last bit in the register. This function of course only works
+    /// to the first bit in the register. This function of course only works
     /// when there are at most 64 bits in the register. If there are more, use
     /// `histogram_string()`.
     pub fn histogram(&self) -> ::std::collections::HashMap<u64, usize>
@@ -287,7 +287,7 @@ impl Circuit
         let mut res = ::std::collections::HashMap::new();
         for col in self.c_state.gencolumns()
         {
-            let key = col.iter().fold(0, |k, &b| (k << 1) | b as u64);
+            let key = col.iter().rev().fold(0, |k, &b| (k << 1) | b as u64);
             let count = res.entry(key).or_insert(0);
             *count += 1;
         }
@@ -307,7 +307,7 @@ impl Circuit
         let mut res = vec![0; 1 << self.c_state.rows()];
         for col in self.c_state.gencolumns()
         {
-            let key = col.iter().fold(0, |k, &b| (k << 1) | b as usize);
+            let key = col.iter().rev().fold(0, |k, &b| (k << 1) | b as usize);
             res[key] += 1;
         }
         res
@@ -316,14 +316,16 @@ impl Circuit
     /// Create a histogram of measurements.
     ///
     /// Create a histogram of the measured classical bits. The `n` bits in the
-    /// classical register are collected in a string key, with the first character
+    /// classical register are collected in a string key, with the last character
     /// in the key corresponding to the first bit in the classical register.
     pub fn histogram_string(&self) -> ::std::collections::HashMap<String, usize>
     {
         let mut res = ::std::collections::HashMap::new();
         for col in self.c_state.gencolumns()
         {
-            let key = col.iter().map(|&b| ::std::char::from_digit(b as u32, 10).unwrap()).collect();
+            let key = col.iter().rev()
+                .map(|&b| ::std::char::from_digit(b as u32, 10).unwrap())
+                .collect();
             let count = res.entry(key).or_insert(0);
             *count += 1;
         }
@@ -638,7 +640,7 @@ mod tests
         circuit.measure(1, 1);
         circuit.execute();
         let hist = circuit.histogram_vec();
-        assert_eq!(hist, vec![0, 0, nr_shots, 0]);
+        assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.x(0);
@@ -656,7 +658,7 @@ mod tests
         circuit.measure_x(1, 1);
         circuit.execute();
         let hist = circuit.histogram_vec();
-        assert_eq!(hist, vec![0, 0, nr_shots, 0]);
+        assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.x(0);
@@ -694,7 +696,7 @@ mod tests
         circuit.measure(1, 1);
         circuit.execute();
         let hist = circuit.histogram_vec();
-        assert_eq!(hist, vec![0, nr_shots, 0, 0]);
+        assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
         let mut circuit = Circuit::new(2, 2, nr_shots);
         circuit.h(0);
@@ -706,8 +708,8 @@ mod tests
         circuit.execute();
         let hist = circuit.histogram_vec();
         assert!(hist[0] > min_count);
-        assert!(hist[1] > min_count);
-        assert_eq!(hist[2], 0);
+        assert!(hist[2] > min_count);
+        assert_eq!(hist[1], 0);
         assert_eq!(hist[3], 0);
     }
 
