@@ -5,6 +5,7 @@ extern crate rand;
 use cmatrix;
 use gates;
 
+use self::rand::distributions::Distribution;
 use self::rand::Rng;
 
 /// Measured quantum state
@@ -41,7 +42,7 @@ pub struct QuState
     /// Coefficients of the basis states in this state
     measurements: ::std::collections::LinkedList<Measurement>,
     /// Random number generator, for measurements
-    rng: rand::ThreadRng
+    rng: rand::rngs::ThreadRng
 }
 
 impl QuState
@@ -279,7 +280,8 @@ impl QuState
 
     /// Measure a qubit.
     ///
-    /// Perform a measurement on qubit `bit` in the state.
+    /// Perform a measurement on qubit `bit` in the state. Measurement is done
+    /// in the `z`-basis.
     pub fn measure(&mut self, bit: usize) -> ::ndarray::Array1<u8>
     {
         assert!(bit < self.nr_bits, "Invalid bit index");
@@ -346,6 +348,60 @@ impl QuState
         res
     }
 
+    /// Measure all qubits
+    ///
+    /// Measure all qubits in this state, and return the results through
+    /// `result`.
+    pub fn measure_all(&mut self) -> ndarray::Array2<u8>
+    {
+        let nr_coefs = 1 << self.nr_bits;
+        let mut counts = ::std::collections::HashMap::new();
+        let mut result = ndarray::Array2::<u8>::zeros((self.nr_bits, self.nr_shots));
+        let mut res_off = 0;
+        let mut new_measurements = ::std::collections::LinkedList::new();
+        for m in &self.measurements
+        {
+            // Collect which measurements are made for this collection of runs.
+            // Store this in a hash map with the measurement result as key, and
+            // the number of times it was measured as value.
+            counts.clear();
+            let distr = rand::distributions::WeightedIndex::new(
+                m.coefs.iter().map(|c| c.norm_sqr())
+            ).unwrap();
+            for idx in distr.sample_iter(&mut self.rng).take(m.count)
+            {
+                let entry = counts.entry(idx).or_insert(0);
+                *entry += 1;
+            }
+
+            // For each unique measurement, store n copies of it in the result,
+            // where n is the number of times it was measured. Furthermore,
+            // create a new set of n runs with the resulting state after
+            // the measurement for the new state.
+            for (&idx, &count) in counts.iter()
+            {
+                let mut coefs = cmatrix::CVector::zeros(nr_coefs);
+                coefs[idx] = cmatrix::COMPLEX_ONE;
+                new_measurements.push_back(Measurement::new(coefs, count));
+
+                for irow in 0..self.nr_bits
+                {
+                    if idx & (1 << irow) != 0
+                    {
+                        // MSB in idx is bit 0 in state
+                        result.slice_mut(s![self.nr_bits-irow-1, res_off..res_off+count]).fill(1);
+                    }
+                }
+
+                res_off += count;
+            }
+        }
+
+        self.measurements = new_measurements;
+
+        result
+    }
+
     pub fn reset(&mut self, bit: usize)
     {
         let measurement = self.measure(bit);
@@ -357,9 +413,11 @@ impl QuState
 #[cfg(test)]
 mod tests
 {
+    extern crate ndarray;
+
     use cmatrix;
     use gates;
-    use qustate::QuState;
+    use super::QuState;
 
     #[test]
     fn test_new()
@@ -538,33 +596,62 @@ mod tests
 //     }
 
     #[test]
+    fn test_measure_all()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+
+        let nr_bits = 3;
+        let nr_shots = 5;
+
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
+        let result = s.measure_all();
+        assert_eq!(result.shape(), [nr_bits, nr_shots]);
+        assert!(result.iter().all(|&b| b == 1));
+
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, o, z], nr_shots);
+        let result = s.measure_all();
+        assert_eq!(result.shape(), [nr_bits, nr_shots]);
+        assert!(result.slice(s![0..2, ..]).iter().all(|&b| b == 1));
+        assert!(result.slice(s![2, ..]).iter().all(|&b| b == 0));
+
+        let mut s = QuState::new(nr_bits, nr_shots);
+        s.apply_gate(&gates::H::new(), &[2]);
+        let result = s.measure_all();
+        assert_eq!(result.shape(), [nr_bits, nr_shots]);
+        assert!(result.slice(s![0..2, ..]).iter().all(|&b| b == 0));
+    }
+
+    #[test]
     fn test_reset()
     {
+        let nr_runs = 10;
+
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;
         let x = cmatrix::COMPLEX_HSQRT2;
 
-        let mut s = QuState::from_qubit_coefs(&[o, z], 10);
+        let mut s = QuState::from_qubit_coefs(&[o, z], nr_runs);
         s.reset(0);
         assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![o, z]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o], 10);
+        let mut s = QuState::from_qubit_coefs(&[z, o], nr_runs);
         s.reset(0);
         assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![o, z]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], 10);
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
         s.reset(0);
         assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![z, o, z, z]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], 10);
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
         s.reset(1);
         assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![z, z, o, z]);
 
-        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], 10);
+        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
         s.reset(0);
         assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![o, z, z, z]);
 
-        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], 10);
+        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
         s.reset(1);
         assert_complex_vector_eq!(&s.measurements.front().unwrap().coefs, &array![x, z, -x, z]);
     }

@@ -19,7 +19,9 @@ enum CircuitOp
     /// Measure a qubit in the Pauli Y basis
     MeasureY(usize, usize),
     /// Measure a qubit in the Pauli Z basis
-    MeasureZ(usize, usize)
+    MeasureZ(usize, usize),
+    /// Measure all qubits, in the Pauli Z basis
+    MeasureAll(Vec<usize>)
 }
 
 /// A quantum circuit
@@ -121,6 +123,15 @@ impl Circuit
     pub fn measure(&mut self, qbit: usize, cbit: usize)
     {
         self.measure_z(qbit, cbit);
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add the measurement of all qubits in the quantum state into the classical
+    /// bits `cbits`.
+    pub fn measure_all(&mut self, cbits: &[usize])
+    {
+        self.ops.push(CircuitOp::MeasureAll(cbits.to_owned()));
     }
 
     /// Reset a qubit
@@ -266,6 +277,13 @@ impl Circuit
                     let msr = self.q_state.measure(qbit);
                     self.c_state.row_mut(cbit).assign(&msr);
                 },
+                CircuitOp::MeasureAll(ref cbits) => {
+                    let msr = self.q_state.measure_all();
+                    for (&i, row) in cbits.iter().zip(msr.genrows())
+                    {
+                        self.c_state.row_mut(i).assign(&row);
+                    }
+                },
                 CircuitOp::Reset(bit) => {
                     self.q_state.reset(bit);
                 }
@@ -277,9 +295,9 @@ impl Circuit
     ///
     /// Create a histogram of the measured classical bits. The `n` bits in the
     /// classical register are collected in a single `u64` integer value. The
-    /// most significant bit `n-1` in the histogram key corresponds to the last
-    /// bit in the classical register, and the least significant bit in the key
-    /// to the first bit in the register. This function of course only works
+    /// first bit in the classical register (at index 0) corresponds to the
+    /// least significant bit in the key; the last classical bit (at index `n-1`)
+    /// to the most significant bit in the key. This function of course only works
     /// when there are at most 64 bits in the register. If there are more, use
     /// `histogram_string()`.
     pub fn histogram(&self) -> ::std::collections::HashMap<u64, usize>
@@ -298,7 +316,8 @@ impl Circuit
     ///
     /// Create a histogram of the measured classical bits. The `n` bits in the
     /// classical register are collected in a single `usize` integer value,
-    /// which is used as an index in a vector. The vector is of length
+    /// which is used as an index in a vector. The bit order of the indices
+    /// is the same as in the `histogram()` function. The vector is of length
     /// `2`<sub>`n`</sub>, so use this function only for reasonably small
     /// numbers of `n`. For sparse collections, using `histogram()` or
     /// `histogram_string` may be better.
@@ -317,7 +336,8 @@ impl Circuit
     ///
     /// Create a histogram of the measured classical bits. The `n` bits in the
     /// classical register are collected in a string key, with the last character
-    /// in the key corresponding to the first bit in the classical register.
+    /// in the key corresponding to the first bit (at index 0) in the classical
+    /// register and vice versa.
     pub fn histogram_string(&self) -> ::std::collections::HashMap<String, usize>
     {
         let mut res = ::std::collections::HashMap::new();
@@ -437,6 +457,21 @@ impl Circuit
                 CircuitOp::MeasureZ(qbit, cbit)   => {
                     res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
                 },
+                CircuitOp::MeasureAll(ref cbits) => {
+                    if cbits.len() == self.c_state.rows()
+                        && cbits.iter().enumerate().all(|(i, &b)| i==b)
+                    {
+                        res += &format!("measure q -> c;\n");
+                    }
+                    else
+                    {
+                        for (qbit, &cbit) in cbits.iter().enumerate()
+                        {
+                            res += &format!("measure {} -> {};\n", qbit_names[qbit],
+                                cbit_names[cbit]);
+                        }
+                    }
+                },
                 CircuitOp::Reset(qbit) => {
                     res += &format!("reset {}", qbit_names[qbit]);
                 }
@@ -526,6 +561,13 @@ impl Circuit
                 CircuitOp::MeasureZ(qbit, cbit)     => {
                     Self::check_c_qasm_measurement(qbit, cbit)?;
                     res += &format!("measure q[{}]\n", qbit);
+                },
+                CircuitOp::MeasureAll(ref cbits) => {
+                    for (qbit, &cbit) in cbits.iter().enumerate()
+                    {
+                        Self::check_c_qasm_measurement(qbit, cbit)?;
+                    }
+                    res += &format!("measure_all\n");
                 },
                 CircuitOp::Reset(qbit) => {
                     res += &format!("prep_z {}", qbit_names[qbit]);
@@ -664,6 +706,37 @@ mod tests
         circuit.x(0);
         circuit.measure_y(0, 0);
         circuit.measure_y(1, 1);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert!(*hist.iter().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_measure_all()
+    {
+        let nr_shots = 1024;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 196;
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.x(0);
+        circuit.measure_all(&[0, 1]);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist, vec![0, nr_shots, 0, 0]);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.x(0);
+        circuit.measure_all(&[1, 0]);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist, vec![0, 0, nr_shots, 0]);
+
+        let mut circuit = Circuit::new(2, 2, nr_shots);
+        circuit.h(0);
+        circuit.h(1);
+        circuit.measure_all(&[0, 1]);
         circuit.execute();
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
