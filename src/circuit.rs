@@ -12,8 +12,10 @@ enum CircuitOp
     Gate(Box<CircuitGate>, Vec<usize>),
     /// Conditionally apply a gate, depending on classical bits
     ConditionalGate(Vec<usize>, u64, Box<CircuitGate>, Vec<usize>),
-    /// Reset a qubit
+    /// Reset a qubit to |0〉
     Reset(usize),
+    /// Reset the quantum state to |00...0〉
+    ResetAll,
     /// Measure a qubit in the Pauli X basis
     MeasureX(usize, usize),
     /// Measure a qubit in the Pauli Y basis
@@ -142,6 +144,15 @@ impl Circuit
     pub fn reset(&mut self, qbit: usize)
     {
         self.ops.push(CircuitOp::Reset(qbit));
+    }
+
+    /// Reset all qubits
+    ///
+    /// Reset the entire quantum state of the circuit to |00...0〉. The classical
+    /// register is not affected.
+    pub fn reset_all(&mut self)
+    {
+        self.ops.push(CircuitOp::ResetAll);
     }
 
     /// Add a Hadamard gate.
@@ -286,6 +297,9 @@ impl Circuit
                 },
                 CircuitOp::Reset(bit) => {
                     self.q_state.reset(bit);
+                },
+                CircuitOp::ResetAll => {
+                    self.q_state.reset_all();
                 }
             }
         }
@@ -473,7 +487,10 @@ impl Circuit
                     }
                 },
                 CircuitOp::Reset(qbit) => {
-                    res += &format!("reset {}", qbit_names[qbit]);
+                    res += &format!("reset {};\n", qbit_names[qbit]);
+                },
+                CircuitOp::ResetAll => {
+                    res += "reset q;\n";
                 }
             }
         }
@@ -570,7 +587,13 @@ impl Circuit
                     res += &format!("measure_all\n");
                 },
                 CircuitOp::Reset(qbit) => {
-                    res += &format!("prep_z {}", qbit_names[qbit]);
+                    res += &format!("prep_z {}\n", qbit_names[qbit]);
+                },
+                CircuitOp::ResetAll => {
+                    for i in 0..nr_qbits
+                    {
+                        res += &format!("prep_z {}\n", qbit_names[i]);
+                    }
                 }
             }
         }
@@ -784,6 +807,24 @@ mod tests
         assert!(hist[2] > min_count);
         assert_eq!(hist[1], 0);
         assert_eq!(hist[3], 0);
+    }
+
+    #[test]
+    fn test_reset_all()
+    {
+        let nr_shots = 1024;
+
+        let mut circuit = Circuit::new(5, 5, nr_shots);
+        circuit.h(0);
+        circuit.z(0);
+        circuit.x(4);
+        circuit.h(3);
+        circuit.reset_all();
+        circuit.measure_all(&[0, 1, 2, 3, 4]);
+        circuit.execute();
+        let hist = circuit.histogram_vec();
+        assert_eq!(hist[0], nr_shots);
+        assert!(hist[1..].iter().all(|&c| c == 0));
     }
 
     #[test]
