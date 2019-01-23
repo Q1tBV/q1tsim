@@ -488,6 +488,53 @@ mod tests
     }
 
     #[test]
+    fn test_apply_conditional_gate()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+
+        let mut s = QuState::new(2, 5);
+        s.apply_conditional_gate(&[false, false, true, true, false], &gates::X::new(), &[1]);
+        assert_eq!(s.state_counts.len(), 3);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 2);
+        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 2);
+        assert_complex_vector_eq!(&sc.coefs, &array![z, o, z, z]);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 1);
+        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+
+        let mut s = QuState::new(2, 5);
+        s.apply_conditional_gate(&[false, false, true, true, true], &gates::X::new(), &[0]);
+        assert_eq!(s.state_counts.len(), 2);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 2);
+        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 3);
+        assert_complex_vector_eq!(&sc.coefs, &array![z, z, o, z]);
+
+        let mut s = QuState::new(2, 5);
+        s.apply_conditional_gate(&[true, false, true, true, false], &gates::H::new(), &[1]);
+        assert_eq!(s.state_counts.len(), 4);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 1);
+        assert_complex_vector_eq!(&sc.coefs, &array![x, x, z, z]);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 1);
+        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 2);
+        assert_complex_vector_eq!(&sc.coefs, &array![x, x, z, z]);
+        let sc = s.state_counts.pop_front().unwrap();
+        assert_eq!(sc.count, 1);
+        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+    }
+
+    #[test]
     fn test_measure()
     {
         let z = cmatrix::COMPLEX_ZERO;
