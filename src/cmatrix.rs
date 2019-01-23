@@ -16,9 +16,9 @@ pub fn kron_vec(v0: &CVector, v1: &CVector) -> CVector
 {
     let (n0, n1) = (v0.len(), v1.len());
     let mut res = CVector::zeros(n0*n1);
-    for i in 0..n0
+    for (i, &x) in v0.iter().enumerate()
     {
-        res.slice_mut(s![i*n1..(i+1)*n1]).assign(&(v1 * v0[i]));
+        res.slice_mut(s![i*n1..(i+1)*n1]).assign(&(v1 * x));
     }
     res
 }
