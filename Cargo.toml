@@ -2,6 +2,11 @@
 name = "q1tsim"
 version = "0.1.0"
 authors = ["Gé Vissers <ge@q1t.nl>"]
+description="A simple, efficient, quantum computer simulator."
+repository="https://github.com/Q1tBV/q1tsim"
+keywords=["quantum-computing", "quantum-computer-simulator", "quantum", "qubits", "rust"]
+license="Apache-2.0"
+readme="README.md"
 
 [dependencies]
 num-complex="0.2"
