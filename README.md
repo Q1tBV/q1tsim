@@ -1,3 +1,10 @@
+# [q1tsim](https://github.com/Q1tBV/q1tsim/)
+
+[![Build Status](https://travis-ci.org/Q1tBV/q1tsim.svg?branch=master)](https://travis-ci.org/Q1tBV/q1tsim)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![crates.io](http://meritbadge.herokuapp.com/q1tsim)](https://crates.io/crates/q1tsim)
+[![Released API docs](https://docs.rs/q1tsim/badge.svg)](https://docs.rs/q1tsim)
+
 A simple, efficient, quantum computer simulator.
 
 Overview
