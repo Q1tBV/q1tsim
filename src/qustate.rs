@@ -333,8 +333,8 @@ impl QuState
             let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
             let n0 = self.rng.sample(distribution) as usize;
 
-            // Store the result
-            res.slice_mut(s![res_start..res_start+n0]).fill(0);
+            // Store the result. In fact, store only the ones, since the array
+            // was already initialized to all zeros.
             res.slice_mut(s![res_start+n0..res_start+m.count]).fill(1);
             res_start += m.count;
 
