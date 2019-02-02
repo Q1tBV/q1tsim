@@ -300,14 +300,28 @@ impl QuState
     /// Measure a qubit.
     ///
     /// Perform a measurement on qubit `bit` in the state. Measurement is done
-    /// in the `z`-basis.
+    /// in the `z`-basis. The result is returned as an array containing the
+    /// measurement result for each run.
     pub fn measure(&mut self, bit: usize) -> ::ndarray::Array1<u8>
     {
+        let mut res = ndarray::Array1::zeros(self.nr_shots);
+        self.measure_into(bit, res.view_mut());
+        res
+    }
+
+    /// Measure a qubit.
+    ///
+    /// Perform a measurement on qubit `bit` in the state. The results
+    /// for each run are stores in `res`, which should be a contiguous view on
+    /// an array of sufficient length to store results for the total number
+    /// of runs in the state. Measurement is done in the `z`-basis.
+    pub fn measure_into(&mut self, bit: usize, mut res: ndarray::ArrayViewMut1<u8>)
+    {
         assert!(bit < self.nr_bits, "Invalid bit index");
+        assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
 
         let block_size = 1 << (self.nr_bits - bit - 1);
         let nr_blocks = 1 << bit;
-        let mut res = ndarray::Array1::zeros(self.nr_shots);
         let mut res_start = 0;
 
         let mut new_state_counts = vec![];
@@ -335,6 +349,7 @@ impl QuState
 
             // Store the result. In fact, store only the ones, since the array
             // was already initialized to all zeros.
+            res.slice_mut(s![res_start..res_start+n0]).fill(0);
             res.slice_mut(s![res_start+n0..res_start+m.count]).fill(1);
             res_start += m.count;
 
@@ -361,8 +376,6 @@ impl QuState
             }
         }
         self.state_counts = new_state_counts;
-
-        res
     }
 
     /// Measure all qubits

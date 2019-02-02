@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -290,18 +290,15 @@ impl Circuit
                 },
                 CircuitOp::MeasureX(qbit, cbit)     => {
                     self.q_state.apply_gate(&gates::H::new(), &[qbit]);
-                    let msr = self.q_state.measure(qbit);
-                    self.c_state.row_mut(cbit).assign(&msr);
+                    self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
                 }
                 CircuitOp::MeasureY(qbit, cbit)     => {
                     self.q_state.apply_gate(&gates::Sdg::new(), &[qbit]);
                     self.q_state.apply_gate(&gates::H::new(), &[qbit]);
-                    let msr = self.q_state.measure(qbit);
-                    self.c_state.row_mut(cbit).assign(&msr);
+                    self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
                 }
                 CircuitOp::MeasureZ(qbit, cbit)     => {
-                    let msr = self.q_state.measure(qbit);
-                    self.c_state.row_mut(cbit).assign(&msr);
+                    self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
                 },
                 CircuitOp::MeasureAll(ref cbits) => {
                     let msr = self.q_state.measure_all();
