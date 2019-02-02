@@ -573,32 +573,28 @@ mod tests
         assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![o, z, z, z]);
 
-            /*
         // (H|0〉)⊗(H|0〉), unnormalized
         let mut s = QuState::from_qubit_coefs(&[o, o, o, o], 1024);
         let m0 = s.measure(0);
         let mut prev_b = m0[0];
-        for j in 0..s.nr_shots
+        let mut sc_idx = 0;
+        for &b in m0.iter()
         {
-            let b = m0[j];
             if b != prev_b
             {
-                let sc = s.state_counts.pop_front().unwrap();
-                s.state_counts.push_back(sc);
+                sc_idx += 1;
                 prev_b = b;
             }
             match b
             {
-                0 => assert_complex_vector_eq!(&s.state_counts[0].coefs,
+                0 => assert_complex_vector_eq!(&s.state_counts[sc_idx].coefs,
                     &array![x, x, z, z]),
-                1 => assert_complex_vector_eq!(&s.state_counts[0].coefs,
+                1 => assert_complex_vector_eq!(&s.state_counts[sc_idx].coefs,
                     &array![z, z, x, x]),
                 _ => panic!("Invalid value {} for bit", b)
             }
         }
 
-        let sc = s.state_counts.pop_front().unwrap();
-        s.state_counts.push_back(sc);
         // After collapse, a new measurement should yield the same result
         let m0b = s.measure(0);
         assert_eq!(m0b, m0);
@@ -607,18 +603,18 @@ mod tests
         let m1 = s.measure(1);
         let mut prev_b0 = m0[0];
         let mut prev_b1 = m1[0];
+        let mut sc_idx = 0;
         for j in 0..s.nr_shots
         {
             let b0 = m0[j];
             let b1 = m1[j];
             if b0 != prev_b0 || b1 != prev_b1
             {
-                let sc = s.state_counts.pop_front().unwrap();
-                s.state_counts.push_back(sc);
+                sc_idx += 1;
                 prev_b0 = b0;
                 prev_b1 = b1;
             }
-            let coefs = &s.state_counts[0].coefs;
+            let coefs = &s.state_counts[sc_idx].coefs;
             match (b0, b1)
             {
                 (0, 0) => assert_complex_vector_eq!(coefs, &array![o, z, z, z]),
@@ -627,7 +623,7 @@ mod tests
                 (1, 1) => assert_complex_vector_eq!(coefs, &array![z, z, z, o]),
                 _      => panic!("Invalid value {:?} for bits", (b0, b1))
             }
-        }*/
+        }
     }
 
     #[test]
