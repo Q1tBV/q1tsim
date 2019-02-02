@@ -25,7 +25,7 @@ use self::rand::Rng;
 
 /// Single quantum state
 ///
-/// The full state of the exoeriment is stored as a collection of quantum states,
+/// The full state of the experiment is stored as a collection of quantum states,
 /// combined with the number of times that this exact state occurs. Initially,
 /// the experiment consists of one single state, which is the same for all
 /// runs. Every time a measurement is made in the experiment, each state can split
@@ -60,7 +60,7 @@ pub struct QuState
     /// The number of separate runs for evolving this state
     nr_shots: usize,
     /// Coefficients of the basis states in this state
-    state_counts: ::std::collections::LinkedList<StateCount>,
+    state_counts: Vec<StateCount>,
     /// Random number generator, for measurements
     rng: rand::rngs::ThreadRng
 }
@@ -74,14 +74,11 @@ impl QuState
         let mut coefs = cmatrix::CVector::zeros(1 << nr_bits);
         coefs[0] = cmatrix::COMPLEX_ONE;
 
-        let mut state_counts = ::std::collections::LinkedList::new();
-        state_counts.push_back(StateCount::new(coefs, nr_shots));
-
         QuState
         {
             nr_bits: nr_bits,
             nr_shots: nr_shots,
-            state_counts: state_counts,
+            state_counts: vec![StateCount::new(coefs, nr_shots)],
             rng: rand::thread_rng()
         }
     }
@@ -107,14 +104,11 @@ impl QuState
             coefs = cmatrix::kron_vec(&coefs, &bit);
         }
 
-        let mut state_counts = ::std::collections::LinkedList::new();
-        state_counts.push_back(StateCount::new(coefs, nr_shots));
-
         QuState
         {
             nr_bits: nr_bits,
             nr_shots: nr_shots,
-            state_counts: state_counts,
+            state_counts: vec![StateCount::new(coefs, nr_shots)],
             rng: rand::thread_rng()
         }
     }
@@ -203,20 +197,20 @@ impl QuState
         }
 
         // Now apply the gate for the runs in the collected ranges
-        let mut new_state_counts = ::std::collections::LinkedList::new();
+        self.state_counts.reverse();
+        let mut new_state_counts = vec![];
         let mut range_idx = 0;
         let mut off = 0;
-        while !self.state_counts.is_empty()
+        while let Some(mut m) = self.state_counts.pop()
         {
             let (begin, end) = ranges[range_idx];
-            let mut m = self.state_counts.pop_front().unwrap();
 
             if begin >= off + m.count
             {
                 // Next range starts after this collection of runs. Append
                 // the runs to the result unchanged, and move to the next run.
                 off += m.count;
-                new_state_counts.push_back(m);
+                new_state_counts.push(m);
                 continue;
             }
 
@@ -229,7 +223,7 @@ impl QuState
                 new_m.count = begin - off;
                 m.count -= new_m.count;
                 off = begin;
-                new_state_counts.push_back(new_m);
+                new_state_counts.push(new_m);
             }
 
             if end < off + m.count
@@ -240,7 +234,7 @@ impl QuState
                 let mut new_m = m.clone();
                 m.count = end - off;
                 new_m.count -= m.count;
-                self.state_counts.push_front(new_m);
+                self.state_counts.push(new_m);
             }
 
             // Now apply the gate to the runs in this range
@@ -263,7 +257,7 @@ impl QuState
             }
 
             off += m.count;
-            new_state_counts.push_back(m);
+            new_state_counts.push(m);
 
             if end > off
             {
@@ -279,7 +273,12 @@ impl QuState
             }
         }
 
-        new_state_counts.append(&mut self.state_counts);
+        if !self.state_counts.is_empty()
+        {
+            self.state_counts.reverse();
+            new_state_counts.append(&mut self.state_counts);
+        }
+
         self.state_counts = new_state_counts;
     }
 
@@ -311,11 +310,9 @@ impl QuState
         let mut res = ndarray::Array1::zeros(self.nr_shots);
         let mut res_start = 0;
 
-        let mut new_state_counts = ::std::collections::LinkedList::new();
-        while !self.state_counts.is_empty()
+        let mut new_state_counts = vec![];
+        for mut m in self.state_counts.drain(..)
         {
-            let mut m = self.state_counts.pop_front().unwrap();
-
             // Compute chance of measuring 0
             let mut w0 = 0.0f64;
             let mut off = 0;
@@ -345,12 +342,12 @@ impl QuState
             if n0 == m.count
             {
                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
-                new_state_counts.push_back(m);
+                new_state_counts.push(m);
             }
             else if n0 == 0
             {
                 Self::collapse(&mut m.coefs, block_size, nr_blocks, 0, 1.0 - w0);
-                new_state_counts.push_back(m);
+                new_state_counts.push(m);
             }
             else
             {
@@ -359,8 +356,8 @@ impl QuState
                 m.count = n0;
                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
                 Self::collapse(&mut m1.coefs, block_size, nr_blocks, 0, 1.0 - w0);
-                new_state_counts.push_back(m);
-                new_state_counts.push_back(m1);
+                new_state_counts.push(m);
+                new_state_counts.push(m1);
             }
         }
         self.state_counts = new_state_counts;
@@ -378,7 +375,7 @@ impl QuState
         let mut counts = ::std::collections::HashMap::new();
         let mut result = ndarray::Array2::<u8>::zeros((self.nr_bits, self.nr_shots));
         let mut res_off = 0;
-        let mut new_state_counts = ::std::collections::LinkedList::new();
+        let mut new_state_counts = vec![];
         for m in &self.state_counts
         {
             // Collect which measurements are made for this collection of runs.
@@ -402,7 +399,7 @@ impl QuState
             {
                 let mut coefs = cmatrix::CVector::zeros(nr_coefs);
                 coefs[idx] = cmatrix::COMPLEX_ONE;
-                new_state_counts.push_back(StateCount::new(coefs, count));
+                new_state_counts.push(StateCount::new(coefs, count));
 
                 for irow in 0..self.nr_bits
                 {
@@ -441,9 +438,7 @@ impl QuState
     {
         let mut coefs = cmatrix::CVector::zeros(1 << self.nr_bits);
         coefs[0] = cmatrix::COMPLEX_ONE;
-
-        self.state_counts.clear();
-        self.state_counts.push_back(StateCount::new(coefs, self.nr_shots));
+        self.state_counts = vec![StateCount::new(coefs, self.nr_shots)];
     }
 }
 
@@ -465,13 +460,13 @@ mod tests
         let s = QuState::new(1, 1024);
         assert_eq!(s.nr_bits, 1);
         assert_eq!(s.nr_shots, 1024);
-        assert_eq!(s.state_counts.front().unwrap().count, 1024);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![o, z]);
+        assert_eq!(s.state_counts[0].count, 1024);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z]);
         let s = QuState::new(3, 1500);
         assert_eq!(s.nr_bits, 3);
         assert_eq!(s.nr_shots, 1500);
-        assert_eq!(s.state_counts.front().unwrap().count, 1500);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![o, z, z, z, z, z, z, z]);
+        assert_eq!(s.state_counts[0].count, 1500);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z, z, z, z, z, z, z]);
     }
 
     #[test]
@@ -485,21 +480,21 @@ mod tests
         let s = QuState::from_qubit_coefs(&[o, z, z, o], 1);
         assert_eq!(s.nr_bits, 2);
         assert_eq!(s.nr_shots, 1);
-        assert_eq!(s.state_counts.front().unwrap().count, 1);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![z, o, z, z]);
+        assert_eq!(s.state_counts[0].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![z, o, z, z]);
         // |1〉⊗|0〉
         let s = QuState::from_qubit_coefs(&[z, o, o, z], 13);
         assert_eq!(s.nr_bits, 2);
         assert_eq!(s.nr_shots, 13);
-        assert_eq!(s.state_counts.front().unwrap().count, 13);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![z, z, o, z]);
+        assert_eq!(s.state_counts[0].count, 13);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![z, z, o, z]);
         // (H|0〉)⊗(Y|1〉), unnormalized
         let s = QuState::from_qubit_coefs(&[o, o, -i, z], 9);
         let x = ::std::f64::consts::FRAC_1_SQRT_2 * i;
         assert_eq!(s.nr_bits, 2);
         assert_eq!(s.nr_shots, 9);
-        assert_eq!(s.state_counts.front().unwrap().count, 9);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![-x, z, -x, z]);
+        assert_eq!(s.state_counts[0].count, 9);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![-x, z, -x, z]);
     }
 
     #[test]
@@ -512,41 +507,32 @@ mod tests
         let mut s = QuState::new(2, 5);
         s.apply_conditional_gate(&[false, false, true, true, false], &gates::X::new(), &[1]);
         assert_eq!(s.state_counts.len(), 3);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 2);
-        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 2);
-        assert_complex_vector_eq!(&sc.coefs, &array![z, o, z, z]);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 1);
-        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+        assert_eq!(s.state_counts[0].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z, z, z]);
+        assert_eq!(s.state_counts[1].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[1].coefs, &array![z, o, z, z]);
+        assert_eq!(s.state_counts[2].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[2].coefs, &array![o, z, z, z]);
 
         let mut s = QuState::new(2, 5);
         s.apply_conditional_gate(&[false, false, true, true, true], &gates::X::new(), &[0]);
         assert_eq!(s.state_counts.len(), 2);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 2);
-        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 3);
-        assert_complex_vector_eq!(&sc.coefs, &array![z, z, o, z]);
+        assert_eq!(s.state_counts[0].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z, z, z]);
+        assert_eq!(s.state_counts[1].count, 3);
+        assert_complex_vector_eq!(&s.state_counts[1].coefs, &array![z, z, o, z]);
 
         let mut s = QuState::new(2, 5);
         s.apply_conditional_gate(&[true, false, true, true, false], &gates::H::new(), &[1]);
         assert_eq!(s.state_counts.len(), 4);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 1);
-        assert_complex_vector_eq!(&sc.coefs, &array![x, x, z, z]);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 1);
-        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 2);
-        assert_complex_vector_eq!(&sc.coefs, &array![x, x, z, z]);
-        let sc = s.state_counts.pop_front().unwrap();
-        assert_eq!(sc.count, 1);
-        assert_complex_vector_eq!(&sc.coefs, &array![o, z, z, z]);
+        assert_eq!(s.state_counts[0].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![x, x, z, z]);
+        assert_eq!(s.state_counts[1].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[1].coefs, &array![o, z, z, z]);
+        assert_eq!(s.state_counts[2].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[2].coefs, &array![x, x, z, z]);
+        assert_eq!(s.state_counts[3].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[3].coefs, &array![o, z, z, z]);
     }
 
     #[test]
@@ -560,20 +546,21 @@ mod tests
         let mut s = QuState::new(1, 3);
         let m = s.measure(0);
         assert_eq!(m, array![0, 0, 0]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![o, z]);
 
         // |0〉⊗|0〉
         let mut s = QuState::from_qubit_coefs(&[o, z, o, z], 3);
         let m = s.measure(1);
         assert_eq!(m, ndarray::Array1::zeros(3));
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![o, z, z, z]);
         let m = s.measure(0);
         assert_eq!(m, ndarray::Array1::zeros(3));
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![o, z, z, z]);
 
+            /*
         // (H|0〉)⊗(H|0〉), unnormalized
         let mut s = QuState::from_qubit_coefs(&[o, o, o, o], 1024);
         let m0 = s.measure(0);
@@ -589,9 +576,9 @@ mod tests
             }
             match b
             {
-                0 => assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+                0 => assert_complex_vector_eq!(&s.state_counts[0].coefs,
                     &array![x, x, z, z]),
-                1 => assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+                1 => assert_complex_vector_eq!(&s.state_counts[0].coefs,
                     &array![z, z, x, x]),
                 _ => panic!("Invalid value {} for bit", b)
             }
@@ -618,7 +605,7 @@ mod tests
                 prev_b0 = b0;
                 prev_b1 = b1;
             }
-            let coefs = &s.state_counts.front().unwrap().coefs;
+            let coefs = &s.state_counts[0].coefs;
             match (b0, b1)
             {
                 (0, 0) => assert_complex_vector_eq!(coefs, &array![o, z, z, z]),
@@ -627,7 +614,7 @@ mod tests
                 (1, 1) => assert_complex_vector_eq!(coefs, &array![z, z, z, o]),
                 _      => panic!("Invalid value {:?} for bits", (b0, b1))
             }
-        }
+        }*/
     }
 
     #[test]
@@ -639,17 +626,17 @@ mod tests
 
         let mut s = QuState::new(3, 1);
         s.apply_gate(&gates::H::new(), &[0]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![x, z, z, z, x, z, z, z]);
 
         let mut s = QuState::new(3, 1);
         s.apply_gate(&gates::H::new(), &[1]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![x, z, x, z, z, z, z, z]);
 
         let mut s = QuState::new(3, 1);
         s.apply_gate(&gates::Y::new(), &[2]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![z, i, z, z, z, z, z, z]);
     }
 
@@ -662,23 +649,23 @@ mod tests
 
         let mut s = QuState::new(3, 1);
         s.apply_gate(&gates::CX::new(), &[0, 1]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![o, z, z, z, z, z, z, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
         s.apply_gate(&gates::CX::new(), &[0, 1]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![z, z, z, z, z, z, o, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
         s.apply_gate(&gates::CX::new(), &[0, 2]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![z, z, z, z, z, o, z, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
         let hh = gates::Kron::new(gates::H::new(), gates::H::new());
         s.apply_gate(&hh, &[1, 2]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![z, z, z, z, h, h, h, h]);
     }
 
@@ -692,20 +679,20 @@ mod tests
 
         let mut s = QuState::new(3, 1);
         s.apply_gate(&gates::CCX::new(), &[0, 1, 2]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![o, z, z, z, z, z, z, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o, o, z], 1);
         s.apply_gate(&gates::CCX::new(), &[0, 2, 1]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![z, z, z, z, z, z, o, z]);
         s.apply_gate(&gates::CCX::new(), &[0, 1, 2]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![z, z, z, z, z, z, z, o]);
 
         let mut s = QuState::from_qubit_coefs(&[x, -x, x, -x, x, -x], 1);
         s.apply_gate(&gates::CCX::new(), &[0, 2, 1]);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs,
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
             &array![hx, -hx, -hx, hx, -hx, -hx, hx, hx]);
     }
 
@@ -747,27 +734,27 @@ mod tests
 
         let mut s = QuState::from_qubit_coefs(&[o, z], nr_runs);
         s.reset(0);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![o, z]);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o], nr_runs);
         s.reset(0);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![o, z]);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
         s.reset(0);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![z, o, z, z]);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![z, o, z, z]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
         s.reset(1);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![z, z, o, z]);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![z, z, o, z]);
 
         let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
         s.reset(0);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![o, z, z, z]);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![o, z, z, z]);
 
         let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
         s.reset(1);
-        assert_complex_vector_eq!(&s.state_counts.front().unwrap().coefs, &array![x, z, -x, z]);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![x, z, -x, z]);
     }
 
     #[test]
@@ -783,10 +770,9 @@ mod tests
 
         s.reset_all();
         assert!(s.state_counts.len() == 1);
-        let sc = s.state_counts.front().unwrap();
-        assert_eq!(sc.count, nr_runs);
+        assert_eq!(s.state_counts[0].count, nr_runs);
         let mut coefs = cmatrix::CVector::zeros(1 << nr_bits);
         coefs[0] = cmatrix::COMPLEX_ONE;
-        assert_complex_vector_eq!(&sc.coefs, &coefs);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &coefs);
     }
 }
