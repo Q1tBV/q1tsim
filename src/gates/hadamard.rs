@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+extern crate ndarray;
 extern crate num_complex;
 
 use cmatrix;
@@ -41,11 +41,14 @@ impl H
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
         let n = state.len() / 2;
-        let s0 = state.slice(s![..n]).to_owned() * cmatrix::COMPLEX_HSQRT2;
-        let s1 = state.slice(s![n..]).to_owned() * cmatrix::COMPLEX_HSQRT2;
+        let s1_copy = state.slice(s![n..]).to_owned();
 
-        state.slice_mut(s![..n]).assign(&(&s0 + &s1));
-        state.slice_mut(s![n..]).assign(&(s0 - s1));
+        let (mut s0, mut s1) = state.view_mut().split_at(ndarray::Axis(0), n);
+
+        s1 -= &s0;
+        s1 *= -cmatrix::COMPLEX_HSQRT2;
+        s0 += &s1_copy;
+        s0 *= cmatrix::COMPLEX_HSQRT2;
     }
 
     pub fn cost() -> f64
