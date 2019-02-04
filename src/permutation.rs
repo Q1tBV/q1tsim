@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -118,9 +118,22 @@ impl Permutation
     /// Permute a vector
     ///
     /// Apply this permutation to vector `v`.
-    pub fn apply_vec<T>(&self, v: &mut ndarray::Array1<T>)
+    pub fn apply_vec_in_place<T>(&self, v: &mut ndarray::Array1<T>)
     {
         self.apply(|i, j| v.swap(i, j));
+    }
+
+    /// Permute a vector
+    ///
+    /// Apply this permutation to vector `v`.
+    pub fn apply_vec<T>(&self, v: &mut ndarray::Array1<T>, work: &mut ndarray::Array1<T>)
+    where T: Copy
+    {
+        for (new_idx, &old_idx) in self.idxs.iter().enumerate()
+        {
+            work[new_idx] = v[old_idx];
+        }
+        ::std::mem::swap(v, work);
     }
 
     /// Transform a matrix
@@ -197,16 +210,32 @@ mod tests
     }
 
     #[test]
-    fn test_apply()
+    fn test_apply_vec_in_place()
     {
         let perm = Permutation::new(vec![1, 3, 0, 2]);
         let mut v = array![1, 3, 5, 7];
-        perm.apply_vec(&mut v);
+        perm.apply_vec_in_place(&mut v);
         assert_eq!(v, array![3, 7, 1, 5]);
 
         let perm = Permutation::new(vec![1, 3, 5, 2, 7, 0, 4, 6]);
         let mut v = array![1.2, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9];
-        perm.apply_vec(&mut v);
+        perm.apply_vec_in_place(&mut v);
+        assert_eq!(v, array![2.3, 4.5, 6.7, 3.4, 8.9, 1.2, 5.6, 7.8]);
+    }
+
+    #[test]
+    fn test_apply_vec()
+    {
+        let perm = Permutation::new(vec![1, 3, 0, 2]);
+        let mut v = array![1, 3, 5, 7];
+        let mut work = array![0, 0, 0, 0];
+        perm.apply_vec(&mut v, &mut work);
+        assert_eq!(v, array![3, 7, 1, 5]);
+
+        let perm = Permutation::new(vec![1, 3, 5, 2, 7, 0, 4, 6]);
+        let mut v = array![1.2, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9];
+        let mut work = array![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        perm.apply_vec(&mut v, &mut work);
         assert_eq!(v, array![2.3, 4.5, 6.7, 3.4, 8.9, 1.2, 5.6, 7.8]);
     }
 

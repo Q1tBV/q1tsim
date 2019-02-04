@@ -143,11 +143,12 @@ impl QuState
         {
             let perm = gates::bit_permutation(self.nr_bits, bits);
             let inv_perm = perm.inverse();
+            let mut work = cmatrix::CVector::zeros(1 << self.nr_bits);
             for m in self.state_counts.iter_mut()
             {
-                inv_perm.apply_vec(&mut m.coefs);
+                inv_perm.apply_vec(&mut m.coefs, &mut work);
                 gate.apply(&mut m.coefs);
-                perm.apply_vec(&mut m.coefs);
+                perm.apply_vec(&mut m.coefs, &mut work);
             }
         }
     }
@@ -251,9 +252,10 @@ impl QuState
             {
                 let perm = gates::bit_permutation(self.nr_bits, bits);
                 let inv_perm = perm.inverse();
-                inv_perm.apply_vec(&mut m.coefs);
+                let mut work = cmatrix::CVector::zeros(1 << self.nr_bits);
+                inv_perm.apply_vec(&mut m.coefs, &mut work);
                 gate.apply(&mut m.coefs);
-                perm.apply_vec(&mut m.coefs);
+                perm.apply_vec(&mut m.coefs, &mut work);
             }
 
             off += m.count;
