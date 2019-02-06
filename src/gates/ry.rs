@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,8 +21,15 @@ use qasm;
 
 /// Rotation around `y` axis.
 ///
-/// The `R`<sub>`Y`</sub>`(λ)` gate rotates the qubit around the `y` axis of the
-/// Bloch sphere over an angle `theta`.
+/// The `R`<sub>`Y`</sub>`(θ)` gate rotates the qubit around the `y` axis of the
+/// Bloch sphere over an angle `θ`. The associated matrix is
+/// ```text
+/// ┌                    ┐
+/// │ cos(θ/2) -sin(θ/2) │
+/// │                    │
+/// │ sin(θ/2)  cos(θ/2) │
+/// └                    ┘
+/// ```
 pub struct RY
 {
     theta: f64,
