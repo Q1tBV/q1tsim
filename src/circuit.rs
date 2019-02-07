@@ -247,7 +247,7 @@ impl Circuit
     /// Add a `U`<sub>`3`</sub>`(θ, ϕ, λ)` gate operating on qubit `bit`, to this circuit.
     pub fn u3(&mut self, theta: f64, phi: f64, lambda: f64, bit: usize)
     {
-        self.add_gate(gates::U3::new(phi, theta, lambda), &[bit]);
+        self.add_gate(gates::U3::new(theta, phi, lambda), &[bit]);
     }
 
     /// Add a C<sub>X</sub> gate.
