@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -109,9 +109,19 @@ where G0: gates::Gate+qasm::CQasm, G1: qasm::CQasm
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, H, I, Kron};
+    use gates::{gate_test, CX, Gate, H, I, Kron, X};
     use qasm::{OpenQasm, CQasm};
     use cmatrix;
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = Kron::new(X::new(), H::new());
+        assert_eq!(gate.cost(), 201.0 + 104.0);
+
+        let gate = Kron::new(Kron::new(X::new(), H::new()), CX::new());
+        assert_eq!(gate.cost(), 201.0 + 104.0 + 1001.0);
+    }
 
     #[test]
     fn test_description()
@@ -217,6 +227,15 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Kron::new(H::new(), I::new()).open_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "h qb0; id qb1");
+    }
+
+    #[test]
+    fn test_conditional_open_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = Kron::new(H::new(), X::new())
+            .conditional_open_qasm("b == 1", &bit_names, &[1, 0]);
+        assert_eq!(qasm, Ok(String::from("if (b == 1) h qb1; if (b == 1) x qb0")));
     }
 
     #[test]

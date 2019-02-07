@@ -548,6 +548,34 @@ mod tests
         assert_complex_vector_eq!(&s.state_counts[2].coefs, &array![x, x, z, z]);
         assert_eq!(s.state_counts[3].count, 1);
         assert_complex_vector_eq!(&s.state_counts[3].coefs, &array![o, z, z, z]);
+
+        let mut s = QuState::from_qubit_coefs(&[o, z, x, x], 5);
+        s.apply_conditional_gate(&[true, false, true, true, false], &gates::CX::new(), &[1, 0]);
+        assert_eq!(s.state_counts.len(), 4);
+        assert_eq!(s.state_counts[0].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![x, z, z, x]);
+        assert_eq!(s.state_counts[1].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[1].coefs, &array![x, x, z, z]);
+        assert_eq!(s.state_counts[2].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[2].coefs, &array![x, z, z, x]);
+        assert_eq!(s.state_counts[3].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[3].coefs, &array![x, x, z, z]);
+
+        let mut s = QuState::new(2, 5);
+        s.apply_conditional_gate(&[true, true, true, false, false], &gates::H::new(), &[0]);
+        assert_eq!(s.state_counts.len(), 2);
+        assert_eq!(s.state_counts[0].count, 3);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![x, z, x, z]);
+        assert_eq!(s.state_counts[1].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[1].coefs, &array![o, z, z, z]);
+        s.apply_conditional_gate(&[false, false, true, true, true], &gates::H::new(), &[0]);
+        assert_eq!(s.state_counts.len(), 3);
+        assert_eq!(s.state_counts[0].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs, &array![x, z, x, z]);
+        assert_eq!(s.state_counts[1].count, 1);
+        assert_complex_vector_eq!(&s.state_counts[1].coefs, &array![o, z, z, z]);
+        assert_eq!(s.state_counts[2].count, 2);
+        assert_complex_vector_eq!(&s.state_counts[2].coefs, &array![x, z, x, z]);
     }
 
     #[test]
@@ -593,7 +621,9 @@ mod tests
                     &array![x, x, z, z]),
                 1 => assert_complex_vector_eq!(&s.state_counts[sc_idx].coefs,
                     &array![z, z, x, x]),
+                // LCOV_EXCL_START
                 _ => panic!("Invalid value {} for bit", b)
+                // LCOV_EXCL_STOP
             }
         }
 
@@ -623,7 +653,9 @@ mod tests
                 (0, 1) => assert_complex_vector_eq!(coefs, &array![z, o, z, z]),
                 (1, 0) => assert_complex_vector_eq!(coefs, &array![z, z, o, z]),
                 (1, 1) => assert_complex_vector_eq!(coefs, &array![z, z, z, o]),
+                // LCOV_EXCL_START
                 _      => panic!("Invalid value {:?} for bits", (b0, b1))
+                // LCOV_EXCL_STOP
             }
         }
     }
