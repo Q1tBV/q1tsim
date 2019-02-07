@@ -618,8 +618,174 @@ impl Circuit
 #[cfg(test)]
 mod tests
 {
-    use circuit::Circuit;
+    use super::{Circuit, CircuitOp};
+    use cmatrix;
     use gates;
+
+    #[test]
+    fn test_gate_methods()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let i = cmatrix::COMPLEX_I;
+
+        let mut circuit = Circuit::new(2, 0, 1);
+        circuit.h(0);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), &array![[x, x], [x, -x]]);
+                assert_eq!(bits, &vec![0]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not an H gate"),
+            None => panic!("H gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.x(1);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[z, o], [o, z]]);
+                assert_eq!(bits, &vec![1]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not an X gate"),
+            None => panic!("X gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.y(0);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[z, -i], [i, z]]);
+                assert_eq!(bits, &vec![0]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not a Y gate"),
+            None => panic!("Y gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.z(1);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[o, z], [z, -o]]);
+                assert_eq!(bits, &vec![1]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not a Z gate"),
+            None => panic!("Z gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.rx(::std::f64::consts::PI, 1);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[z, -i], [-i, z]]);
+                assert_eq!(bits, &vec![1]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not an RX gate"),
+            None => panic!("RX gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.ry(::std::f64::consts::PI, 0);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[z, -o], [o, z]]);
+                assert_eq!(bits, &vec![0]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not an RY gate"),
+            None => panic!("RY gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.rz(::std::f64::consts::PI, 1);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[-i, z], [z, i]]);
+                assert_eq!(bits, &vec![1]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not an RZ gate"),
+            None => panic!("RZ gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.u1(::std::f64::consts::FRAC_PI_4, 1);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![[o, z], [z, x*(o+i)]]);
+                assert_eq!(bits, &vec![1]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not a U1 gate"),
+            None => panic!("U1 gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.u2(::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2, 0);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [x, -x*i],
+                    [0.5*(o+i), 0.5*(-o+i)]
+                ]);
+                assert_eq!(bits, &vec![0]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not a U2 gate"),
+            None => panic!("U2 gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.u3(::std::f64::consts::PI, ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::FRAC_PI_2, 0);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [z, -i],
+                    [x*(o+i), z]
+                ]);
+                assert_eq!(bits, &vec![0]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not a U3 gate"),
+            None => panic!("U3 gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+        circuit.cx(1, 0);
+        match circuit.ops.last()
+        {
+            Some(CircuitOp::Gate(gate, bits)) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z],
+                    [z, o, z, z],
+                    [z, z, z, o],
+                    [z, z, o, z]
+                ]);
+                assert_eq!(bits, &vec![1, 0]);
+            },
+            // LCOV_EXCL_START
+            Some(_) => panic!("Value added was not a CX gate"),
+            None => panic!("CX gate was not added")
+            // LCOV_EXCL_STOP
+        }
+
+    }
 
     #[test]
     fn test_execute()
