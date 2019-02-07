@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -65,11 +65,11 @@ pub trait CQasm
         let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
         if parts.len() != 2
         {
-            Err(format!("Unable to find instruction name or argument in \"{}\"", unc_qasm))
+            Err(format!("Unable to find gate name or argument in \"{}\"", unc_qasm))
         }
         else
         {
-            Ok(format!("c-{} {} {}", parts[0], condition, parts[1]))
+            Ok(format!("c-{} {}, {}", parts[0], condition, parts[1]))
         }
     }
 }
@@ -79,3 +79,30 @@ pub trait CQasm
 pub trait CircuitGate: gates::Gate + OpenQasm + CQasm {}
 
 impl<G: Gate + OpenQasm + CQasm> CircuitGate for G {}
+
+
+#[cfg(test)]
+mod tests
+{
+    use gates::H;
+
+    use super::{CQasm, OpenQasm};
+
+    #[test]
+    fn test_conditional_open_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+
+        let res = H::new().conditional_open_qasm("b == 0", &bit_names, &[1]);
+        assert_eq!(res, Ok(String::from("if (b == 0) h qb1")));
+    }
+
+    #[test]
+    fn test_conditional_c_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+
+        let res = H::new().conditional_c_qasm("b[0]", &bit_names, &[1]);
+        assert_eq!(res, Ok(String::from("c-h b[0], qb1")));
+    }
+}

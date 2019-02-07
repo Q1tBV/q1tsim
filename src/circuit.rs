@@ -559,15 +559,16 @@ impl Circuit
                     else
                     {
                         let n: usize = *control.iter().max().unwrap();
-                        let mut condition = String::new();
+                        let mut conditions = vec![];
                         for &idx in control.iter()
                         {
                             if target & (1 << (n - idx)) == 0
                             {
                                 res += &format!("not {}", cbit_names[idx]);
                             }
-                            condition += &format!("{}, ", &cbit_names[idx]);
+                            conditions.push(cbit_names[idx].as_str());
                         }
+                        let condition = conditions.join(", ");
                         let gate_qasm = gate.conditional_c_qasm(&condition, &qbit_names, bits)?;
                         res += &format!("{}\n", gate_qasm);
                         for idx in control.iter()
