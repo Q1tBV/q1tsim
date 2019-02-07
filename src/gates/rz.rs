@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,7 +23,14 @@ use qasm;
 ///
 /// The `R`<sub>`Z`</sub>`(λ)` gate rotates the qubit around the `z` axis of the
 /// Bloch sphere over an angle `λ`. It is equivalent to the `U`<sub>`1`</sub>
-/// gate, up to an overall phase.
+/// gate, up to an overall phase. The associated matrix is
+/// ```text
+/// ┌                     ┐
+/// │ exp(-iλ/2)        0 │
+/// │                     │
+/// │          0 exp(iλ/2)│
+/// └                     ┘
+/// ```
 pub struct RZ
 {
     lambda: f64,
