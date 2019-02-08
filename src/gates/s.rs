@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,7 +22,14 @@ use qasm;
 /// The Clifford `S` gate
 ///
 /// The `S` gate rotates the state over π/2 radians around the `z` axis of
-/// the Bloch sphere. It is the square root of the `Z` gate.
+/// the Bloch sphere. It is the square root of the `Z` gate. The associated
+/// matrix is
+/// ```text
+/// ┌     ┐
+/// │ 1 0 │
+/// │ 0 i │
+/// └     ┘
+/// ```
 pub struct S
 {
 }
@@ -99,7 +106,14 @@ impl qasm::CQasm for S
 /// Conjugate of Clifford `S` gate
 ///
 /// The `S`<sup>`†`</sup> gate rotates the state over -π/2 radians around the
-/// `z` axis of the Bloch sphere. It is the conjugate of the `S` gate.
+/// `z` axis of the Bloch sphere. It is the conjugate of the `S` gate. The
+/// associated matrix is
+/// ```text
+/// ┌      ┐
+/// │ 1  0 │
+/// │ 0 -i │
+/// └      ┘
+/// ```
 pub struct Sdg
 {
 }
