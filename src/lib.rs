@@ -15,9 +15,9 @@
 #[cfg(test)] #[macro_use] extern crate matches;
 #[macro_use] extern crate ndarray;
 
-pub mod circuit;
 #[macro_use] pub mod cmatrix;
 #[macro_use] pub mod gates;
+pub mod circuit;
 pub mod permutation;
 pub mod qasm;
 pub mod qustate;
