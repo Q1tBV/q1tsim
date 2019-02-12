@@ -12,68 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-use gates;
-
-use gates::Gate;
-
-/// Trait for gates that can be represented in OpenQasm.
-pub trait OpenQasm
-{
-    /// OpenQasm representation
-    ///
-    /// Return an OpenQasm instruction string for this gate operating on qubits
-    /// `bits`. The array `bit_names` contains the names of all qubits.
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
-
-    /// OpenQasm representation of conditional gate.
-    ///
-    /// Return the OpenQasm representation of a gate that is only executed when
-    /// the condition `condition` on the classical bits of the program state
-    /// holds. The default implementation only works for a single gate,
-    /// composite gates (like `Composite` or `Kron`) should overwrite this
-    /// default. On success, returns `Ok` with the instruction string. On error,
-    /// returns `Err` with an error message.
-    fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> Result<String, String>
-    {
-        Ok(format!("if ({}) {}", condition, self.open_qasm(bit_names, bits)))
-    }
-}
-
-/// Trait for gates that can be represented in c-Qasm.
-pub trait CQasm
-{
-    /// cQasm representation
-    ///
-    /// Return an cQasm instruction string for this gate operating on qubits
-    /// `bits`. The array `bit_names` contains the names of all qubits.
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
-
-    /// cQasm representation of conditional gate.
-    ///
-    /// Return the cQasm representation of a gate that is only executed when
-    /// the condition `condition` on the classical bits of the program state
-    /// holds. The default implementation only works for a single gate,
-    /// composite gates (like `Composite` or `Kron`) should overwrite this
-    /// default. On success, returns `Ok` with the instruction string. On error,
-    /// returns `Err` with an error message.
-    fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> Result<String, String>
-    {
-        let unc_qasm = self.c_qasm(bit_names, bits);
-        let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
-        if parts.len() != 2
-        {
-            Err(format!("Unable to find gate name or argument in \"{}\"", unc_qasm))
-        }
-        else
-        {
-            Ok(format!("c-{} {}, {}", parts[0], condition, parts[1]))
-        }
-    }
-}
-
 pub struct LatexExportState
 {
     matrix: Vec<Vec<Option<String>>>,
@@ -333,7 +271,7 @@ impl LatexExportState
     }
 }
 
-// Trait for gates that can be drawn in LaTeX
+/// Trait for gates that can be drawn in LaTeX
 pub trait Latex
 {
     fn latex(&self, bits: &[usize], state: &mut LatexExportState);
@@ -345,34 +283,10 @@ pub trait Latex
     }
 }
 
-/// Trait combining the traits necessary for a gate in a quantum circuit
-pub trait CircuitGate: gates::Gate + OpenQasm + CQasm + Latex {}
-
-impl<G: Gate + OpenQasm + CQasm + Latex> CircuitGate for G {}
-
-
 #[cfg(test)]
 mod tests
 {
     use gates::H;
 
-    use super::{CQasm, OpenQasm};
-
-    #[test]
-    fn test_conditional_open_qasm()
-    {
-        let bit_names = [String::from("qb0"), String::from("qb1")];
-
-        let res = H::new().conditional_open_qasm("b == 0", &bit_names, &[1]);
-        assert_eq!(res, Ok(String::from("if (b == 0) h qb1")));
-    }
-
-    #[test]
-    fn test_conditional_c_qasm()
-    {
-        let bit_names = [String::from("qb0"), String::from("qb1")];
-
-        let res = H::new().conditional_c_qasm("b[0]", &bit_names, &[1]);
-        assert_eq!(res, Ok(String::from("c-h b[0], qb1")));
-    }
+    use super::Latex;
 }
