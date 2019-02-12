@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The `Swap` gate
 ///
@@ -101,7 +101,7 @@ impl gates::Gate for Swap
     }
 }
 
-impl qasm::OpenQasm for Swap
+impl export::OpenQasm for Swap
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -111,7 +111,7 @@ impl qasm::OpenQasm for Swap
     }
 }
 
-impl qasm::CQasm for Swap
+impl export::CQasm for Swap
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -119,11 +119,36 @@ impl qasm::CQasm for Swap
     }
 }
 
+impl export::Latex for Swap
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 2, "Swap gate operates on two bits");
+
+        let (mut b0, mut b1) = (bits[0], bits[1]);
+        if b1 < b0
+        {
+            ::std::mem::swap(&mut b0, &mut b1);
+        }
+
+        state.set_field(b0, format!(r"\qswap \qwx[{}]", b1-b0));
+        state.set_field(b1, String::from(r"\qswap"));
+    }
+
+    fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        state.reserve_range(bits, None);
+        self.latex(bits, state);
+        state.claim_range(bits, None);
+    }
+}
+
+
 #[cfg(test)]
 mod tests
 {
     use gates::{Gate, Swap};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

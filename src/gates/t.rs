@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The `T` gate
 ///
@@ -81,7 +81,7 @@ impl gates::Gate for T
     }
 }
 
-impl qasm::OpenQasm for T
+impl export::OpenQasm for T
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -89,11 +89,20 @@ impl qasm::OpenQasm for T
     }
 }
 
-impl qasm::CQasm for T
+impl export::CQasm for T
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("t {}", bit_names[bits[0]])
+    }
+}
+
+impl export::Latex for T
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "T gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{T}"));
     }
 }
 
@@ -159,7 +168,7 @@ impl gates::Gate for Tdg
     }
 }
 
-impl qasm::OpenQasm for Tdg
+impl export::OpenQasm for Tdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -167,11 +176,20 @@ impl qasm::OpenQasm for Tdg
     }
 }
 
-impl qasm::CQasm for Tdg
+impl export::CQasm for Tdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("tdag {}", bit_names[bits[0]])
+    }
+}
+
+impl export::Latex for Tdg
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "Tdg gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{T^\dagger}"));
     }
 }
 
@@ -182,7 +200,7 @@ mod tests
 
     use super::{T, Tdg};
     use gates::Gate;
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The `V` gate
 ///
@@ -60,7 +60,7 @@ impl gates::Gate for V
     }
 }
 
-impl qasm::OpenQasm for V
+impl export::OpenQasm for V
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -68,12 +68,21 @@ impl qasm::OpenQasm for V
     }
 }
 
-impl qasm::CQasm for V
+impl export::CQasm for V
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         let name = &bit_names[bits[0]];
         format!("x90 {}", name)
+    }
+}
+
+impl export::Latex for V
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "V gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{V}"));
     }
 }
 
@@ -118,7 +127,7 @@ impl gates::Gate for Vdg
     }
 }
 
-impl qasm::OpenQasm for Vdg
+impl export::OpenQasm for Vdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -126,7 +135,7 @@ impl qasm::OpenQasm for Vdg
     }
 }
 
-impl qasm::CQasm for Vdg
+impl export::CQasm for Vdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -135,11 +144,20 @@ impl qasm::CQasm for Vdg
     }
 }
 
+impl export::Latex for Vdg
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "Vdg gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{V^\dagger}"));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, V, Vdg};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

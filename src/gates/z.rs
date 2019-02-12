@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The Pauli Z gate.
 ///
@@ -77,7 +77,7 @@ impl gates::Gate for Z
     }
 }
 
-impl qasm::OpenQasm for Z
+impl export::OpenQasm for Z
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -85,7 +85,7 @@ impl qasm::OpenQasm for Z
     }
 }
 
-impl qasm::CQasm for Z
+impl export::CQasm for Z
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -93,11 +93,21 @@ impl qasm::CQasm for Z
     }
 }
 
+impl export::Latex for Z
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "Z gate operates on a single bit");
+        let symbol = if state.is_controlled() { r"\control \qw" } else { r"\gate{Z}" };
+        state.set_field(bits[0], String::from(symbol));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, Z};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

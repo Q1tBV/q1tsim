@@ -15,10 +15,11 @@
 
 extern crate ndarray;
 
+use export;
 use gates;
 use qustate;
 
-use qasm::{CircuitGate, OpenQasm};
+use export::{CircuitGate, OpenQasm};
 
 /// A single operation in a circuit
 enum CircuitOp
@@ -612,6 +613,57 @@ impl Circuit
         }
 
         Ok(res)
+    }
+
+    pub fn latex(&self) -> String
+    {
+        let nr_qbits = self.q_state.nr_bits();
+        let nr_cbits = self.c_state.rows();
+        let mut state = export::LatexExportState::new(nr_qbits, nr_cbits);
+        for op in self.ops.iter()
+        {
+            match *op
+            {
+                CircuitOp::Gate(ref gate, ref bits) => {
+                    gate.latex_checked(bits, &mut state);
+                },
+                CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
+                    state.reserve_range(bits, Some(control));
+                    let controlled = state.set_controlled(true);
+                    gate.latex(bits, &mut state);
+                    state.set_controlled(controlled);
+                    state.set_condition(control, target, bits);
+                    state.claim_range(bits, Some(control));
+                },
+                CircuitOp::MeasureX(qbit, cbit)     => {
+                    state.set_measurement(qbit, cbit, Some("X"));
+                }
+                CircuitOp::MeasureY(qbit, cbit)     => {
+                    state.set_measurement(qbit, cbit, Some("Y"));
+                }
+                CircuitOp::MeasureZ(qbit, cbit)     => {
+                    state.set_measurement(qbit, cbit, None);
+                },
+                CircuitOp::MeasureAll(ref cbits) => {
+                    for (qbit, &cbit) in cbits.iter().enumerate()
+                    {
+                        state.set_measurement(qbit, cbit, None);
+                    }
+                },
+                CircuitOp::Reset(qbit) => {
+                    state.set_reset(qbit);
+                },
+                CircuitOp::ResetAll => {
+                    state.reserve_range(&[0, nr_qbits-1], None);
+                    for qbit in 0..nr_qbits
+                    {
+                        state.set_reset(qbit);
+                    }
+                }
+            }
+        }
+
+        state.code()
     }
 }
 

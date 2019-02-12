@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The Hadamard gate.
 ///
@@ -87,7 +87,7 @@ impl gates::Gate for H
     }
 }
 
-impl qasm::OpenQasm for H
+impl export::OpenQasm for H
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -95,7 +95,7 @@ impl qasm::OpenQasm for H
     }
 }
 
-impl qasm::CQasm for H
+impl export::CQasm for H
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -103,11 +103,20 @@ impl qasm::CQasm for H
     }
 }
 
+impl export::Latex for H
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "H gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{H}"));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, H};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

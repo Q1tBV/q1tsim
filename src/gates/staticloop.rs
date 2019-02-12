@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,7 +15,7 @@
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 use gates::Gate;
 
@@ -98,7 +98,7 @@ impl gates::Gate for Loop
     }
 }
 
-impl qasm::OpenQasm for Loop
+impl export::OpenQasm for Loop
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -126,7 +126,7 @@ impl qasm::OpenQasm for Loop
     }
 }
 
-impl qasm::CQasm for Loop
+impl export::CQasm for Loop
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -141,12 +141,39 @@ impl qasm::CQasm for Loop
     }
 }
 
+impl export::Latex for Loop
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        if self.nr_iterations == 1
+        {
+            self.body.latex(bits, state);
+        }
+        else if self.nr_iterations == 2
+        {
+            self.body.latex(bits, state);
+            self.body.latex_checked(bits, state);
+        }
+        else
+        {
+            let min = *bits.iter().min().unwrap();
+            let max = *bits.iter().max().unwrap();
+
+            state.start_loop(self.nr_iterations);
+            self.body.latex(bits, state);
+            state.add_cds(min, max - min, r"\cdots");
+            self.body.latex_checked(bits, state);
+            state.end_loop();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::Loop;
     use gates::{gate_test, Composite, Gate};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

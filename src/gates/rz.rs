@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// Rotation around `z` axis.
 ///
@@ -101,7 +101,7 @@ impl gates::Gate for RZ
     }
 }
 
-impl qasm::OpenQasm for RZ
+impl export::OpenQasm for RZ
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -109,7 +109,7 @@ impl qasm::OpenQasm for RZ
     }
 }
 
-impl qasm::CQasm for RZ
+impl export::CQasm for RZ
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -117,11 +117,21 @@ impl qasm::CQasm for RZ
     }
 }
 
+impl export::Latex for RZ
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "RZ gate operates on a single bit");
+        let contents = format!(r"\gate{{R_z({:.4})}}", self.lambda);
+        state.set_field(bits[0], contents);
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, RZ};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// Phase gate.
 ///
@@ -86,7 +86,7 @@ impl gates::Gate for U1
     }
 }
 
-impl qasm::OpenQasm for U1
+impl export::OpenQasm for U1
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -94,7 +94,7 @@ impl qasm::OpenQasm for U1
     }
 }
 
-impl qasm::CQasm for U1
+impl export::CQasm for U1
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -103,11 +103,21 @@ impl qasm::CQasm for U1
     }
 }
 
+impl export::Latex for U1
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "U1 gate operates on a single bit");
+        let contents = format!(r"\gate{{U_1({:.4})}}", self.lambda);
+        state.set_field(bits[0], contents);
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, U1};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

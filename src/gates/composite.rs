@@ -18,9 +18,9 @@ extern crate regex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
-use qasm::CircuitGate;
+use export::CircuitGate;
 use super::*;
 
 /// Structure for errors encountered while parsing a composite gate description
@@ -502,7 +502,7 @@ impl gates::Gate for Composite
     }
 }
 
-impl qasm::OpenQasm for Composite
+impl export::OpenQasm for Composite
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -540,7 +540,7 @@ impl qasm::OpenQasm for Composite
     }
 }
 
-impl qasm::CQasm for Composite
+impl export::CQasm for Composite
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -559,6 +559,86 @@ impl qasm::CQasm for Composite
     }
 }
 
+impl export::Latex for Composite
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        if state.expand_composite()
+        {
+            for op in self.ops.iter()
+            {
+                let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
+                // The composite gate may take up more than one column, so for
+                // each gate in the composition, we need to ensure there's
+                // place available. Therefore, use latex_checked() instead of
+                // the latex() method on the sub-gate.
+                op.gate.latex_checked(&gate_bits, state);
+            }
+        }
+        else
+        {
+            let mut bits_copy = bits.to_vec();
+            bits_copy.sort();
+            let mut first = bits_copy[0];
+            let mut last = first;
+            let mut ranges = vec![];
+            for &bit in bits[1..].iter()
+            {
+                if bit == last+1
+                {
+                    last += 1;
+                }
+                else
+                {
+                    ranges.push((first, last));
+                    first = bit;
+                    last = first;
+                }
+            }
+            ranges.push((first, last));
+
+            let (first, last) = ranges[0];
+            if last == first
+            {
+                state.set_field(first, format!(r"\gate{{{}}}", self.description()));
+            }
+            else
+            {
+                state.set_field(first,
+                    format!(r"\multigate{{{}}}{{{}}}", last-first, self.description()));
+                for bit in first+1..last+1
+                {
+                    state.set_field(bit, format!(r"\ghost{{{}}}", self.description()));
+                }
+            }
+
+            let mut prev_last = last;
+            for &(first, last) in ranges[1..].iter()
+            {
+                if last == first
+                {
+                    state.set_field(first,
+                        format!(r"\sgate{{\gate{{{}}}}}{{{}}}", self.description(),
+                            prev_last as isize - last as isize));
+                }
+                else
+                {
+                    state.set_field(first,
+                        format!(r"\sgate{{\multigate{{{}}}{{{}}}}}{{{}}}",
+                            last - first, self.description(),
+                            prev_last as isize - last as isize));
+                    for bit in first+1..last+1
+                    {
+                        state.set_field(bit, format!(r"\ghost{{{}}}", self.description()));
+                    }
+                }
+
+                prev_last = last;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
@@ -567,7 +647,7 @@ mod tests
     use cmatrix;
     use super::{Composite, ParseError};
     use gates::{Gate, CCX, CX, H, X};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use self::num_complex::Complex;
 
     #[test]

@@ -18,6 +18,6 @@
 #[macro_use] pub mod cmatrix;
 #[macro_use] pub mod gates;
 pub mod circuit;
+pub mod export;
 pub mod permutation;
-pub mod qasm;
 pub mod qustate;

@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 pub use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// Controlled gates.
 ///
@@ -85,6 +85,44 @@ where G: gates::Gate
     }
 }
 
+impl<G> export::Latex for C<G>
+where G: gates::Gate + export::Latex
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() > 1, "Controlled gates only work on multiple bits");
+
+        // We can only reasonably draw this if the controlled gate
+        // operates on bits all above or all below the control bit
+        let control = bits[0];
+        let min = *bits[1..].iter().min().unwrap();
+        let max = *bits[1..].iter().max().unwrap();
+        if min > control && max > control
+        {
+            state.set_field(control, format!(r"\ctrl{{{}}}", min - control));
+        }
+        else if min < control && max < control
+        {
+            state.set_field(control, format!(r"\ctrl{{{}}}", max as isize - control as isize));
+        }
+        else
+        {
+            panic!("Unable to draw controlled gate with control in the middle");
+        }
+
+        let controlled = state.set_controlled(true);
+        self.gate.latex(&bits[1..], state);
+        state.set_controlled(controlled);
+    }
+
+    fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        state.reserve_range(bits, None);
+        self.latex(bits, state);
+        state.claim_range(bits, None);
+    }
+}
+
 #[macro_export]
 macro_rules! declare_controlled_type
 {
@@ -148,7 +186,7 @@ macro_rules! declare_controlled_cost
 macro_rules! declare_controlled_qasm
 {
     ($trait_name:ident, $gate_name:ident, $method_name: ident $(, arg=$arg:ident)*) => {
-        impl qasm::$trait_name for $gate_name
+        impl export::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
             {
@@ -166,7 +204,7 @@ macro_rules! declare_controlled_qasm
         }
     };
     ($trait_name:ident, $gate_name:ident, $method_name: ident, qasm=$qasm:expr $(, arg=$arg:ident)*) => {
-        impl qasm::$trait_name for $gate_name
+        impl export::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
             {
@@ -187,6 +225,25 @@ macro_rules! declare_controlled_qasm
             }
         }
     };
+}
+
+#[macro_export]
+macro_rules! declare_controlled_latex
+{
+    ($gate_name:ident) => {
+        impl export::Latex for $gate_name
+        {
+            fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+            {
+                self.cgate.latex(bits, state);
+            }
+
+            fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
+            {
+                self.cgate.latex_checked(bits, state);
+            }
+        }
+    }
 }
 
 #[macro_export]
@@ -216,6 +273,7 @@ macro_rules! declare_controlled
         declare_controlled_impl_gate!($name, $gate_type);
         declare_controlled_qasm!(OpenQasm, $name, open_qasm);
         declare_controlled_qasm!(CQasm, $name, c_qasm);
+        declare_controlled_latex!($name);
     };
     ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, arg=$arg:ident)* $(, open_qasm=$open_qasm:expr)* $(, c_qasm=$c_qasm:expr)*) => {
         declare_controlled_type!($(#[$attr])* $name, $gate_type $(, $arg)*);
@@ -223,6 +281,7 @@ macro_rules! declare_controlled
         declare_controlled_impl_gate!($name, $gate_type, cost=Self::cost());
         declare_controlled_qasm!(OpenQasm, $name, open_qasm $(, qasm=$open_qasm)* $(, arg=$arg)*);
         declare_controlled_qasm!(CQasm, $name, c_qasm $(, qasm=$c_qasm)* $(, arg=$arg)*);
+        declare_controlled_latex!($name);
     };
 }
 
@@ -315,7 +374,7 @@ declare_controlled!(
 mod tests
 {
     use gates::{gate_test, Gate, H, X};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use super::{C, CCX, CCZ, CH, CRX, CRY, CRZ, CX, CY, CZ};
     use cmatrix;
 

@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The identity gate
 ///
@@ -63,7 +63,7 @@ impl gates::Gate for I
     }
 }
 
-impl qasm::OpenQasm for I
+impl export::OpenQasm for I
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -71,7 +71,7 @@ impl qasm::OpenQasm for I
     }
 }
 
-impl qasm::CQasm for I
+impl export::CQasm for I
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -79,11 +79,20 @@ impl qasm::CQasm for I
     }
 }
 
+impl export::Latex for I
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "I gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\qw"));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, I};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

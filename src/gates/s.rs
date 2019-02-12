@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The Clifford `S` gate
 ///
@@ -87,7 +87,7 @@ impl gates::Gate for S
     }
 }
 
-impl qasm::OpenQasm for S
+impl export::OpenQasm for S
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -95,11 +95,20 @@ impl qasm::OpenQasm for S
     }
 }
 
-impl qasm::CQasm for S
+impl export::CQasm for S
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
         format!("s {}", bit_names[bits[0]])
+    }
+}
+
+impl export::Latex for S
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "S gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{S}"));
     }
 }
 
@@ -171,7 +180,7 @@ impl gates::Gate for Sdg
     }
 }
 
-impl qasm::OpenQasm for Sdg
+impl export::OpenQasm for Sdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -179,7 +188,7 @@ impl qasm::OpenQasm for Sdg
     }
 }
 
-impl qasm::CQasm for Sdg
+impl export::CQasm for Sdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -187,11 +196,20 @@ impl qasm::CQasm for Sdg
     }
 }
 
+impl export::Latex for Sdg
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "Sdg gate operates on a single bit");
+        state.set_field(bits[0], String::from(r"\gate{S^\dagger}"));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, S, Sdg};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

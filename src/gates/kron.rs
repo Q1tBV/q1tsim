@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
@@ -74,8 +74,8 @@ where G0: gates::Gate, G1: gates::Gate
     }
 }
 
-impl<G0, G1> qasm::OpenQasm for Kron<G0, G1>
-where G0: gates::Gate+qasm::OpenQasm, G1: qasm::OpenQasm
+impl<G0, G1> export::OpenQasm for Kron<G0, G1>
+where G0: gates::Gate+export::OpenQasm, G1: export::OpenQasm
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -95,8 +95,8 @@ where G0: gates::Gate+qasm::OpenQasm, G1: qasm::OpenQasm
     }
 }
 
-impl<G0, G1> qasm::CQasm for Kron<G0, G1>
-where G0: gates::Gate+qasm::CQasm, G1: qasm::CQasm
+impl<G0, G1> export::CQasm for Kron<G0, G1>
+where G0: gates::Gate+export::CQasm, G1: export::CQasm
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -106,11 +106,22 @@ where G0: gates::Gate+qasm::CQasm, G1: qasm::CQasm
     }
 }
 
+impl<G0, G1> export::Latex for Kron<G0, G1>
+where G0: gates::Gate+export::Latex, G1: export::Latex
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        let n0 = self.g0.nr_affected_bits();
+        self.g0.latex(&bits[..n0], state);
+        self.g1.latex(&bits[n0..], state);
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, CX, Gate, H, I, Kron, X};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]

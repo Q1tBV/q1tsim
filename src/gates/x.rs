@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
-use qasm;
+use export;
 
 /// The Pauli X gate.
 ///
@@ -97,7 +97,7 @@ impl gates::Gate for X
     }
 }
 
-impl qasm::OpenQasm for X
+impl export::OpenQasm for X
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -105,7 +105,7 @@ impl qasm::OpenQasm for X
     }
 }
 
-impl qasm::CQasm for X
+impl export::CQasm for X
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
     {
@@ -113,11 +113,21 @@ impl qasm::CQasm for X
     }
 }
 
+impl export::Latex for X
+{
+    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+    {
+        assert!(bits.len() == 1, "X gate operates on a single bit");
+        let symbol = if state.is_controlled() { r"\targ" } else { r"\gate{X}" };
+        state.set_field(bits[0], String::from(symbol));
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use gates::{gate_test, Gate, X};
-    use qasm::{OpenQasm, CQasm};
+    use export::{OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
