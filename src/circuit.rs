@@ -49,9 +49,9 @@ enum CircuitOp
 pub struct Circuit
 {
     /// The quantum state of the system
-    pub q_state: qustate::QuState,
+    q_state: qustate::QuState,
     /// The classial state of the system
-    pub c_state: ndarray::Array2<u8>,
+    c_state: ndarray::Array2<u8>,
     /// The operations to perform on the state
     ops: Vec<CircuitOp>
 }
@@ -70,6 +70,18 @@ impl Circuit
             c_state: ndarray::Array::zeros((nr_cbits, nr_shots)),
             ops: vec![]
         }
+    }
+
+    /// The number of quantum bits in this circuit
+    pub fn nr_qbits(&self) -> usize
+    {
+        self.q_state.nr_bits()
+    }
+
+    /// The number of classical bits in this circuit
+    pub fn nr_cbits(&self) -> usize
+    {
+        self.c_state.rows()
     }
 
     /// The classical register.
@@ -423,7 +435,7 @@ impl Circuit
         let mut res = String::from("OPENQASM 2.0;\ninclude \"qelib1.inc\";\n");
 
         let mut qbit_names = vec![];
-        let nr_qbits = self.q_state.nr_bits();
+        let nr_qbits = self.nr_qbits();
         if nr_qbits > 0
         {
             res += &format!("qreg q[{}];\n", nr_qbits);
@@ -433,7 +445,7 @@ impl Circuit
             }
         }
         let mut cbit_names = vec![];
-        let nr_cbits = self.c_state.rows();
+        let nr_cbits = self.nr_cbits();
         if nr_cbits > 0
         {
             res += &format!("creg b[{}];\n", nr_cbits);
@@ -534,7 +546,7 @@ impl Circuit
 
         let mut qbit_names = vec![];
         let mut cbit_names = vec![];
-        let nr_qbits = self.q_state.nr_bits();
+        let nr_qbits = self.nr_qbits();
         if nr_qbits > 0
         {
             res += &format!("qubits {}\n", nr_qbits);
@@ -617,8 +629,8 @@ impl Circuit
 
     pub fn latex(&self) -> String
     {
-        let nr_qbits = self.q_state.nr_bits();
-        let nr_cbits = self.c_state.rows();
+        let nr_qbits = self.nr_qbits();
+        let nr_cbits = self.nr_cbits();
         let mut state = export::LatexExportState::new(nr_qbits, nr_cbits);
         for op in self.ops.iter()
         {
