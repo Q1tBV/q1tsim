@@ -125,7 +125,9 @@ impl QuState
     {
         let gate_bits = gate.nr_affected_bits();
         assert!(gate_bits == bits.len(),
-            "The number of bits affected by the gate does not match the provided number of bits.");
+            "The number of bits affected by the {} gate should be {}, but {} bits were provided.",
+            gate.description(), gate_bits, bits.len()
+        );
 
         if gate_bits == 1
         {
@@ -164,7 +166,9 @@ impl QuState
 
         let gate_bits = gate.nr_affected_bits();
         assert!(gate_bits == bits.len(),
-            "The number of bits affected by the gate does not match the provided number of bits.");
+            "The number of bits affected by the {} gate should be {}, but {} bits were provided.",
+            gate.description(), gate_bits, bits.len()
+        );
 
         // Create a list of ranges of runs that should have the gate applied
         let mut ranges = vec![];
