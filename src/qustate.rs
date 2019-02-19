@@ -155,6 +155,16 @@ impl QuState
         }
     }
 
+    pub fn apply_unary_gate_all<G>(&mut self, gate: &G)
+    where G: gates::Gate
+    {
+        // XXX FIXME: this can be done smarter
+        for bit in 0..self.nr_bits
+        {
+            self.apply_gate(gate, &[bit]);
+        }
+    }
+
     /// Apply a conditional n-ary quantum gate `gate`, controlled by classical
     /// bit `control`, on the qubits from `bits` in this state.
     pub fn apply_conditional_gate<G>(&mut self, control: &[bool], gate: &G,

@@ -19,7 +19,19 @@ use export;
 use gates;
 use qustate;
 
-use export::{CircuitGate, OpenQasm};
+use export::{CircuitGate, CQasm, OpenQasm};
+
+/// Basis in which to perform measurements
+#[derive(Clone, Copy)]
+pub enum Basis
+{
+    /// Pauli `X` basis
+    X,
+    /// Pauli `Y` basis
+    Y,
+    /// Pauli `Z` basis
+    Z
+}
 
 /// A single operation in a circuit
 enum CircuitOp
@@ -32,14 +44,10 @@ enum CircuitOp
     Reset(usize),
     /// Reset the quantum state to |00...0〉
     ResetAll,
-    /// Measure a qubit in the Pauli X basis
-    MeasureX(usize, usize),
-    /// Measure a qubit in the Pauli Y basis
-    MeasureY(usize, usize),
-    /// Measure a qubit in the Pauli Z basis
-    MeasureZ(usize, usize),
-    /// Measure all qubits, in the Pauli Z basis
-    MeasureAll(Vec<usize>)
+    /// Measure a qubit in a certain basis
+    Measure(usize, usize, Basis),
+    /// Measure all qubits
+    MeasureAll(Vec<usize>, Basis)
 }
 
 /// A quantum circuit
@@ -118,31 +126,43 @@ impl Circuit
             Box::new(gate), bits.to_owned()));
     }
 
+    /// Add a measurement
+    ///
+    /// Add measurement of qubit `qbit` in basis `basis`, into classical bit
+    /// `cbit`, to this circuit.
+    pub fn measure_basis(&mut self, qbit: usize, cbit: usize, basis: Basis)
+    {
+        self.ops.push(CircuitOp::Measure(qbit, cbit, basis));
+    }
+
     /// Add a measurement.
     ///
     /// Add measurement of qubit `qbit` in the Pauli `X` basis, into classical
     /// bit `cbit` to this circuit.
+    #[inline(always)]
     pub fn measure_x(&mut self, qbit: usize, cbit: usize)
     {
-        self.ops.push(CircuitOp::MeasureX(qbit, cbit));
+        self.measure_basis(qbit, cbit, Basis::X);
     }
 
     /// Add a measurement.
     ///
     /// Add measurement of qubit `qbit` in the Pauli `Y` basis, into classical
     /// bit `cbit` to this circuit.
+    #[inline(always)]
     pub fn measure_y(&mut self, qbit: usize, cbit: usize)
     {
-        self.ops.push(CircuitOp::MeasureY(qbit, cbit));
+        self.measure_basis(qbit, cbit, Basis::Y);
     }
 
     /// Add a measurement.
     ///
     /// Add measurement of qubit `qbit` in the Pauli `Z` basis, into classical
     /// bit `cbit` to this circuit.
+    #[inline(always)]
     pub fn measure_z(&mut self, qbit: usize, cbit: usize)
     {
-        self.ops.push(CircuitOp::MeasureZ(qbit, cbit));
+        self.measure_basis(qbit, cbit, Basis::Z);
     }
 
     /// Add a measurement.
@@ -152,16 +172,26 @@ impl Circuit
     #[inline(always)]
     pub fn measure(&mut self, qbit: usize, cbit: usize)
     {
-        self.measure_z(qbit, cbit);
+        self.measure_basis(qbit, cbit, Basis::Z);
     }
 
     /// Add a measurement.
     ///
     /// Add the measurement of all qubits in the quantum state into the classical
-    /// bits `cbits`.
+    /// bits `cbits`. Measurement is done in basis `basis`.
+    pub fn measure_all_basis(&mut self, cbits: &[usize], basis: Basis)
+    {
+        self.ops.push(CircuitOp::MeasureAll(cbits.to_owned(), basis));
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add the measurement of all qubits in the quantum state into the classical
+    /// bits `cbits`. Measurement is done in the Pauli `Z` basis.
+    #[inline(always)]
     pub fn measure_all(&mut self, cbits: &[usize])
     {
-        self.ops.push(CircuitOp::MeasureAll(cbits.to_owned()));
+        self.measure_all_basis(cbits, Basis::Z);
     }
 
     /// Reset a qubit
@@ -301,19 +331,36 @@ impl Circuit
                     self.q_state.apply_conditional_gate(&apply_gate, &**gate,
                         bits.as_slice());
                 },
-                CircuitOp::MeasureX(qbit, cbit)     => {
-                    self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                CircuitOp::Measure(qbit, cbit, basis) => {
+                    match basis
+                    {
+                        Basis::X => {
+                            self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                        },
+                        Basis::Y => {
+                            self.q_state.apply_gate(&gates::Sdg::new(), &[qbit]);
+                            self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                        },
+                        _ => {
+                            /* do nothing */
+                        }
+                    }
                     self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
                 }
-                CircuitOp::MeasureY(qbit, cbit)     => {
-                    self.q_state.apply_gate(&gates::Sdg::new(), &[qbit]);
-                    self.q_state.apply_gate(&gates::H::new(), &[qbit]);
-                    self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
-                }
-                CircuitOp::MeasureZ(qbit, cbit)     => {
-                    self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
-                },
-                CircuitOp::MeasureAll(ref cbits) => {
+                CircuitOp::MeasureAll(ref cbits, basis) => {
+                    match basis
+                    {
+                        Basis::X => {
+                            self.q_state.apply_unary_gate_all(&gates::H::new());
+                        },
+                        Basis::Y => {
+                            self.q_state.apply_unary_gate_all(&gates::Sdg::new());
+                            self.q_state.apply_unary_gate_all(&gates::H::new());
+                        },
+                        _ => {
+                            /* do nothing */
+                        }
+                    }
                     let msr = self.q_state.measure_all();
                     for (&i, row) in cbits.iter().zip(msr.genrows())
                     {
@@ -484,20 +531,42 @@ impl Circuit
                         res += &format!("{};\n", gate_qasm);
                     }
                 },
-                CircuitOp::MeasureX(qbit, cbit)   => {
-                    res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
+                CircuitOp::Measure(qbit, cbit, basis) => {
+                    match basis
+                    {
+                        Basis::X => {
+                            res += &format!("{};\n",
+                                gates::H::new().open_qasm(&qbit_names, &[qbit]));
+                        },
+                        Basis::Y => {
+                            res += &format!("{};\n",
+                                gates::Sdg::new().open_qasm(&qbit_names, &[qbit]));
+                            res += &format!("{};\n",
+                                gates::H::new().open_qasm(&qbit_names, &[qbit]));
+                        }
+                        _ => {}
+                    }
                     res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
                 }
-                CircuitOp::MeasureY(qbit, cbit)   => {
-                    res += &format!("{};\n", gates::Sdg::new().open_qasm(&qbit_names, &[qbit]));
-                    res += &format!("{};\n", gates::H::new().open_qasm(&qbit_names, &[qbit]));
-                    res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
-                }
-                CircuitOp::MeasureZ(qbit, cbit)   => {
-                    res += &format!("measure {} -> {};\n", qbit_names[qbit], cbit_names[cbit]);
-                },
-                CircuitOp::MeasureAll(ref cbits) => {
-                    if cbits.len() == self.c_state.rows()
+                CircuitOp::MeasureAll(ref cbits, basis) => {
+                    match basis
+                    {
+                        Basis::X => {
+                            let names = [String::from("q")];
+                            res += &format!("{};\n",
+                                gates::H::new().open_qasm(&names, &[0]));
+                        },
+                        Basis::Y => {
+                            let names = [String::from("q")];
+                            res += &format!("{};\n",
+                                gates::Sdg::new().open_qasm(&names, &[0]));
+                            res += &format!("{};\n",
+                                gates::H::new().open_qasm(&names, &[0]));
+                        }
+                        _ => {}
+                    }
+
+                    if cbits.len() == self.nr_cbits()
                         && cbits.iter().enumerate().all(|(i, &b)| i==b)
                     {
                         res += &format!("measure q -> c;\n");
@@ -593,22 +662,42 @@ impl Circuit
                         }
                     }
                 },
-                CircuitOp::MeasureX(qbit, cbit)     => {
+                CircuitOp::Measure(qbit, cbit, basis) => {
                     Self::check_c_qasm_measurement(qbit, cbit)?;
-                    res += &format!("measure_x q[{}]\n", qbit);
+                    let op = match basis
+                    {
+                        Basis::X => "measure_x",
+                        Basis::Y => "measure_y",
+                        _        => "measure"
+                    };
+                    res += &format!("{} q[{}]\n", op, qbit);
                 }
-                CircuitOp::MeasureY(qbit, cbit)     => {
-                    Self::check_c_qasm_measurement(qbit, cbit)?;
-                    res += &format!("measure_y q[{}]\n", qbit);
-                }
-                CircuitOp::MeasureZ(qbit, cbit)     => {
-                    Self::check_c_qasm_measurement(qbit, cbit)?;
-                    res += &format!("measure q[{}]\n", qbit);
-                },
-                CircuitOp::MeasureAll(ref cbits) => {
+                CircuitOp::MeasureAll(ref cbits, basis) => {
                     for (qbit, &cbit) in cbits.iter().enumerate()
                     {
                         Self::check_c_qasm_measurement(qbit, cbit)?;
+                    }
+                    match basis
+                    {
+                        Basis::X => {
+                            for bit in 0..self.nr_qbits()
+                            {
+                                res += &format!("{};\n",
+                                    gates::H::new().c_qasm(&qbit_names, &[bit]));
+                            }
+                        },
+                        Basis::Y => {
+                            for bit in 0..self.nr_qbits()
+                            {
+                                res += &format!("{};\n",
+                                    gates::Sdg::new().c_qasm(&qbit_names, &[bit]));
+                                res += &format!("{};\n",
+                                    gates::H::new().c_qasm(&qbit_names, &[bit]));
+                            }
+                        },
+                        _ => {
+                            /* do nothing */
+                        }
                     }
                     res += &format!("measure_all\n");
                 },
@@ -647,19 +736,25 @@ impl Circuit
                     state.set_condition(control, target, bits);
                     state.claim_range(bits, Some(control));
                 },
-                CircuitOp::MeasureX(qbit, cbit)     => {
-                    state.set_measurement(qbit, cbit, Some("X"));
+                CircuitOp::Measure(qbit, cbit, basis) => {
+                    let basis_lbl = match basis
+                    {
+                        Basis::X => Some("X"),
+                        Basis::Y => Some("Y"),
+                        _        => None
+                    };
+                    state.set_measurement(qbit, cbit, basis_lbl);
                 }
-                CircuitOp::MeasureY(qbit, cbit)     => {
-                    state.set_measurement(qbit, cbit, Some("Y"));
-                }
-                CircuitOp::MeasureZ(qbit, cbit)     => {
-                    state.set_measurement(qbit, cbit, None);
-                },
-                CircuitOp::MeasureAll(ref cbits) => {
+                CircuitOp::MeasureAll(ref cbits, basis) => {
+                    let basis_lbl = match basis
+                    {
+                        Basis::X => Some("X"),
+                        Basis::Y => Some("Y"),
+                        _        => None
+                    };
                     for (qbit, &cbit) in cbits.iter().enumerate()
                     {
-                        state.set_measurement(qbit, cbit, None);
+                        state.set_measurement(qbit, cbit, basis_lbl);
                     }
                 },
                 CircuitOp::Reset(qbit) => {
