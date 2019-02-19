@@ -19,6 +19,7 @@ extern crate regex;
 use cmatrix;
 use gates;
 use export;
+use support;
 
 use export::CircuitGate;
 use super::*;
@@ -577,25 +578,7 @@ impl export::Latex for Composite
         }
         else
         {
-            let mut bits_copy = bits.to_vec();
-            bits_copy.sort();
-            let mut first = bits_copy[0];
-            let mut last = first;
-            let mut ranges = vec![];
-            for &bit in bits[1..].iter()
-            {
-                if bit == last+1
-                {
-                    last += 1;
-                }
-                else
-                {
-                    ranges.push((first, last));
-                    first = bit;
-                    last = first;
-                }
-            }
-            ranges.push((first, last));
+            let ranges = support::get_ranges(bits);
 
             let (first, last) = ranges[0];
             if last == first

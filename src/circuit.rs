@@ -47,7 +47,9 @@ enum CircuitOp
     /// Measure a qubit in a certain basis
     Measure(usize, usize, Basis),
     /// Measure all qubits
-    MeasureAll(Vec<usize>, Basis)
+    MeasureAll(Vec<usize>, Basis),
+    /// Prevent gate reordering on the associated bits across the barrier
+    Barrier(Vec<usize>)
 }
 
 /// A quantum circuit
@@ -302,6 +304,15 @@ impl Circuit
         self.add_gate(gates::CX::new(), &[control, target]);
     }
 
+    /// Add a barrier
+    ///
+    /// Add a barrier on the bits in `bits`. No transformations on these bits
+    /// are allowed across this barrier.
+    pub fn barrier(&mut self, bits: &[usize])
+    {
+        self.ops.push(CircuitOp::Barrier(bits.to_vec()));
+    }
+
     /// Execute this circuit
     ///
     /// Execute this circuit, performing its operations and measurements. Note
@@ -372,6 +383,9 @@ impl Circuit
                 },
                 CircuitOp::ResetAll => {
                     self.q_state.reset_all();
+                },
+                CircuitOp::Barrier(_) => {
+                    /* Nothing to be done */
                 }
             }
         }
@@ -585,6 +599,13 @@ impl Circuit
                 },
                 CircuitOp::ResetAll => {
                     res += "reset q;\n";
+                },
+                CircuitOp::Barrier(ref qbits) => {
+                    res += &format!("barrier {};",
+                        qbits.iter()
+                        .map(|b| b.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "));
                 }
             }
         }
@@ -709,6 +730,9 @@ impl Circuit
                     {
                         res += &format!("prep_z {}\n", qbit_names[i]);
                     }
+                },
+                CircuitOp::Barrier(_) => {
+                    /* Not available */
                 }
             }
         }
@@ -766,6 +790,9 @@ impl Circuit
                     {
                         state.set_reset(qbit);
                     }
+                },
+                CircuitOp::Barrier(ref qbits) => {
+                    state.set_barrier(qbits);
                 }
             }
         }

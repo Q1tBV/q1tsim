@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use support;
+
 pub struct LatexExportState
 {
     matrix: Vec<Vec<Option<String>>>,
@@ -258,6 +260,17 @@ impl LatexExportState
         let res = self.controlled;
         self.controlled = controlled;
         res
+    }
+
+    pub fn set_barrier(&mut self, bits: &[usize])
+    {
+        let ranges = support::get_ranges(bits);
+
+        self.add_column();
+        for (first, last) in ranges
+        {
+            self.set_field(first, format!(r"\qw \barrier{{{}}}", last - first))
+        }
     }
 
     pub fn is_controlled(&self) -> bool
