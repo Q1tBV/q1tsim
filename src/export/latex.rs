@@ -180,7 +180,7 @@ impl LatexExportState
         {
             let end = self.matrix.len() - 1;
             self.loops.push((start, end, count));
-            self.add_column();
+            self.reserve_all();
         }
         else
         {
@@ -192,7 +192,7 @@ impl LatexExportState
     {
         self.reserve_all();
         self.set_field(bit, format!(r"\cds{{{}}}{{{}}}", count, label));
-        self.add_column();
+        self.reserve_all();
     }
 
     pub fn code(&self) -> String
@@ -218,6 +218,7 @@ impl LatexExportState
             res += "\\\\\n";
         }
 
+        let last_col_used = self.in_use.contains(&true);
         for i in 0..self.total_nr_bits()
         {
             if self.add_init
@@ -252,9 +253,12 @@ impl LatexExportState
                 }
             }
 
-            res += r" & ";
-            res += if i < self.nr_qbits { r"\qw " } else { r"\cw " };
-            res += "\\\\\n";
+            if last_col_used
+            {
+                res += r" & ";
+                res += if i < self.nr_qbits { r"\qw" } else { r"\cw" };
+            }
+            res += " \\\\\n";
         }
         res += "}\n";
 
