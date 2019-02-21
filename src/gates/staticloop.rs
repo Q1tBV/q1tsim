@@ -173,7 +173,7 @@ mod tests
 {
     use super::Loop;
     use gates::{gate_test, Composite, Gate};
-    use export::{OpenQasm, CQasm};
+    use export::{CQasm, OpenQasm, Latex, LatexExportState};
     use cmatrix;
 
     #[test]
@@ -182,6 +182,20 @@ mod tests
         let body = Composite::from_string("body", "RX(1.0471975511965976) 0").unwrap();
         let gate = Loop::new("myloop", 3, body);
         assert_eq!(gate.description(), "3(body)");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let body = Composite::from_string("body", "H 0").unwrap();
+        let count = 15;
+        let gate = Loop::new("myloop", count, body);
+        assert_eq!(gate.cost(), count as f64 * 104.0);
+
+        let body = Composite::from_string("body", "H 1; CX 0 1; H 1").unwrap();
+        let count = 9;
+        let gate = Loop::new("myloop", count, body);
+        assert_eq!(gate.cost(), count as f64 * 1209.0);
     }
 
     #[test]
@@ -219,13 +233,55 @@ mod tests
     }
 
     #[test]
+    fn test_apply_mat()
+    {
+        let body = Composite::from_string("body", "Sdg 0").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let i = cmatrix::COMPLEX_I;
+        let x = cmatrix::COMPLEX_HSQRT2;
+
+        let mut state = array![
+            [o, z, x, z],
+            [z, z, z, z],
+            [z, o, z, x],
+            [z, z, x, x],
+        ];
+        let result = array![
+            [ o, z,   x,   z ],
+            [ z, z,   z,   z ],
+            [ z, i,   z, i*x ],
+            [ z, z, i*x, i*x ]
+        ];
+        gate.apply_mat(&mut state);
+        assert_complex_matrix_eq!(&state, &result);
+    }
+
+    #[test]
     fn test_open_qasm()
     {
+        let body = Composite::from_string("body", "H 0").unwrap();
+        let gate = Loop::new("myloop", 0, body);
+        let bit_names = [String::from("qb0")];
+        let qasm = gate.open_qasm(&bit_names, &[0]);
+        assert_eq!(qasm, "");
+
         let body = Composite::from_string("body", "H 0; H 1; CX 0 1").unwrap();
         let gate = Loop::new("myloop", 3, body);
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = gate.open_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "h qb0; h qb1; cx qb0, qb1;\nh qb0; h qb1; cx qb0, qb1;\nh qb0; h qb1; cx qb0, qb1");
+    }
+
+    #[test]
+    fn test_conditional_open_qasm()
+    {
+        let body = Composite::from_string("body", "H 0; H 1; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let res = gate.conditional_open_qasm("c == 3", &bit_names, &[0, 1]);
+        assert!(matches!(res, Err(_)));
     }
 
     #[test]
@@ -236,5 +292,65 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = gate.c_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, ".myloop(3)\nh qb0\nh qb1\ncnot qb0, qb1\n.end");
+    }
+
+    #[test]
+    fn test_conditional_c_qasm()
+    {
+        let body = Composite::from_string("body", "H 0; H 1; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let res = gate.conditional_c_qasm("c == 3", &bit_names, &[0, 1]);
+        assert!(matches!(res, Err(_)));
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 0, body);
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \qw \\
+    \lstick{\ket{0}} & \qw \\
+}
+"#);
+
+        let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 1, body);
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{H} & \ctrl{1} & \qw \\
+    \lstick{\ket{0}} & \qw & \targ & \qw \\
+}
+"#);
+
+        let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 2, body);
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{H} & \ctrl{1} & \gate{H} & \ctrl{1} & \qw \\
+    \lstick{\ket{0}} & \qw & \targ & \qw & \targ & \qw \\
+}
+"#);
+
+        let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 15, body);
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    & \mbox{} \POS"2,2"."2,2"."2,6"."2,6"!C*+<.7em>\frm{^\}},+U*++!D{15\times}\\
+    & & & & & & \\
+    \lstick{\ket{0}} & \gate{H} & \ctrl{1} & \cds{1}{\cdots} & \gate{H} & \ctrl{1} & \qw \\
+    \lstick{\ket{0}} & \qw & \targ & \qw & \qw & \targ & \qw \\
+}
+"#);
     }
 }
