@@ -120,6 +120,12 @@ impl LatexExportState
 
     pub fn set_field(&mut self, bit: usize, contents: String)
     {
+        // Don't crash when user forgets to rerserve space
+        if self.matrix.is_empty()
+        {
+            self.add_column();
+        }
+
         let col = self.matrix.last_mut().unwrap();
         col[bit] = Some(contents);
         self.in_use[bit] = true;
