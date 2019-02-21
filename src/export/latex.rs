@@ -92,6 +92,14 @@ impl LatexExportState
         }
     }
 
+    fn reserve_all(&mut self)
+    {
+        if self.in_use.contains(&true)
+        {
+            self.add_column();
+        }
+    }
+
     pub fn claim_range(&mut self, qbits: &[usize], cbits: Option<&[usize]>)
     {
         let mut bits = qbits.to_vec();
@@ -162,8 +170,7 @@ impl LatexExportState
 
     pub fn start_loop(&mut self, count: usize)
     {
-        let last_cbit = self.nr_cbits - 1;
-        self.reserve_range(&[0], Some(&[last_cbit]));
+        self.reserve_all();
         self.open_loops.push((self.matrix.len() - 1, count));
     }
 
@@ -183,8 +190,7 @@ impl LatexExportState
 
     pub fn add_cds(&mut self, bit: usize, count: usize, label: &str)
     {
-        let last_cbit = self.nr_cbits - 1;
-        self.reserve_range(&[0], Some(&[last_cbit]));
+        self.reserve_all();
         self.set_field(bit, format!(r"\cds{{{}}}{{{}}}", count, label));
         self.add_column();
     }
