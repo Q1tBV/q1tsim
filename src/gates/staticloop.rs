@@ -154,7 +154,7 @@ impl export::Latex for Loop
             self.body.latex(bits, state);
             self.body.latex_checked(bits, state);
         }
-        else
+        else if self.nr_iterations > 2
         {
             let min = *bits.iter().min().unwrap();
             let max = *bits.iter().max().unwrap();
