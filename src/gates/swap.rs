@@ -147,8 +147,8 @@ impl export::Latex for Swap
 #[cfg(test)]
 mod tests
 {
-    use gates::{Gate, Swap};
-    use export::{OpenQasm, CQasm};
+    use gates::{gate_test, Gate, Swap};
+    use export::{LatexExportState, Latex, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -156,6 +156,13 @@ mod tests
     {
         let gate = Swap::new();
         assert_eq!(gate.description(), "Swap");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = Swap::new();
+        assert_eq!(gate.cost(), 3.0 * 1001.0);
     }
 
     #[test]
@@ -170,6 +177,28 @@ mod tests
             [z, o, z, z],
             [z, z, z, o]
         ]);
+    }
+
+    #[test]
+    fn test_apply()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let h = 0.5 * o;
+        let mut state = array![
+            [o, z, x,  x, x,  h, z],
+            [z, o, x, -x, z, -h, z],
+            [z, z, z,  z, x,  h, o],
+            [z, z, z,  z, z, -h, z]
+        ];
+        let result = array![
+            [o, z, x,  x, x,  h, z],
+            [z, z, z,  z, x,  h, o],
+            [z, o, x, -x, z, -h, z],
+            [z, z, z,  z, z, -h, z]
+        ];
+        gate_test(Swap::new(), &mut state, &result);
     }
 
     #[test]
@@ -209,5 +238,29 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Swap::new().c_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "swap qb0, qb1");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = Swap::new();
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex_checked(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \qswap \qwx[1] & \qw \\
+    \lstick{\ket{0}} & \qswap & \qw \\
+}
+"#);
+
+        let gate = Swap::new();
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex_checked(&[1, 0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \qswap \qwx[1] & \qw \\
+    \lstick{\ket{0}} & \qswap & \qw \\
+}
+"#);
     }
 }
