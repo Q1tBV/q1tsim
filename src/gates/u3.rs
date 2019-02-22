@@ -121,7 +121,7 @@ mod tests
     extern crate num_complex;
 
     use gates::{gate_test, Gate, U3};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
     use self::num_complex::Complex;
 
@@ -130,6 +130,13 @@ mod tests
     {
         let gate = U3::new(0.17, ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
         assert_eq!(gate.description(), "U3(0.1700, 0.7854, 0.6931)");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = U3::new(0.17, ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
+        assert_eq!(gate.cost(), 201.0);
     }
 
     #[test]
@@ -175,5 +182,36 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = U3::new(1.0, 2.25, 3.5).c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "rz qb, 3.5\nry qb, 1\n; rz qb 2.25");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = U3::new(0.17, ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{U_3(0.1700, 0.7854, 0.6931)} & \qw \\
+}
+"#);
+
+        let gate = U3::new(::std::f64::consts::PI, -1.2, ::std::f64::consts::LN_2);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{U_3(3.1416, -1.2000, 0.6931)} & \qw \\
+}
+"#);
+
+        let gate = U3::new(::std::f64::consts::FRAC_PI_2, 12.0, -3.14);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{U_3(1.5708, 12.0000, -3.1400)} & \qw \\
+}
+"#);
     }
 }

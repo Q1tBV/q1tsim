@@ -107,6 +107,8 @@ where G: gates::Gate + export::Latex
         }
         else
         {
+            // XXX FIXME: figure out how to do this, and if really not possible,
+            // return an error.
             panic!("Unable to draw controlled gate with control in the middle");
         }
 
@@ -374,8 +376,8 @@ declare_controlled!(
 mod tests
 {
     use gates::{gate_test, Gate, H, X};
-    use export::{OpenQasm, CQasm};
-    use super::{C, CCX, CCZ, CH, CRX, CRY, CRZ, CX, CY, CZ};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use super::{C, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CV, CX, CY, CZ};
     use cmatrix;
 
     #[test]
@@ -514,5 +516,38 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let open_qasm = CCZ::new().c_qasm(&bit_names, &[0, 1, 2]);
         assert_eq!(open_qasm, "h qb2\ntoffoli qb0, qb1, qb2\nh qb2");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = CS::new();
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex_checked(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \ctrl{1} & \qw \\
+    \lstick{\ket{0}} & \gate{S} & \qw \\
+}
+"#);
+
+        let gate = CV::new();
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex_checked(&[1, 0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{V} & \qw \\
+    \lstick{\ket{0}} & \ctrl{-1} & \qw \\
+}
+"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_latex_error()
+    {
+        let gate = CCX::new();
+        let mut state = LatexExportState::new(3, 0);
+        let ltx = gate.latex_checked(&[1, 2, 0], &mut state);
     }
 }

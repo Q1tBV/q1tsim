@@ -92,14 +92,28 @@ impl export::Latex for I
 mod tests
 {
     use gates::{gate_test, Gate, I};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
     fn test_description()
     {
-        let i = I::new();
-        assert_eq!(i.description(), "I");
+        let gate = I::new();
+        assert_eq!(gate.description(), "I");
+    }
+
+    #[test]
+    fn test_nr_affected_bits()
+    {
+        let gate = I::new();
+        assert_eq!(gate.nr_affected_bits(), 1);
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = I::new();
+        assert_eq!(gate.cost(), 0.0);
     }
 
     #[test]
@@ -137,5 +151,18 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = I::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "i qb");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = I::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \qw & \qw \\
+}
+"#);
     }
 }

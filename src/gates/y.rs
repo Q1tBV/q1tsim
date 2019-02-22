@@ -118,14 +118,21 @@ impl export::Latex for Y
 mod tests
 {
     use gates::{gate_test, Gate, Y};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
     fn test_description()
     {
-        let y = Y::new();
-        assert_eq!(y.description(), "Y");
+        let gate = Y::new();
+        assert_eq!(gate.description(), "Y");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = Y::new();
+        assert_eq!(gate.cost(), 201.0);
     }
 
     #[test]
@@ -163,5 +170,18 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = Y::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "y qb");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = Y::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{Y} & \qw \\
+}
+"#);
     }
 }

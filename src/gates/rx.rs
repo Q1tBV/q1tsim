@@ -140,7 +140,7 @@ impl export::Latex for RX
 mod tests
 {
     use gates::{gate_test, Gate, RX};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -148,6 +148,13 @@ mod tests
     {
         let gate = RX::new(::std::f64::consts::PI);
         assert_eq!(gate.description(), "RX(3.1416)");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = RX::new(::std::f64::consts::PI);
+        assert_eq!(gate.cost(), 201.0);
     }
 
     #[test]
@@ -197,5 +204,27 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = RX::new(2.25).c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "rx qb, 2.25");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = RX::new(::std::f64::consts::FRAC_PI_2);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{R_x(1.5708)} & \qw \\
+}
+"#);
+
+        let gate = RX::new(-24.0);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{R_x(-24.0000)} & \qw \\
+}
+"#);
     }
 }

@@ -116,14 +116,21 @@ impl export::Latex for H
 mod tests
 {
     use gates::{gate_test, Gate, H};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
     fn test_description()
     {
-        let h = H::new();
-        assert_eq!(h.description(), "H");
+        let gate = H::new();
+        assert_eq!(gate.description(), "H");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = H::new();
+        assert_eq!(gate.cost(), 104.0);
     }
 
     #[test]
@@ -159,5 +166,18 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = H::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "h qb");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = H::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{H} & \qw \\
+}
+"#);
     }
 }

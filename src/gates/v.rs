@@ -157,7 +157,7 @@ impl export::Latex for Vdg
 mod tests
 {
     use gates::{gate_test, Gate, V, Vdg};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -167,6 +167,15 @@ mod tests
         assert_eq!(gate.description(), "V");
         let gate = Vdg::new();
         assert_eq!(gate.description(), "V†");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = V::new();
+        assert_eq!(gate.cost(), 201.0);
+        let gate = Vdg::new();
+        assert_eq!(gate.cost(), 201.0);
     }
 
     #[test]
@@ -231,5 +240,27 @@ mod tests
         assert_eq!(qasm, "x90 qb");
         let qasm = Vdg::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "mx90 qb");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = V::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{V} & \qw \\
+}
+"#);
+
+        let gate = Vdg::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{V^\dagger} & \qw \\
+}
+"#);
     }
 }

@@ -117,7 +117,7 @@ impl export::Latex for U1
 mod tests
 {
     use gates::{gate_test, Gate, U1};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -125,6 +125,13 @@ mod tests
     {
         let gate = U1::new(::std::f64::consts::FRAC_PI_4);
         assert_eq!(gate.description(), "U1(0.7854)");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = U1::new(::std::f64::consts::FRAC_PI_4);
+        assert_eq!(gate.cost(), 7.0);
     }
 
     #[test]
@@ -164,5 +171,27 @@ mod tests
         let bit_names = [String::from("qb")];
         let qasm = U1::new(::std::f64::consts::PI).c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "rz qb, 3.141592653589793");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = U1::new(::std::f64::consts::FRAC_PI_4);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{U_1(0.7854)} & \qw \\
+}
+"#);
+
+        let gate = U1::new(-1.2);
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{U_1(-1.2000)} & \qw \\
+}
+"#);
     }
 }

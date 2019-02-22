@@ -199,8 +199,8 @@ mod tests
     extern crate num_complex;
 
     use super::{T, Tdg};
-    use gates::Gate;
-    use export::{OpenQasm, CQasm};
+    use gates::{gate_test, Gate};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -210,6 +210,15 @@ mod tests
         assert_eq!(gate.description(), "T");
         let gate = Tdg::new();
         assert_eq!(gate.description(), "T†");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = T::new();
+        assert_eq!(gate.cost(), 7.0);
+        let gate = Tdg::new();
+        assert_eq!(gate.cost(), 7.0);
     }
 
     #[test]
@@ -224,6 +233,45 @@ mod tests
 
         let gate = Tdg::new();
         assert_complex_matrix_eq!(gate.matrix(), array![[o, z], [z, t.conj()]]);
+    }
+
+    #[test]
+    fn test_apply()
+    {
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let h = 0.5 * o;
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let t = num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
+        let td = t.conj();
+
+        let mut state = array![
+            [o, z, x,  h, z],
+            [z, o, z, -h, z],
+            [z, z, x,  h, z],
+            [z, z, z, -h, o]
+        ];
+        let result = array![
+            [o, z,   x,    h, z],
+            [z, o,   z,   -h, z],
+            [z, z, t*x,  t*h, z],
+            [z, z,   z, -t*h, t]
+        ];
+        gate_test(T::new(), &mut state, &result);
+
+        let mut state = array![
+            [o, z, x,  h, z],
+            [z, o, z, -h, z],
+            [z, z, x,  h, z],
+            [z, z, z, -h, o]
+        ];
+        let result = array![
+            [o, z,    x,     h,  z],
+            [z, o,    z,    -h,  z],
+            [z, z, td*x,  td*h,  z],
+            [z, z,    z, -td*h, td]
+        ];
+        gate_test(Tdg::new(), &mut state, &result);
     }
 
     #[test]
@@ -283,5 +331,27 @@ mod tests
         assert_eq!(qasm, "t qb");
         let qasm = Tdg::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "tdag qb");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = T::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{T} & \qw \\
+}
+"#);
+
+        let gate = Tdg::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{T^\dagger} & \qw \\
+}
+"#);
     }
 }

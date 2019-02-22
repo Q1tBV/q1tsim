@@ -209,7 +209,7 @@ impl export::Latex for Sdg
 mod tests
 {
     use gates::{gate_test, Gate, S, Sdg};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -219,6 +219,15 @@ mod tests
         assert_eq!(gate.description(), "S");
         let gate = Sdg::new();
         assert_eq!(gate.description(), "S†");
+    }
+
+    #[test]
+    fn test_cost()
+    {
+        let gate = S::new();
+        assert_eq!(gate.cost(), 7.0);
+        let gate = Sdg::new();
+        assert_eq!(gate.cost(), 7.0);
     }
 
     #[test]
@@ -282,5 +291,27 @@ mod tests
         assert_eq!(qasm, "s qb");
         let qasm = Sdg::new().c_qasm(&bit_names, &[0]);
         assert_eq!(qasm, "sdag qb");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = S::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{S} & \qw \\
+}
+"#);
+
+        let gate = Sdg::new();
+        let mut state = LatexExportState::new(1, 0);
+        gate.latex_checked(&[0], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{S^\dagger} & \qw \\
+}
+"#);
     }
 }
