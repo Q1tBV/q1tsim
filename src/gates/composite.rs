@@ -831,15 +831,15 @@ impl export::Latex for Composite
                 if last == first
                 {
                     state.set_field(first,
-                        format!(r"\sgate{{\gate{{{}}}}}{{{}}}", self.description(),
-                            prev_last as isize - last as isize));
+                        format!(r"\gate{{{}}} \qwx[{}]", self.description(),
+                            prev_last as isize - first as isize));
                 }
                 else
                 {
                     state.set_field(first,
-                        format!(r"\sgate{{\multigate{{{}}}{{{}}}}}{{{}}}",
+                        format!(r"\multigate{{{}}}{{{}}} \qwx[{}]",
                             last - first, self.description(),
-                            prev_last as isize - last as isize));
+                            prev_last as isize - first as isize));
                     for bit in first+1..last+1
                     {
                         state.set_field(bit, format!(r"\ghost{{{}}}", self.description()));
@@ -860,7 +860,7 @@ mod tests
     use cmatrix;
     use super::{Composite, ParseError};
     use gates::{Gate, CCX, CX, H, X};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use self::num_complex::Complex;
 
     #[test]
@@ -1748,5 +1748,68 @@ mod tests
         gate.add_gate(X::new(), &[1]);
         let qasm = gate.c_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "cnot qb0, qb1\nx qb1");
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = Composite::from_string("CZ", "H 1; CX 0 1; H 1").unwrap();
+        let mut state = LatexExportState::new(2, 0);
+        gate.latex_checked(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \qw & \ctrl{1} & \qw & \qw \\
+    \lstick{\ket{0}} & \gate{H} & \targ & \gate{H} & \qw \\
+}
+"#);
+
+        let gate = Composite::from_string("CZ", "H 1; CX 0 1; H 1").unwrap();
+        let mut state = LatexExportState::new(2, 0);
+        state.set_expand_composite(false);
+        gate.latex_checked(&[0, 1], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \multigate{1}{CZ} & \qw \\
+    \lstick{\ket{0}} & \ghost{CZ} & \qw \\
+}
+"#);
+
+        let gate = Composite::from_string("CZ", "H 1; CX 0 1; H 1").unwrap();
+        let mut state = LatexExportState::new(3, 0);
+        state.set_expand_composite(false);
+        gate.latex_checked(&[0, 2], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{CZ} & \qw \\
+    \lstick{\ket{0}} & \qw & \qw \\
+    \lstick{\ket{0}} & \gate{CZ} \qwx[-2] & \qw \\
+}
+"#);
+
+        let gate = Composite::from_string("G", "H 0; CX 1 2; H 0").unwrap();
+        let mut state = LatexExportState::new(4, 0);
+        state.set_expand_composite(false);
+        gate.latex_checked(&[0, 2, 3], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{G} & \qw \\
+    \lstick{\ket{0}} & \qw & \qw \\
+    \lstick{\ket{0}} & \multigate{1}{G} \qwx[-2] & \qw \\
+    \lstick{\ket{0}} & \ghost{G} & \qw \\
+}
+"#);
+
+        let gate = Composite::from_string("G", "H 0; CX 1 2; H 0").unwrap();
+        let mut state = LatexExportState::new(4, 0);
+        state.set_expand_composite(false);
+        gate.latex_checked(&[0, 1, 3], &mut state);
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \multigate{1}{G} & \qw \\
+    \lstick{\ket{0}} & \ghost{G} & \qw \\
+    \lstick{\ket{0}} & \qw & \qw \\
+    \lstick{\ket{0}} & \gate{G} \qwx[-2] & \qw \\
+}
+"#);
     }
 }
