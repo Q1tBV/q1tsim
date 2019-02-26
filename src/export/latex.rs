@@ -402,9 +402,20 @@ impl LatexExportState
         self.controlled
     }
 
+    /// Set whether to expand composite gates.
+    ///
+    /// Set whether composite gates should be drawn as individual components.
+    /// If `expand` is `true`, composite gates are drawn by drawing their
+    /// components. If `expand` is false, composite gates are drawn as a single
+    /// block gate.
+    pub fn set_expand_composite(&mut self, expand: bool)
+    {
+        self.expand_composite = expand;
+    }
+
     /// Whether to expand composite gates.
     ///
-    /// Return whether composiute gates should be drawn as individual components
+    /// Return whether composite gates should be drawn as individual components
     /// (in which case `true` is returned), or as a single, possibly multi-bit,
     /// operation (when the result is `false`).
     pub fn expand_composite(&self) -> bool
