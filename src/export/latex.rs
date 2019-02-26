@@ -165,10 +165,10 @@ impl LatexExportState
             bits.extend(cbs.iter().map(|&b| self.nr_qbits + b));
         }
 
-        if let Some(&start) = bits.iter().min()
+        if let Some(&first) = bits.iter().min()
         {
-            let end = *bits.iter().max().unwrap();
-            for bit in start..end
+            let last = *bits.iter().max().unwrap();
+            for bit in first..last+1
             {
                 self.in_use[bit] = true;
             }
