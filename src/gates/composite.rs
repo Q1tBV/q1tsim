@@ -209,6 +209,8 @@ impl Composite
             }
             else
             {
+                // It's probably impossible to get here with the above regular
+                // expression. Too large numbers are mapped to Inf.
                 Err(ParseError::InvalidArgument(String::from(expr)))
             }
         }
@@ -1695,8 +1697,11 @@ mod tests
         let res = Composite::from_string("XXX", "H 0 1");
         assert!(matches!(res, Err(ParseError::InvalidNrBits(_))));
 
-        // Unclosed arguments
+        // Invalid arguments
         let res = Composite::from_string("XXX", "RX(abc) 1");
+        assert!(matches!(res, Err(ParseError::InvalidArgument(_))));
+
+        let res = Composite::from_string("G", "U1(12897231928172918729136192817936) 0");
         assert!(matches!(res, Err(ParseError::InvalidArgument(_))));
 
         // Missing bit number
@@ -1713,6 +1718,12 @@ mod tests
 
         // Unclosed arguments
         let res = Composite::from_string("XXX", "RX(1.2a) 1");
+        assert!(matches!(res, Err(ParseError::UnclosedParentheses(_))));
+
+        let res = Composite::from_string("XXX", "RX(1.2*(1+2 1");
+        assert!(matches!(res, Err(ParseError::UnclosedParentheses(_))));
+
+        let res = Composite::from_string("XXX", "RX(sin(1.2 1");
         assert!(matches!(res, Err(ParseError::UnclosedParentheses(_))));
     }
 
