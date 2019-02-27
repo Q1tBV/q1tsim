@@ -331,11 +331,11 @@ impl Circuit
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
                     let nr_shots = self.c_state.cols();
                     let mut cbits = vec![0; nr_shots];
-                    for &i in control
+                    for (ibit, &irow) in control.iter().enumerate()
                     {
-                        for (cb, &sb) in cbits.iter_mut().zip(self.c_state.row(i).iter())
+                        for (cb, &sb) in cbits.iter_mut().zip(self.c_state.row(irow).iter())
                         {
-                            *cb = (*cb << 1) | sb as u64;
+                            *cb |= (sb << ibit) as u64;
                         }
                     }
                     let apply_gate: Vec<bool> = cbits.iter().map(|&b| b == target).collect();
