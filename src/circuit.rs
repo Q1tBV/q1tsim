@@ -663,22 +663,22 @@ impl Circuit
                     {
                         let n: usize = *control.iter().max().unwrap();
                         let mut conditions = vec![];
-                        for &idx in control.iter()
+                        for (shift, &idx) in control.iter().enumerate()
                         {
-                            if target & (1 << (n - idx)) == 0
+                            if target & (1 << shift) == 0
                             {
-                                res += &format!("not {}", cbit_names[idx]);
+                                res += &format!("not {}\n", cbit_names[idx]);
                             }
                             conditions.push(cbit_names[idx].as_str());
                         }
                         let condition = conditions.join(", ");
                         let gate_qasm = gate.conditional_c_qasm(&condition, &qbit_names, bits)?;
                         res += &format!("{}\n", gate_qasm);
-                        for idx in control.iter()
+                        for (shift, &idx) in control.iter().enumerate()
                         {
-                            if target & (1 << (n - idx)) == 0
+                            if target & (1 << shift) == 0
                             {
-                                res += &format!("not b[{}]", idx);
+                                res += &format!("not {}\n", cbit_names[idx]);
                             }
                         }
                     }
@@ -703,16 +703,16 @@ impl Circuit
                         Basis::X => {
                             for bit in 0..self.nr_qbits()
                             {
-                                res += &format!("{};\n",
+                                res += &format!("{}\n",
                                     gates::H::new().c_qasm(&qbit_names, &[bit]));
                             }
                         },
                         Basis::Y => {
                             for bit in 0..self.nr_qbits()
                             {
-                                res += &format!("{};\n",
+                                res += &format!("{}\n",
                                     gates::Sdg::new().c_qasm(&qbit_names, &[bit]));
-                                res += &format!("{};\n",
+                                res += &format!("{}\n",
                                     gates::H::new().c_qasm(&qbit_names, &[bit]));
                             }
                         },
