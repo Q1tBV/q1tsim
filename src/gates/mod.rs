@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -122,35 +122,6 @@ pub trait Gate
     /// Return a matrix describing the unitary transformation that the gate
     /// provides
     fn matrix(&self) -> cmatrix::CMatrix;
-
-    /// Expanded matrix.
-    ///
-    /// Return the matrix describing the operation of this gate on the qubits
-    /// in `bits`, in a system of `nr_bits  qubits.
-    fn expanded_matrix(&self, bits: &[usize], nr_bits: usize) -> cmatrix::CMatrix
-    {
-        let gate_bits = self.nr_affected_bits();
-
-        assert_eq!(bits.len(), gate_bits,
-            "The number of bit indices provided does not match the number of bits affected by this gate.");
-        for &bit in bits
-        {
-            assert!(bit < nr_bits, "Invalid bit index {} for {}-bit system.", bit, nr_bits);
-        }
-
-        if gate_bits == 1
-        {
-            cmatrix::kron_mat(&cmatrix::CMatrix::eye(1 << bits[0]),
-                &cmatrix::kron_mat(&self.matrix(),
-                    &cmatrix::CMatrix::eye(1 << (nr_bits-bits[0]-1))))
-        }
-        else
-        {
-            let gate_mat = cmatrix::kron_mat(&self.matrix(),
-                &cmatrix::CMatrix::eye(1 << (nr_bits-gate_bits)));
-            bit_permutation(nr_bits, bits).transform(&gate_mat)
-        }
-    }
 
     /// Apply a gate.
     ///
