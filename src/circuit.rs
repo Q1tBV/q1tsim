@@ -583,7 +583,7 @@ impl Circuit
                     if cbits.len() == self.nr_cbits()
                         && cbits.iter().enumerate().all(|(i, &b)| i==b)
                     {
-                        res += &format!("measure q -> c;\n");
+                        res += &format!("measure q -> b;\n");
                     }
                     else
                     {
