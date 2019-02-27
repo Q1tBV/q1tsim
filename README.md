@@ -30,7 +30,7 @@ To use q1tsim in your Rust application, add the following to your `Cargo.toml` f
 
 ```toml
 [dependencies]
-q1tsim = "0.1"
+q1tsim = "0.2"
 ```
 
 As an example, here is a 3-qubit quantum Fourier transform of the |000〉quantum
@@ -77,3 +77,5 @@ fn main()
 ```
 The result should be a more or less equal distribution over the eight possible
 states (000, 001, ..., 111).
+
+Read the complete source code documentation on [docs.rs](https://docs.rs/q1tsim).
