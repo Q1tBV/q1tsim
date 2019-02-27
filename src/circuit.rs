@@ -600,11 +600,19 @@ impl Circuit
                     res += "reset q;\n";
                 },
                 CircuitOp::Barrier(ref qbits) => {
-                    res += &format!("barrier {};",
-                        qbits.iter()
-                        .map(|b| b.to_string())
-                        .collect::<Vec<String>>()
-                        .join(", "));
+                    if qbits.len() == self.nr_qbits()
+                        && qbits.iter().enumerate().all(|(i, &b)| i==b)
+                    {
+                        res += "barrier q;\n";
+                    }
+                    else
+                    {
+                        res += &format!("barrier {};\n",
+                            qbits.iter()
+                            .map(|&b| qbit_names[b].as_str())
+                            .collect::<Vec<&str>>()
+                            .join(", "));
+                    }
                 }
             }
         }
