@@ -463,9 +463,7 @@ pub trait Latex
 #[cfg(test)]
 mod tests
 {
-    use gates::H;
-
-    use super::{Latex, LatexExportState};
+    use super::LatexExportState;
 
     #[test]
     fn test_new()
