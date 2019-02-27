@@ -535,10 +535,9 @@ impl Circuit
                         self.check_open_qasm_condition_bits(control)?;
                         let mut starget = 0;
                         let mut shift = control.len() - 1;
-                        for idx in control.iter()
+                        for (tshift, sshift) in control.iter().enumerate()
                         {
-                            starget |= ((target >> shift) & 0x01) << idx;
-                            shift -= 1;
+                            starget |= ((target >> tshift) & 0x01) << sshift;
                         }
                         let condition = format!("b == {}", starget);
                         let gate_qasm = gate.conditional_open_qasm(&condition, &qbit_names, bits)?;
