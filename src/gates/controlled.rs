@@ -548,6 +548,6 @@ r#"\Qcircuit @C=1em @R=.7em {
     {
         let gate = CCX::new();
         let mut state = LatexExportState::new(3, 0);
-        let ltx = gate.latex_checked(&[1, 2, 0], &mut state);
+        let _ltx = gate.latex_checked(&[1, 2, 0], &mut state);
     }
 }
