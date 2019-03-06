@@ -42,7 +42,7 @@ use q1tsim::{circuit, gates};
 
 fn main()
 {
-    // The number of times this circuit os evaulated
+    // The number of times this circuit is evaluated
     let nr_runs = 8192;
 
     // Create a quantum circuit with 3 quantum bits and 3 classical (measurement)
