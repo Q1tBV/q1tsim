@@ -51,7 +51,7 @@ impl ::std::hash::Hasher for IdentityHasher
     /// unimplemented here as we only support `u64` or `usize` keys. For those
     /// types, `write_u64()` and `write_usize()` are overridden from the
     /// default.
-    fn write(&mut self, bytes: &[u8])
+    fn write(&mut self, _bytes: &[u8])
     {
         unimplemented!();
     }
