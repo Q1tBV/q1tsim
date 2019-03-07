@@ -17,7 +17,9 @@ extern crate ndarray;
 
 use export;
 use gates;
+use idhash;
 use qustate;
+use support;
 
 use export::{CircuitGate, CQasm, OpenQasm};
 
@@ -58,10 +60,14 @@ enum CircuitOp
 /// operations to be performed on it.
 pub struct Circuit
 {
+    /// The number of quantum bits in the system
+    nr_qbits: usize,
+    /// The number of classical bit in the system
+    nr_cbits: usize,
     /// The quantum state of the system
-    q_state: qustate::QuState,
+    q_state: Option<qustate::QuState>,
     /// The classial state of the system
-    c_state: ndarray::Array2<u8>,
+    c_state: Option<ndarray::Array1<u64>>,
     /// The operations to perform on the state
     ops: Vec<CircuitOp>
 }
@@ -70,14 +76,16 @@ impl Circuit
 {
     /// Create a new circuit.
     ///
-    /// Create a new (empty) quantum circuit, with `nr_qubits` quantum bits and
-    /// `nr_cbits` classical bits, to be run `nr_shots` times.
-    pub fn new(nr_qubits: usize, nr_cbits: usize, nr_shots: usize) -> Self
+    /// Create a new (empty) quantum circuit, with `nr_qbits` quantum bits and
+    /// `nr_cbits` classical bits.
+    pub fn new(nr_qbits: usize, nr_cbits: usize) -> Self
     {
         Circuit
         {
-            q_state: qustate::QuState::new(nr_qubits, nr_shots),
-            c_state: ndarray::Array::zeros((nr_cbits, nr_shots)),
+            nr_qbits: nr_qbits,
+            nr_cbits: nr_cbits,
+            q_state: None,
+            c_state: None,
             ops: vec![]
         }
     }
@@ -85,22 +93,23 @@ impl Circuit
     /// The number of quantum bits in this circuit
     pub fn nr_qbits(&self) -> usize
     {
-        self.q_state.nr_bits()
+        self.nr_qbits
     }
 
     /// The number of classical bits in this circuit
     pub fn nr_cbits(&self) -> usize
     {
-        self.c_state.rows()
+        self.nr_cbits
     }
 
     /// The classical register.
     ///
     /// Return a reference to the classical bit register, containing the results
-    /// of any measurements made on the system.
-    pub fn cstate(&self) -> &ndarray::Array2<u8>
+    /// of any measurements made on the system. If no experiment has been run
+    /// yet, `None` is returned.
+    pub fn cstate(&self) -> Option<&ndarray::Array1<u64>>
     {
-        &self.c_state
+        self.c_state.as_ref()
     }
 
     /// Add a gate.
@@ -315,74 +324,89 @@ impl Circuit
 
     /// Execute this circuit
     ///
-    /// Execute this circuit, performing its operations and measurements. Note
-    /// that this does not reset the state before execution. In case multiple
-    /// runs of the same circuit are to be done, call `reset()` between
-    /// executions.
-    pub fn execute(&mut self)
+    /// Execute this circuit, performing its operations and measurements.
+    /// Measurements are made over `nr_shots` executions of the circuit. This
+    /// function clears any previous states of the system (quantum or classical).
+    pub fn execute(&mut self, nr_shots: usize)
     {
+        self.q_state = Some(qustate::QuState::new(self.nr_qbits, nr_shots));
+        self.c_state = Some(ndarray::Array::zeros(nr_shots));
+        self.reexecute();
+    }
+
+    pub fn reexecute(&mut self)
+    {
+        if self.q_state.is_none() || self.c_state.is_none()
+        {
+            panic!("Not yet executed");
+        }
+
+        let q_state = self.q_state.as_mut().unwrap();
+        let c_state = self.c_state.as_mut().unwrap();
+
         for op in self.ops.iter()
         {
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    self.q_state.apply_gate(&**gate, bits.as_slice());
+                    q_state.apply_gate(&**gate, bits.as_slice());
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
-                    let nr_shots = self.c_state.cols();
-                    let mut cbits = vec![0; nr_shots];
-                    for (ibit, &irow) in control.iter().enumerate()
+                    let mut cbits = vec![0; c_state.len()];
+                    for (idst, &isrc) in control.iter().enumerate()
                     {
-                        for (cb, &sb) in cbits.iter_mut().zip(self.c_state.row(irow).iter())
+                        for (db, &sb) in cbits.iter_mut().zip(c_state.iter())
                         {
-                            *cb |= (sb << ibit) as u64;
+                            *db |= ((sb >> isrc) & 1) << idst;
                         }
                     }
-                    let apply_gate: Vec<bool> = cbits.iter().map(|&b| b == target).collect();
-                    self.q_state.apply_conditional_gate(&apply_gate, &**gate,
+                    let apply_gate: Vec<bool> = cbits.iter()
+                        .map(|&b| b == target)
+                        .collect();
+                    q_state.apply_conditional_gate(&apply_gate, &**gate,
                         bits.as_slice());
                 },
                 CircuitOp::Measure(qbit, cbit, basis) => {
                     match basis
                     {
                         Basis::X => {
-                            self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                            q_state.apply_gate(&gates::H::new(), &[qbit]);
                         },
                         Basis::Y => {
-                            self.q_state.apply_gate(&gates::Sdg::new(), &[qbit]);
-                            self.q_state.apply_gate(&gates::H::new(), &[qbit]);
+                            q_state.apply_gate(&gates::Sdg::new(), &[qbit]);
+                            q_state.apply_gate(&gates::H::new(), &[qbit]);
                         },
                         _ => {
                             /* do nothing */
                         }
                     }
-                    self.q_state.measure_into(qbit, self.c_state.row_mut(cbit));
+                    q_state.measure_into(qbit, cbit, c_state);
                 }
                 CircuitOp::MeasureAll(ref cbits, basis) => {
                     match basis
                     {
                         Basis::X => {
-                            self.q_state.apply_unary_gate_all(&gates::H::new());
+                            q_state.apply_unary_gate_all(&gates::H::new());
                         },
                         Basis::Y => {
-                            self.q_state.apply_unary_gate_all(&gates::Sdg::new());
-                            self.q_state.apply_unary_gate_all(&gates::H::new());
+                            q_state.apply_unary_gate_all(&gates::Sdg::new());
+                            q_state.apply_unary_gate_all(&gates::H::new());
                         },
                         _ => {
                             /* do nothing */
                         }
                     }
-                    let msr = self.q_state.measure_all();
-                    for (&i, row) in cbits.iter().zip(msr.genrows())
+                    let msr = q_state.measure_all();
+                    for (dst, &src) in c_state.iter_mut().zip(msr.iter())
                     {
-                        self.c_state.row_mut(i).assign(&row);
+                        *dst = support::permute_bits(src, cbits);
                     }
                 },
                 CircuitOp::Reset(bit) => {
-                    self.q_state.reset(bit);
+                    q_state.reset(bit);
                 },
                 CircuitOp::ResetAll => {
-                    self.q_state.reset_all();
+                    q_state.reset_all();
                 },
                 CircuitOp::Barrier(_) => {
                     /* Nothing to be done */
@@ -400,16 +424,25 @@ impl Circuit
     /// to the most significant bit in the key. This function of course only works
     /// when there are at most 64 bits in the register. If there are more, use
     /// `histogram_string()`.
-    pub fn histogram(&self) -> ::std::collections::HashMap<u64, usize>
+    pub fn histogram(&self) -> idhash::U64HashMap<usize>
     {
-        let mut res = ::std::collections::HashMap::new();
-        for col in self.c_state.gencolumns()
+        if let Some(ref c_state) = self.c_state
         {
-            let key = col.iter().rev().fold(0, |k, &b| (k << 1) | b as u64);
-            let count = res.entry(key).or_insert(0);
-            *count += 1;
+//             let capacity = ::std::cmp::min(c_state.cols(), 1 << self.nr_cbits);
+//             let mut res = ::std::collections::HashMap::with_capacity(capacity);
+            let mut res = idhash::new_u64_hash_map();
+            for &key in c_state
+            {
+                let count = res.entry(key).or_insert(0);
+                *count += 1;
+            }
+            res
         }
-        res
+        else
+        {
+            // XXX FIXME: dont panic, return error
+            panic!("Not yet executed!")
+        }
     }
 
     /// Create a histogram of measurements.
@@ -423,13 +456,20 @@ impl Circuit
     /// `histogram_string` may be better.
     pub fn histogram_vec(&self) -> Vec<usize>
     {
-        let mut res = vec![0; 1 << self.c_state.rows()];
-        for col in self.c_state.gencolumns()
+        if let Some(ref c_state) = self.c_state
         {
-            let key = col.iter().rev().fold(0, |k, &b| (k << 1) | b as usize);
-            res[key] += 1;
+            let mut res = vec![0; 1 << self.nr_cbits];
+            for &key in c_state
+            {
+                res[key as usize] += 1;
+            }
+            res
         }
-        res
+        else
+        {
+            // XXX FIXME: dont panic, return error
+            panic!("Not yet executed!")
+        }
     }
 
     /// Create a histogram of measurements.
@@ -440,22 +480,28 @@ impl Circuit
     /// register and vice versa.
     pub fn histogram_string(&self) -> ::std::collections::HashMap<String, usize>
     {
-        let mut res = ::std::collections::HashMap::new();
-        for col in self.c_state.gencolumns()
+        if let Some(ref c_state) = self.c_state
         {
-            let key = col.iter().rev()
-                .map(|&b| ::std::char::from_digit(b as u32, 10).unwrap())
-                .collect();
-            let count = res.entry(key).or_insert(0);
-            *count += 1;
+            let mut res = ::std::collections::HashMap::new();
+            for &key in c_state
+            {
+                let skey = format!("{:0width$b}", key, width=self.nr_cbits);
+                let count = res.entry(skey).or_insert(0);
+                *count += 1;
+            }
+            res
         }
-        res
+        else
+        {
+            // XXX FIXME: dont panic, return error
+            panic!("Not yet executed!")
+        }
     }
 
     fn is_full_register(&self, control: &[usize]) -> bool
     {
         let n = control.len();
-        if n != self.c_state.rows()
+        if n != self.nr_cbits
         {
             return false;
         }
@@ -496,21 +542,19 @@ impl Circuit
         let mut res = String::from("OPENQASM 2.0;\ninclude \"qelib1.inc\";\n");
 
         let mut qbit_names = vec![];
-        let nr_qbits = self.nr_qbits();
-        if nr_qbits > 0
+        if self.nr_qbits > 0
         {
-            res += &format!("qreg q[{}];\n", nr_qbits);
-            for i in 0..nr_qbits
+            res += &format!("qreg q[{}];\n", self.nr_qbits);
+            for i in 0..self.nr_qbits
             {
                 qbit_names.push(format!("q[{}]", i));
             }
         }
         let mut cbit_names = vec![];
-        let nr_cbits = self.nr_cbits();
-        if nr_cbits > 0
+        if self.nr_cbits > 0
         {
-            res += &format!("creg b[{}];\n", nr_cbits);
-            for i in 0..nr_qbits
+            res += &format!("creg b[{}];\n", self.nr_cbits);
+            for i in 0..self.nr_cbits
             {
                 cbit_names.push(format!("b[{}]", i));
             }
@@ -578,7 +622,7 @@ impl Circuit
                         _ => {}
                     }
 
-                    if cbits.len() == self.nr_cbits()
+                    if cbits.len() == self.nr_cbits
                         && cbits.iter().enumerate().all(|(i, &b)| i==b)
                     {
                         res += &format!("measure q -> b;\n");
@@ -599,7 +643,7 @@ impl Circuit
                     res += "reset q;\n";
                 },
                 CircuitOp::Barrier(ref qbits) => {
-                    if qbits.len() == self.nr_qbits()
+                    if qbits.len() == self.nr_qbits
                         && qbits.iter().enumerate().all(|(i, &b)| i==b)
                     {
                         res += "barrier q;\n";
@@ -642,11 +686,10 @@ impl Circuit
 
         let mut qbit_names = vec![];
         let mut cbit_names = vec![];
-        let nr_qbits = self.nr_qbits();
-        if nr_qbits > 0
+        if self.nr_qbits > 0
         {
-            res += &format!("qubits {}\n", nr_qbits);
-            for i in 0..nr_qbits
+            res += &format!("qubits {}\n", self.nr_qbits);
+            for i in 0..self.nr_qbits
             {
                 qbit_names.push(format!("q[{}]", i));
                 cbit_names.push(format!("b[{}]", i));
@@ -706,14 +749,14 @@ impl Circuit
                     match basis
                     {
                         Basis::X => {
-                            for bit in 0..self.nr_qbits()
+                            for bit in 0..self.nr_qbits
                             {
                                 res += &format!("{}\n",
                                     gates::H::new().c_qasm(&qbit_names, &[bit]));
                             }
                         },
                         Basis::Y => {
-                            for bit in 0..self.nr_qbits()
+                            for bit in 0..self.nr_qbits
                             {
                                 res += &format!("{}\n",
                                     gates::Sdg::new().c_qasm(&qbit_names, &[bit]));
@@ -731,7 +774,7 @@ impl Circuit
                     res += &format!("prep_z {}\n", qbit_names[qbit]);
                 },
                 CircuitOp::ResetAll => {
-                    for i in 0..nr_qbits
+                    for i in 0..self.nr_qbits
                     {
                         res += &format!("prep_z {}\n", qbit_names[i]);
                     }
@@ -747,9 +790,7 @@ impl Circuit
 
     pub fn latex(&self) -> String
     {
-        let nr_qbits = self.nr_qbits();
-        let nr_cbits = self.nr_cbits();
-        let mut state = export::LatexExportState::new(nr_qbits, nr_cbits);
+        let mut state = export::LatexExportState::new(self.nr_qbits, self.nr_cbits);
         for op in self.ops.iter()
         {
             match *op
@@ -789,8 +830,8 @@ impl Circuit
                     state.set_reset(qbit);
                 },
                 CircuitOp::ResetAll => {
-                    state.reserve_range(&[0, nr_qbits-1], None);
-                    for qbit in 0..nr_qbits
+                    state.reserve_range(&[0, self.nr_qbits-1], None);
+                    for qbit in 0..self.nr_qbits
                     {
                         state.set_reset(qbit);
                     }
@@ -811,6 +852,7 @@ mod tests
     use super::{Basis, Circuit, CircuitOp};
     use cmatrix;
     use gates;
+    use qustate;
 
     #[test]
     fn test_gate_methods()
@@ -820,7 +862,7 @@ mod tests
         let x = cmatrix::COMPLEX_HSQRT2;
         let i = cmatrix::COMPLEX_I;
 
-        let mut circuit = Circuit::new(2, 0, 1);
+        let mut circuit = Circuit::new(2, 0);
         circuit.h(0);
         match circuit.ops.last()
         {
@@ -979,14 +1021,15 @@ mod tests
     #[test]
     fn test_execute()
     {
-        let mut circuit = Circuit::new(2, 2, 5);
+        let nr_shots = 5;
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::X::new(), &[0]);
         circuit.add_gate(gates::X::new(), &[1]);
         circuit.add_gate(gates::CX::new(), &[0, 1]);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
-        assert_eq!(circuit.cstate(), &array![[1, 1, 1, 1, 1], [0, 0, 0, 0, 0]]);
+        circuit.execute(nr_shots);
+        assert_eq!(circuit.cstate(), Some(&array![0b01, 0b01, 0b01, 0b01, 0b01]));
     }
 
     #[test]
@@ -997,37 +1040,37 @@ mod tests
         // (assuming normal distribution)
         let min_count = 196;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_x(0, 0);
         circuit.measure_x(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.h(0);
         circuit.h(1);
         circuit.measure_x(0, 0);
         circuit.measure_x(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_y(0, 0);
         circuit.measure_y(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
     }
@@ -1035,53 +1078,35 @@ mod tests
     #[test]
     fn test_conditional()
     {
-        let mut circuit = Circuit::new(2, 2, 5);
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_conditional_gate(&[0, 1], 1, gates::X::new(), &[1]);
         circuit.measure_all(&[0, 1]);
-        circuit.execute();
-        assert_eq!(circuit.c_state, array![
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0]
-        ]);
+        circuit.execute(5);
+        assert_eq!(circuit.c_state, Some(array![0b00, 0b00, 0b00, 0b00, 0b00]));
 
-        let mut circuit = Circuit::new(2, 2, 5);
-        circuit.c_state.assign(&array![
-            [1, 0, 0, 1, 0],
-            [0, 1, 1, 1, 0]
-        ]);
+        let mut circuit = Circuit::new(2, 2);
+        circuit.q_state = Some(qustate::QuState::new(2, 5));
+        circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 1, gates::X::new(), &[1]);
         circuit.measure_all(&[0, 1]);
-        circuit.execute();
-        assert_eq!(circuit.c_state, array![
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0]
-        ]);
+        circuit.reexecute();
+        assert_eq!(circuit.c_state, Some(array![0b10, 0b00, 0b00, 0b00, 0b00]));
 
-        let mut circuit = Circuit::new(2, 2, 5);
-        circuit.c_state.assign(&array![
-            [1, 0, 0, 1, 0],
-            [0, 1, 1, 1, 0]
-        ]);
+        let mut circuit = Circuit::new(2, 2);
+        circuit.q_state = Some(qustate::QuState::new(2, 5));
+        circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 2, gates::X::new(), &[1]);
         circuit.measure_all(&[0, 1]);
-        circuit.execute();
-        assert_eq!(circuit.c_state, array![
-            [0, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0]
-        ]);
+        circuit.reexecute();
+        assert_eq!(circuit.c_state, Some(array![0b00, 0b10, 0b10, 0b00, 0b00]));
 
-        let mut circuit = Circuit::new(2, 2, 5);
-        circuit.c_state.assign(&array![
-            [1, 0, 0, 1, 0],
-            [0, 1, 1, 1, 0]
-        ]);
+        let mut circuit = Circuit::new(2, 2);
+        circuit.q_state = Some(qustate::QuState::new(2, 5));
+        circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[1], 1, gates::X::new(), &[0]);
         circuit.measure_all(&[0, 1]);
-        circuit.execute();
-        assert_eq!(circuit.c_state, array![
-            [0, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0]
-        ]);
+        circuit.reexecute();
+        assert_eq!(circuit.c_state, Some(array![0b00, 0b01, 0b01, 0b01, 0b00]));
     }
 
     #[test]
@@ -1092,25 +1117,25 @@ mod tests
         // (assuming normal distribution)
         let min_count = 196;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_all(&[0, 1]);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_all(&[1, 0]);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
         circuit.h(1);
         circuit.measure_all(&[0, 1]);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
     }
@@ -1123,37 +1148,37 @@ mod tests
         // (assuming normal distribution)
         let min_count = 196;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
         circuit.h(1);
         circuit.measure_all_basis(&[0, 1], Basis::X);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![nr_shots, 0, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.h(0);
         circuit.h(1);
         circuit.measure_all_basis(&[0, 1], Basis::X);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.h(0);
         circuit.h(1);
         circuit.add_gate(gates::S::new(), &[0]);
         circuit.add_gate(gates::S::new(), &[1]);
         circuit.measure_all_basis(&[0, 1], Basis::Y);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.measure_all_basis(&[0, 1], Basis::Y);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
     }
@@ -1166,12 +1191,12 @@ mod tests
         // (assuming normal distribution)
         let min_count = 906;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::H::new(), &[0]);
         circuit.add_gate(gates::H::new(), &[1]);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
 
         let hist = circuit.histogram();
         // With this many shots, we expect all keys to be present
@@ -1191,12 +1216,12 @@ mod tests
         // (assuming normal distribution)
         let min_count = 906;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::H::new(), &[0]);
         circuit.add_gate(gates::H::new(), &[1]);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
 
         let hist = circuit.histogram_vec();
         assert_eq!(hist.iter().sum::<usize>(), nr_shots);
@@ -1211,12 +1236,12 @@ mod tests
         // (assuming normal distribution)
         let min_count = 906;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::H::new(), &[0]);
         circuit.add_gate(gates::H::new(), &[1]);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
 
         let hist = circuit.histogram_string();
         // With this many shots, we expect all keys to be present
@@ -1236,35 +1261,35 @@ mod tests
         // (assuming normal distribution)
         let min_count = 443;
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
         circuit.z(0);
         circuit.reset(0);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![nr_shots, 0, 0, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
         circuit.z(0);
         circuit.x(1);
         circuit.reset(0);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
-        let mut circuit = Circuit::new(2, 2, nr_shots);
+        let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
         circuit.z(0);
         circuit.h(1);
         circuit.reset(0);
         circuit.measure(0, 0);
         circuit.measure(1, 1);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert!(hist[0] > min_count);
         assert!(hist[2] > min_count);
@@ -1277,14 +1302,14 @@ mod tests
     {
         let nr_shots = 1024;
 
-        let mut circuit = Circuit::new(5, 5, nr_shots);
+        let mut circuit = Circuit::new(5, 5);
         circuit.h(0);
         circuit.z(0);
         circuit.x(4);
         circuit.h(3);
         circuit.reset_all();
         circuit.measure_all(&[0, 1, 2, 3, 4]);
-        circuit.execute();
+        circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert_eq!(hist[0], nr_shots);
         assert!(hist[1..].iter().all(|&c| c == 0));
@@ -1293,7 +1318,7 @@ mod tests
     #[test]
     fn test_open_qasm()
     {
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.cx(0, 1);
         circuit.barrier(&[0, 1]);
@@ -1322,7 +1347,7 @@ h q[1];
 measure q[1] -> b[1];
 "#)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_all(&[0, 1]);
         circuit.measure_all(&[1, 0]);
@@ -1344,7 +1369,7 @@ h q;
 measure q -> b;
 "#)));
 
-        let mut circuit = Circuit::new(2, 0, 1);
+        let mut circuit = Circuit::new(2, 0);
         circuit.x(0);
         circuit.h(1);
         circuit.reset(0);
@@ -1361,7 +1386,7 @@ x q[0];
 reset q;
 "#)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_all(&[0, 1]);
         circuit.add_conditional_gate(&[0, 1], 1, gates::X::new(), &[0]);
@@ -1377,11 +1402,11 @@ if (b == 1) x q[0];
 x q[1];
 "#)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_conditional_gate(&[0], 1, gates::X::new(), &[0]);
         assert!(matches!(circuit.open_qasm(), Err(_)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.add_conditional_gate(&[1, 2], 1, gates::X::new(), &[0]);
         assert!(matches!(circuit.open_qasm(), Err(_)));
     }
@@ -1389,7 +1414,7 @@ x q[1];
     #[test]
     fn test_c_qasm()
     {
-        let mut circuit = Circuit::new(3, 3, 10);
+        let mut circuit = Circuit::new(3, 3);
         circuit.x(0);
         circuit.cx(0, 1);
         circuit.cx(1, 0);
@@ -1409,7 +1434,7 @@ measure_x q[1]
 measure_y q[2]
 "#)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.h(1);
         circuit.measure_all(&[0, 1]);
@@ -1436,7 +1461,7 @@ h q[1]
 measure_all
 "#)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
         circuit.measure_all(&[0, 1]);
         circuit.add_conditional_gate(&[0, 1], 1, gates::X::new(), &[0]);
@@ -1452,7 +1477,7 @@ not b[1]
 x q[1]
 "#)));
 
-        let mut circuit = Circuit::new(2, 2, 1);
+        let mut circuit = Circuit::new(2, 2);
         circuit.measure(0, 1);
         // c-Qasm only allows for measuring to the classical bit with the same index
         assert!(matches!(circuit.c_qasm(), Err(_)));
@@ -1461,7 +1486,7 @@ x q[1]
     #[test]
     fn test_latex()
     {
-        let mut circuit = Circuit::new(2, 2, 1024);
+        let mut circuit = Circuit::new(2, 2);
 
         circuit.h(0);
         circuit.x(1);

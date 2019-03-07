@@ -43,10 +43,42 @@ pub fn get_ranges(nrs: &[usize]) -> Vec<(usize, usize)>
     ranges
 }
 
+/// Reverse bits.
+///
+/// Return the lowest `nr_bits` bits in `idx` in reverse order. Bits higher
+/// than `nr_bits` are lost.
+pub fn reverse_bits(idx: u64, nr_bits: usize) -> u64
+{
+    let mut res = 0;
+    let mut sidx = idx;
+    for i in 0..nr_bits
+    {
+        res |= (sidx & 1) << (nr_bits - 1 - i);
+        sidx >>= 1;
+    }
+    res
+}
+
+/// Permute bits.
+///
+/// Permute  the bits in `idx`, or select bits from it. The indices of the bits
+/// to select are given in `bits`, with 0 meaning the least significant bit in
+/// `idx`. The bits are stored in the order given in `bits`, with the first bit
+/// stored as the leats significant bit in the result.
+pub fn permute_bits(idx: u64, bits: &[usize]) -> u64
+{
+    let mut res = 0;
+    for (i, b) in bits.iter().enumerate()
+    {
+        res |= ((idx >> b) & 1) << i;
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests
 {
-    use super::get_ranges;
+    use super::{get_ranges, permute_bits, reverse_bits};
 
     #[test]
     fn test_get_ranges()
@@ -63,5 +95,26 @@ mod tests
         assert_eq!(ranges, vec![(0, 4), (6, 6)]);
         let ranges = get_ranges(&[5, 6, 9, 2, 0, 11]);
         assert_eq!(ranges, vec![(0, 0), (2, 2), (5, 6), (9, 9), (11, 11)]);
+    }
+
+    #[test]
+    fn test_reverse_bits()
+    {
+        assert_eq!(reverse_bits(1, 1), 1);
+        assert_eq!(reverse_bits(1, 4), 8);
+        assert_eq!(reverse_bits(10, 4), 5);
+        assert_eq!(reverse_bits(26, 4), 5);
+        assert_eq!(reverse_bits(0xfffffffffffffffa, 4), 0x5);
+        assert_eq!(reverse_bits(0xffffffffffffaaaa, 32), 0x5555ffff);
+        assert_eq!(reverse_bits(0x1ffffffffffffffa, 64), 0x5ffffffffffffff8);
+    }
+
+    #[test]
+    fn test_permute_bits()
+    {
+        assert_eq!(permute_bits(0xc, &[0, 3, 1, 2]), 0xa);
+        assert_eq!(permute_bits(0xfffffffffffff0ff, &[8, 9, 10, 11]), 0);
+        assert_eq!(permute_bits(0xf555555555555555, &[63, 62, 61, 60]), 0xf);
+        assert_eq!(permute_bits(0x3, &[3, 2, 1, 0]), 0xc);
     }
 }

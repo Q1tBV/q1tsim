@@ -22,4 +22,5 @@ pub mod export;
 pub mod permutation;
 pub mod qustate;
 
+mod idhash;
 mod support;
