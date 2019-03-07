@@ -221,6 +221,8 @@ macro_rules! declare_controlled_qasm
                     res = res.replace(pattern, &self.$arg.to_string());
                     let pattern = concat!("{half_", stringify!($arg), "}");
                     res = res.replace(pattern, &(0.5 * self.$arg).to_string());
+                    let pattern = concat!("{quarter_", stringify!($arg), "}");
+                    res = res.replace(pattern, &(0.25 * self.$arg).to_string());
                 )*
 
                 res
@@ -361,6 +363,27 @@ declare_controlled!(
     CZ, gates::Z, cost=CX::cost() + 2.0*gates::U2::cost());
 
 declare_controlled!(
+    /// Doubly controlled `R`<sub>`Y`</sub> gate.
+    CCRY, gates::CRY,
+    cost=6.0 * gates::U3::cost() + 8.0*CX::cost(),
+    arg=theta,
+    open_qasm="cx {1}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {1}, {2}; u3({theta}/4, 0, 0) {2}; cx {0}, {1}; cx {1}, {2}; u3({theta}/4, 0, 0) {2}; cx {1}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {0}, {1}; cx {0}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {0}, {2}; u3({theta}/4, 0, 0) {2}",
+    c_qasm=r#"cnot {1}, {2}
+ry {2}, -{quarter_theta}
+cnot {1}, {2}
+ry {2}, {quarter_theta}
+cnot {0}, {1}
+cnot {1}, {2}
+ry {2}, {quarter_theta}
+cnot {1}, {2}
+ry {2}, -{quarter_theta}
+cnot {0}, {1}
+cnot {0}, {2}
+ry {2}, -{quarter_theta}
+cnot {0}, {2}
+ry {2}, {quarter_theta}"#);
+
+declare_controlled!(
     /// Doubly controlled `X` gate.
     CCX, gates::CX,
     cost=6.0*CX::cost() + 7.0*gates::U1::cost() + 2.0*gates::U2::cost(),
@@ -377,7 +400,7 @@ mod tests
 {
     use gates::{gate_test, Gate, H, X};
     use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use super::{C, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CV, CX, CY, CZ};
+    use super::{C, CCRY, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CV, CX, CY, CZ};
     use cmatrix;
 
     #[test]
@@ -492,6 +515,7 @@ mod tests
         assert_eq!(CRZ::cost(), 2016.0);
         assert_eq!(CCX::new().cost(), 6263.0);
         assert_eq!(CCZ::new().cost(), 6471.0);
+        assert_eq!(CCRY::new(1.6).cost(), 9214.0);
     }
 
     #[test]
@@ -504,18 +528,40 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let open_qasm = CCZ::new().open_qasm(&bit_names, &[0, 1, 2]);
         assert_eq!(open_qasm, "h qb2; ccx qb0, qb1, qb2; h qb2");
+
+        let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
+        let open_qasm = CCRY::new(1.6).open_qasm(&bit_names, &[1, 2, 0]);
+        assert_eq!(open_qasm, "cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb1, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb0; u3(1.6/4, 0, 0) qb0");
     }
 
     #[test]
     fn test_c_qasm()
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
-        let open_qasm = CX::new().c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(open_qasm, "cnot qb0, qb1");
+        let c_qasm = CX::new().c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(c_qasm, "cnot qb0, qb1");
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
-        let open_qasm = CCZ::new().c_qasm(&bit_names, &[0, 1, 2]);
-        assert_eq!(open_qasm, "h qb2\ntoffoli qb0, qb1, qb2\nh qb2");
+        let c_qasm = CCZ::new().c_qasm(&bit_names, &[0, 1, 2]);
+        assert_eq!(c_qasm, "h qb2\ntoffoli qb0, qb1, qb2\nh qb2");
+
+        let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
+        let c_qasm = CCRY::new(1.6).c_qasm(&bit_names, &[1, 2, 0]);
+        assert_eq!(c_qasm,
+r#"cnot qb2, qb0
+ry qb0, -0.4
+cnot qb2, qb0
+ry qb0, 0.4
+cnot qb1, qb2
+cnot qb2, qb0
+ry qb0, 0.4
+cnot qb2, qb0
+ry qb0, -0.4
+cnot qb1, qb2
+cnot qb1, qb0
+ry qb0, -0.4
+cnot qb1, qb0
+ry qb0, 0.4"#);
     }
 
     #[test]

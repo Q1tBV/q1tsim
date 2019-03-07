@@ -271,7 +271,7 @@ where G: Gate
     assert_complex_matrix_eq!(&*state, result);
 }
 
-pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCX, CCZ};
+pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCRY, CCX, CCZ};
 pub use self::composite::Composite;
 pub use self::hadamard::H;
 pub use self::identity::I;

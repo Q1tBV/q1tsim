@@ -560,6 +560,10 @@ impl Composite
         {
             match gate.name.to_lowercase().as_str()
             {
+                "ccry" => {
+                    Self::assert_nr_args_bits(1, 3, &gate)?;
+                    composite.add_gate(CCRY::new(gate.args[0]), &gate.bits);
+                },
                 "ccx" => {
                     Self::assert_nr_args_bits(0, 3, &gate)?;
                     composite.add_gate(CCX::new(), &gate.bits);
