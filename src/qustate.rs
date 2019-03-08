@@ -459,75 +459,6 @@ impl QuState
         }
     }
 
-//     pub fn project(&mut self, qbit: usize) -> u8
-//     {
-//         assert!(qbit < self.nr_bits, "Invalid bit index");
-//         assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
-//
-//         let block_size = 1 << (self.nr_bits - qbit - 1);
-//         let nr_blocks = 1 << qbit;
-//         let mut res_start = 0;
-//
-//         let one_mask = 1 << cbit;
-//         let zero_mask = !one_mask;
-//
-//         let mut new_state_counts = vec![];
-//         for mut m in self.state_counts.drain(..)
-//         {
-//             // Compute chance of measuring 0
-//             let mut w0 = 0.0f64;
-//             let mut off = 0;
-//             for _ in 0..nr_blocks
-//             {
-//                 w0 += m.coefs.slice(s![off..off+block_size])
-//                     .iter().map(|c| c.norm_sqr())
-//                     .sum::<f64>();
-//                 off += 2 * block_size;
-//             }
-//
-//             // Sometimes, the sum may add up to slightly more than 1, due to
-//             // numerical inaccuracies. This causes the Binomial distribution to
-//             // panic, so cap w0.
-//             w0 = w0.min(1.0);
-//
-//             // Compute how many times we measure 0
-//             let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
-//             let n0 = self.rng.sample(distribution) as usize;
-//
-//             // Store the result.
-//             res.slice_mut(s![res_start..res_start+n0]).map_inplace(
-//                 |b| *b &= zero_mask
-//             );
-//             res.slice_mut(s![res_start+n0..res_start+m.count]).map_inplace(
-//                 |b| *b |= one_mask
-//             );
-//             res_start += m.count;
-//
-//             // Collapse the wave function
-//             if n0 == m.count
-//             {
-//                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
-//                 new_state_counts.push(m);
-//             }
-//             else if n0 == 0
-//             {
-//                 Self::collapse(&mut m.coefs, block_size, nr_blocks, 0, 1.0 - w0);
-//                 new_state_counts.push(m);
-//             }
-//             else
-//             {
-//                 let mut m1 = m.clone();
-//                 m1.count = m.count - n0;
-//                 m.count = n0;
-//                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
-//                 Self::collapse(&mut m1.coefs, block_size, nr_blocks, 0, 1.0 - w0);
-//                 new_state_counts.push(m);
-//                 new_state_counts.push(m1);
-//             }
-//         }
-//         self.state_counts = new_state_counts;
-//     }
-
     /// Measure all qubits
     ///
     /// Measure all qubits in this state, and return the results.
@@ -869,6 +800,56 @@ mod tests
                 // LCOV_EXCL_STOP
             }
         }
+    }
+
+    #[test]
+    fn test_peek_into()
+    {
+        let nr_shots = 1024;
+        let mut measurements = ndarray::Array1::zeros(nr_shots);
+
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let x = cmatrix::COMPLEX_HSQRT2;
+        let h = 0.5 * o;
+
+        // |0〉
+        let mut s = QuState::new(1, nr_shots);
+        s.peek_into(0, 0, &mut measurements);
+        assert!(measurements.iter().all(|&bits| bits == 0));
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
+            &array![o, z]);
+
+        // H|0〉
+        let mut s = QuState::from_qubit_coefs(&[o, o], nr_shots);
+        s.peek_into(0, 0, &mut measurements);
+        assert!(stats::measurement_ok(measurements.sum() as usize, nr_shots,
+            0.5, 1.0e-5));
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
+            &array![x, x]);
+
+        // H|0〉⊗ H|0〉
+        let mut s = QuState::from_qubit_coefs(&[o, o, o, o], nr_shots);
+        s.peek_into(0, 0, &mut measurements);
+        assert!(stats::measurement_ok(measurements.sum() as usize, nr_shots,
+            0.5, 1.0e-5));
+        measurements.fill(0);
+        s.peek_into(1, 0, &mut measurements);
+        assert!(stats::measurement_ok(measurements.sum() as usize, nr_shots,
+            0.5, 1.0e-5));
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
+            &array![h, h, h, h]);
+
+        // H|0〉⊗ |1〉
+        let mut s = QuState::from_qubit_coefs(&[x, x, z, o], nr_shots);
+        s.peek_into(0, 0, &mut measurements);
+        assert!(stats::measurement_ok(measurements.sum() as usize, nr_shots,
+            0.5, 1.0e-5));
+        measurements.fill(0);
+        s.peek_into(1, 0, &mut measurements);
+        assert_eq!(measurements.sum() as usize, nr_shots);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
+            &array![z, x, z, x]);
     }
 
     #[test]
