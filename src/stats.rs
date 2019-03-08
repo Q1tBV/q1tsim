@@ -34,7 +34,7 @@ pub fn measurement_ok(count: usize, nr_shots: usize, p: f64, tol: f64) -> bool
 #[cfg(test)]
 mod tests
 {
-    use super::get_bounds;
+    use super::{get_bounds, measurement_ok};
 
     #[test]
     fn test_get_bounds()
@@ -44,5 +44,17 @@ mod tests
         assert_eq!(get_bounds(1234, 0.75, 1.0e-5), (860, 991));
         assert_eq!(get_bounds(1234, 0.75, 1.0e-10), (828, 1023));
         assert_eq!(get_bounds(1_000_000, 0.43, 1.0e-4), (428158, 431842));
+    }
+
+    #[test]
+    fn test_measurement_ok()
+    {
+        assert!(measurement_ok(512, 1024, 0.5, 1.0e-5));
+        assert!(measurement_ok(444, 1024, 0.5, 1.0e-5));
+        assert!(!measurement_ok(443, 1024, 0.5, 1.0e-5));
+        assert!(measurement_ok(580, 1024, 0.5, 1.0e-5));
+        assert!(!measurement_ok(581, 1024, 0.5, 1.0e-5));
+        assert!(!measurement_ok(1023, 1024, 0.5, 1.0e-5));
+        assert!(!measurement_ok(0, 1024, 0.5, 1.0e-5));
     }
 }

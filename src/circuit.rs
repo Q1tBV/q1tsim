@@ -874,6 +874,7 @@ mod tests
     use cmatrix;
     use gates;
     use qustate;
+    use stats;
 
     #[test]
     fn test_gate_methods()
@@ -1057,9 +1058,7 @@ mod tests
     fn test_measure()
     {
         let nr_shots = 1024;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 196;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
@@ -1075,7 +1074,9 @@ mod tests
         circuit.measure_x(1, 1);
         circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
-        assert!(*hist.iter().min().unwrap() >= min_count);
+        assert!(hist.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
 
         let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
@@ -1093,7 +1094,9 @@ mod tests
         circuit.measure_y(1, 1);
         circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
-        assert!(*hist.iter().min().unwrap() >= min_count);
+        assert!(hist.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
@@ -1134,9 +1137,7 @@ mod tests
     fn test_measure_all()
     {
         let nr_shots = 1024;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 196;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.x(0);
@@ -1158,16 +1159,16 @@ mod tests
         circuit.measure_all(&[0, 1]);
         circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
-        assert!(*hist.iter().min().unwrap() >= min_count);
+        assert!(hist.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
     fn test_measure_all_basis()
     {
         let nr_shots = 1024;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 196;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
@@ -1201,16 +1202,16 @@ mod tests
         circuit.measure_all_basis(&[0, 1], Basis::Y);
         circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
-        assert!(*hist.iter().min().unwrap() >= min_count);
+        assert!(hist.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
     fn test_peek_all()
     {
         let nr_shots = 1024;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 443;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(1, 3);
         circuit.h(0);
@@ -1224,11 +1225,11 @@ mod tests
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
         let n00 = hist[0] + hist[2] + hist[4] + hist[6];
-        assert!(n00 > min_count && n00 < nr_shots - min_count);
+        assert!(stats::measurement_ok(n00, nr_shots, 0.5, tol));
         let n10 = hist[0] + hist[1] + hist[4] + hist[5];
         assert!(n10 == nr_shots);
         let n20 = hist[0] + hist[1] + hist[2] + hist[3];
-        assert!(n20 > min_count && n20 < nr_shots - min_count);
+        assert!(stats::measurement_ok(n20, nr_shots, 0.5, tol));
 
         let mut circuit = Circuit::new(2, 6);
         circuit.h(0);
@@ -1251,21 +1252,23 @@ mod tests
             n1[(key as usize >> 2) & 0x03] += count;
             n2[(key as usize >> 4) & 0x03] += count;
         }
-        assert!(n0[0] + n0[2] > min_count && n0[0] + n0[2] < nr_shots - min_count);
-        assert!(n0[0] + n0[1] > min_count && n0[0] + n0[1] < nr_shots - min_count);
-        assert!(n1[0] + n1[2] == nr_shots);
-        assert!(n1[0] + n1[1] > min_count && n1[0] + n1[1] < nr_shots - min_count);
-        assert!(n2[0] + n2[2] > min_count && n2[0] + n2[2] < nr_shots - min_count);
-        assert!(n2[0] + n2[1] > min_count && n2[0] + n2[1] < nr_shots - min_count);
+        assert!(n0.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
+        assert_eq!(n1[1], 0);
+        assert_eq!(n1[3], 0);
+        assert!(stats::measurement_ok(n1[0], nr_shots, 0.5, tol));
+        assert!(stats::measurement_ok(n1[2], nr_shots, 0.5, tol));
+        assert!(n2.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
     fn test_histogram()
     {
         let nr_shots = 4096;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 906;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::H::new(), &[0]);
@@ -1281,16 +1284,16 @@ mod tests
         assert_eq!(keys, vec![&0, &1, &2, &3]);
 
         assert_eq!(hist.values().sum::<usize>(), nr_shots);
-        assert!(*hist.values().min().unwrap() >= min_count);
+        assert!(hist.values().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
     fn test_histogram_vec()
     {
         let nr_shots = 4096;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 906;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::H::new(), &[0]);
@@ -1301,16 +1304,16 @@ mod tests
 
         let hist = circuit.histogram_vec();
         assert_eq!(hist.iter().sum::<usize>(), nr_shots);
-        assert!(*hist.iter().min().unwrap() >= min_count);
+        assert!(hist.iter().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
     fn test_histogram_string()
     {
         let nr_shots = 4096;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 906;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.add_gate(gates::H::new(), &[0]);
@@ -1326,16 +1329,16 @@ mod tests
         assert_eq!(keys, vec!["00", "01", "10", "11"]);
 
         assert_eq!(hist.values().sum::<usize>(), nr_shots);
-        assert!(*hist.values().min().unwrap() >= min_count);
+        assert!(hist.values().all(
+            |&count| stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
     }
 
     #[test]
     fn test_reset()
     {
         let nr_shots = 1024;
-        // chance of individual count being less than min_count is less than 10^-5
-        // (assuming normal distribution)
-        let min_count = 443;
+        let tol = 1.0e-5;
 
         let mut circuit = Circuit::new(2, 2);
         circuit.h(0);
@@ -1367,9 +1370,9 @@ mod tests
         circuit.measure(1, 1);
         circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
-        assert!(hist[0] > min_count);
-        assert!(hist[2] > min_count);
+        assert!(stats::measurement_ok(hist[0], nr_shots, 0.5, tol));
         assert_eq!(hist[1], 0);
+        assert!(stats::measurement_ok(hist[2], nr_shots, 0.5, tol));
         assert_eq!(hist[3], 0);
     }
 
