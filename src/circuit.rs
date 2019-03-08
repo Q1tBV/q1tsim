@@ -19,7 +19,6 @@ use export;
 use gates;
 use idhash;
 use qustate;
-use support;
 
 use export::{CircuitGate, CQasm, OpenQasm};
 
@@ -50,6 +49,8 @@ enum CircuitOp
     Measure(usize, usize, Basis),
     /// Measure all qubits
     MeasureAll(Vec<usize>, Basis),
+    /// Measure all qubits in the `Z` basis without affecting state
+    PeekAll(Vec<usize>),
     /// Prevent gate reordering on the associated bits across the barrier
     Barrier(Vec<usize>)
 }
@@ -203,6 +204,18 @@ impl Circuit
     pub fn measure_all(&mut self, cbits: &[usize])
     {
         self.measure_all_basis(cbits, Basis::Z);
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add the measurement of all qubits in the quantum state into the classical
+    /// bits `cbits`. Measurement is done in the Pauli `Z` basis, without
+    /// collapsing the quantum state.
+    /// NOTE: this is not a physical process, and cannot be reproduced on a real
+    /// quantum computer.
+    pub fn peek_all(&mut self, cbits: &[usize])
+    {
+        self.ops.push(CircuitOp::PeekAll(cbits.to_owned()));
     }
 
     /// Reset a qubit
@@ -396,11 +409,10 @@ impl Circuit
                             /* do nothing */
                         }
                     }
-                    let msr = q_state.measure_all();
-                    for (dst, &src) in c_state.iter_mut().zip(msr.iter())
-                    {
-                        *dst = support::permute_bits(src, cbits);
-                    }
+                    q_state.measure_all_into(cbits, c_state);
+                },
+                CircuitOp::PeekAll(ref cbits) => {
+                    q_state.peek_all_into(cbits, c_state);
                 },
                 CircuitOp::Reset(bit) => {
                     q_state.reset(bit);
@@ -636,6 +648,9 @@ impl Circuit
                         }
                     }
                 },
+                CircuitOp::PeekAll(_) => {
+                    return Err(String::from("Peeking into the quantum state is not a physical operation, and is not supported in OpenQasm"));
+                },
                 CircuitOp::Reset(qbit) => {
                     res += &format!("reset {};\n", qbit_names[qbit]);
                 },
@@ -770,6 +785,9 @@ impl Circuit
                     }
                     res += &format!("measure_all\n");
                 },
+                CircuitOp::PeekAll(_) => {
+                    return Err(String::from("Peeking into the quantum state is not a physical operation, and is not supported in c-Qasm"));
+                },
                 CircuitOp::Reset(qbit) => {
                     res += &format!("prep_z {}\n", qbit_names[qbit]);
                 },
@@ -825,6 +843,9 @@ impl Circuit
                     {
                         state.set_measurement(qbit, cbit, basis_lbl);
                     }
+                },
+                CircuitOp::PeekAll(_) => {
+                    unimplemented!();
                 },
                 CircuitOp::Reset(qbit) => {
                     state.set_reset(qbit);
@@ -1181,6 +1202,61 @@ mod tests
         circuit.execute(nr_shots);
         let hist = circuit.histogram_vec();
         assert!(*hist.iter().min().unwrap() >= min_count);
+    }
+
+    #[test]
+    fn test_peek_all()
+    {
+        let nr_shots = 1024;
+        // chance of individual count being less than min_count is less than 10^-5
+        // (assuming normal distribution)
+        let min_count = 443;
+
+        let mut circuit = Circuit::new(1, 3);
+        circuit.h(0);
+        circuit.peek_all(&[0]);
+        circuit.h(0);
+        circuit.peek_all(&[1]);
+        circuit.h(0);
+        circuit.peek_all(&[2]);
+        circuit.execute(1024);
+        let hist = circuit.histogram_vec();
+        // Results of first and third measurement should be approximately equally
+        // distributed over 0 and 1, second should be pure 0.
+        let n00 = hist[0] + hist[2] + hist[4] + hist[6];
+        assert!(n00 > min_count && n00 < nr_shots - min_count);
+        let n10 = hist[0] + hist[1] + hist[4] + hist[5];
+        assert!(n10 == nr_shots);
+        let n20 = hist[0] + hist[1] + hist[2] + hist[3];
+        assert!(n20 > min_count && n20 < nr_shots - min_count);
+
+        let mut circuit = Circuit::new(2, 6);
+        circuit.h(0);
+        circuit.h(1);
+        circuit.peek_all(&[0, 1]);
+        circuit.h(0);
+        circuit.peek_all(&[2, 3]);
+        circuit.h(0);
+        circuit.peek_all(&[4, 5]);
+        circuit.execute(1024);
+        let hist = circuit.histogram();
+        // Results of first and third measurement should be approximately equally
+        // distributed over 0 and 1, second should be pure 0.
+        let mut n0 = [0; 4];
+        let mut n1 = [0; 4];
+        let mut n2 = [0; 4];
+        for (key, count) in hist
+        {
+            n0[key as usize & 0x03] += count;
+            n1[(key as usize >> 2) & 0x03] += count;
+            n2[(key as usize >> 4) & 0x03] += count;
+        }
+        assert!(n0[0] + n0[2] > min_count && n0[0] + n0[2] < nr_shots - min_count);
+        assert!(n0[0] + n0[1] > min_count && n0[0] + n0[1] < nr_shots - min_count);
+        assert!(n1[0] + n1[2] == nr_shots);
+        assert!(n1[0] + n1[1] > min_count && n1[0] + n1[1] < nr_shots - min_count);
+        assert!(n2[0] + n2[2] > min_count && n2[0] + n2[2] < nr_shots - min_count);
+        assert!(n2[0] + n2[1] > min_count && n2[0] + n2[1] < nr_shots - min_count);
     }
 
     #[test]

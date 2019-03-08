@@ -343,6 +343,9 @@ impl QuState
         let nr_blocks = 1 << qbit;
         let mut res_start = 0;
 
+        let one_mask = 1 << cbit;
+        let zero_mask = !one_mask;
+
         let mut new_state_counts = vec![];
         for mut m in self.state_counts.drain(..)
         {
@@ -367,8 +370,6 @@ impl QuState
             let n0 = self.rng.sample(distribution) as usize;
 
             // Store the result.
-            let one_mask = 1 << cbit;
-            let zero_mask = !one_mask;
             res.slice_mut(s![res_start..res_start+n0]).map_inplace(
                 |b| *b &= zero_mask
             );
@@ -402,14 +403,157 @@ impl QuState
         self.state_counts = new_state_counts;
     }
 
+    /// Measure a qubit.
+    ///
+    /// Perform a measurement on qubit `qbit` in the state to bit `cbit` in res,
+    /// without affecting the quantum state, i.e. the wave function is not
+    /// collapsed. The output array `res` should be of sufficient length to store
+    /// results for the total number of runs in the state. Measurement is done
+    /// in the `z`-basis.
+    /// NOTE: this is not a physical process, and impossible to reproduce on
+    /// a real quantum computer.
+    pub fn peek_into(&mut self, qbit: usize, cbit: usize,
+        res: &mut ndarray::Array1<u64>)
+    {
+        assert!(qbit < self.nr_bits, "Invalid bit index");
+        assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
+
+        let block_size = 1 << (self.nr_bits - qbit - 1);
+        let nr_blocks = 1 << qbit;
+        let mut res_start = 0;
+
+        let one_mask = 1 << cbit;
+        let zero_mask = !one_mask;
+
+        for m in &self.state_counts
+        {
+            // Compute chance of measuring 0
+            let mut w0 = 0.0f64;
+            let mut off = 0;
+            for _ in 0..nr_blocks
+            {
+                w0 += m.coefs.slice(s![off..off+block_size])
+                    .iter().map(|c| c.norm_sqr())
+                    .sum::<f64>();
+                off += 2 * block_size;
+            }
+
+            // Sometimes, the sum may add up to slightly more than 1, due to
+            // numerical inaccuracies. This causes the Binomial distribution to
+            // panic, so cap w0.
+            w0 = w0.min(1.0);
+
+            // Compute how many times we measure 0
+            let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
+            let n0 = self.rng.sample(distribution) as usize;
+
+
+            // Store the result.
+            res.slice_mut(s![res_start..res_start+n0]).map_inplace(
+                |b| *b &= zero_mask
+            );
+            res.slice_mut(s![res_start+n0..res_start+m.count]).map_inplace(
+                |b| *b |= one_mask
+            );
+            res_start += m.count;
+        }
+    }
+
+//     pub fn project(&mut self, qbit: usize) -> u8
+//     {
+//         assert!(qbit < self.nr_bits, "Invalid bit index");
+//         assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
+//
+//         let block_size = 1 << (self.nr_bits - qbit - 1);
+//         let nr_blocks = 1 << qbit;
+//         let mut res_start = 0;
+//
+//         let one_mask = 1 << cbit;
+//         let zero_mask = !one_mask;
+//
+//         let mut new_state_counts = vec![];
+//         for mut m in self.state_counts.drain(..)
+//         {
+//             // Compute chance of measuring 0
+//             let mut w0 = 0.0f64;
+//             let mut off = 0;
+//             for _ in 0..nr_blocks
+//             {
+//                 w0 += m.coefs.slice(s![off..off+block_size])
+//                     .iter().map(|c| c.norm_sqr())
+//                     .sum::<f64>();
+//                 off += 2 * block_size;
+//             }
+//
+//             // Sometimes, the sum may add up to slightly more than 1, due to
+//             // numerical inaccuracies. This causes the Binomial distribution to
+//             // panic, so cap w0.
+//             w0 = w0.min(1.0);
+//
+//             // Compute how many times we measure 0
+//             let distribution = rand::distributions::Binomial::new(m.count as u64, w0);
+//             let n0 = self.rng.sample(distribution) as usize;
+//
+//             // Store the result.
+//             res.slice_mut(s![res_start..res_start+n0]).map_inplace(
+//                 |b| *b &= zero_mask
+//             );
+//             res.slice_mut(s![res_start+n0..res_start+m.count]).map_inplace(
+//                 |b| *b |= one_mask
+//             );
+//             res_start += m.count;
+//
+//             // Collapse the wave function
+//             if n0 == m.count
+//             {
+//                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
+//                 new_state_counts.push(m);
+//             }
+//             else if n0 == 0
+//             {
+//                 Self::collapse(&mut m.coefs, block_size, nr_blocks, 0, 1.0 - w0);
+//                 new_state_counts.push(m);
+//             }
+//             else
+//             {
+//                 let mut m1 = m.clone();
+//                 m1.count = m.count - n0;
+//                 m.count = n0;
+//                 Self::collapse(&mut m.coefs, block_size, nr_blocks, block_size, w0);
+//                 Self::collapse(&mut m1.coefs, block_size, nr_blocks, 0, 1.0 - w0);
+//                 new_state_counts.push(m);
+//                 new_state_counts.push(m1);
+//             }
+//         }
+//         self.state_counts = new_state_counts;
+//     }
+
     /// Measure all qubits
     ///
     /// Measure all qubits in this state, and return the results.
     pub fn measure_all(&mut self) -> ndarray::Array1<u64>
     {
+        let mut res = ndarray::Array1::zeros(self.nr_shots);
+        let cbits: Vec<usize> = (0..self.nr_bits).collect();
+        self.measure_all_into(&cbits, &mut res);
+        res
+    }
+
+    /// Measure all qubits
+    ///
+    /// Measure all qubits in this state, and store the results in `res`,
+    /// which should be of sufficient length to hold results for the number of
+    /// runs in this state.  The first qubit measured is stored at the bit
+    /// position indicated by the first element of `cbits`, and so on.
+    pub fn measure_all_into(&mut self, cbits: &[usize], res: &mut ndarray::Array1<u64>)
+    {
+        assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
+        assert!(cbits.len() == self.nr_bits,
+            "Number of measurement bits does not match number of quantum bits");
+
+        let mask = !cbits.iter().fold(0u64, |m, b| m | (1u64 << b));
         let nr_coefs = 1 << self.nr_bits;
         let mut counts = ::std::collections::HashMap::new();
-        let mut result = ndarray::Array1::<u64>::zeros(self.nr_shots);
         let mut res_off = 0;
         let mut new_state_counts = vec![];
         for m in &self.state_counts
@@ -438,15 +582,66 @@ impl QuState
                 new_state_counts.push(StateCount::new(coefs, count));
 
                 let rev_idx = support::reverse_bits(idx as u64, self.nr_bits);
-                result.slice_mut(s![res_off..res_off+count]).fill(rev_idx);
+                let perm_idx = support::shuffle_bits(rev_idx, cbits);
+                res.slice_mut(s![res_off..res_off+count]).map_inplace(
+                    |bits| *bits = (*bits & mask) | perm_idx
+                );
 
                 res_off += count;
             }
         }
 
         self.state_counts = new_state_counts;
+    }
 
-        result
+    /// Measure all qubits
+    ///
+    /// Measure all qubits in this state without affecting the quantum state,
+    /// i.e. without collapsing the wave function. The measurement results
+    /// are stored in `res`, which must be of sufficient length to hold results
+    /// for the total number of runs in the state. The first qubit measured
+    /// is stored at the bit position indicated by the first element of `cbits`,
+    /// and so on.
+    /// NOTE: this is not a physical process, and impossible to reproduce on
+    /// a real quantum computer.
+    pub fn peek_all_into(&mut self, cbits: &[usize], res: &mut ndarray::Array1<u64>)
+    {
+        assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
+        assert!(cbits.len() == self.nr_bits,
+            "Number of measurement bits does not match number of quantum bits");
+
+        let mask = !cbits.iter().fold(0u64, |m, b| m | (1u64 << b));
+
+        let mut counts = idhash::new_usize_hash_map();
+        let mut res_off = 0;
+        for m in &self.state_counts
+        {
+            // Collect which measurements are made for this collection of runs.
+            // Store this in a hash map with the measurement result as key, and
+            // the number of times it was measured as value.
+            counts.clear();
+            let distr = rand::distributions::WeightedIndex::new(
+                m.coefs.iter().map(|c| c.norm_sqr())
+            ).unwrap();
+            for idx in distr.sample_iter(&mut self.rng).take(m.count)
+            {
+                let entry = counts.entry(idx).or_insert(0);
+                *entry += 1;
+            }
+
+            // For each unique measurement, store n copies of it in the result,
+            // where n is the number of times it was measured.
+            for (&idx, &count) in counts.iter()
+            {
+                let rev_idx = support::reverse_bits(idx as u64, self.nr_bits);
+                let perm_idx = support::shuffle_bits(rev_idx, cbits);
+                res.slice_mut(s![res_off..res_off+count]).map_inplace(
+                    |bits| *bits = (*bits & mask) | perm_idx
+                );
+
+                res_off += count;
+            }
+        }
     }
 
     /// Reset a qubit
@@ -479,6 +674,7 @@ mod tests
 
     use cmatrix;
     use gates;
+    use stats;
     use super::QuState;
 
     #[test]
@@ -778,6 +974,41 @@ mod tests
         let result = s.measure_all();
         assert_eq!(result.shape(), [nr_shots]);
         assert!(result.iter().all(|&b| (b & 0b011) == 0));
+    }
+
+    #[test]
+    fn test_peek_all()
+    {
+        let tol = 1.0e-5;
+        let z = cmatrix::COMPLEX_ZERO;
+        let o = cmatrix::COMPLEX_ONE;
+        let h = 0.5 * o;
+
+        let nr_bits = 3;
+        let nr_shots = 1024;
+
+        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
+        s.apply_gate(&gates::H::new(), &[0]);
+        s.apply_gate(&gates::H::new(), &[2]);
+        let mut result = ndarray::Array1::zeros(nr_shots);
+        s.peek_all_into(&[0, 1, 2], &mut result);
+        // Ensure quantum state is preserved
+        assert_eq!(s.state_counts[0].count, nr_shots);
+        assert_complex_vector_eq!(&s.state_counts[0].coefs,
+            &array![z, z, h, -h, z, z, -h, h]);
+        // Ensure measurement is correct
+        assert_eq!(result.shape(), [nr_shots]);
+        let mut n = vec![0; nr_bits];
+        for &bits in result.iter()
+        {
+            for i in 0..nr_bits
+            {
+                n[i] += (bits as usize >> i) & 1;
+            }
+        }
+        assert!(stats::measurement_ok(n[0], nr_shots, 0.5, tol));
+        assert_eq!(n[1], nr_shots);
+        assert!(stats::measurement_ok(n[0], nr_shots, 0.5, tol));
     }
 
     #[test]

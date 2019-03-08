@@ -24,3 +24,4 @@ pub mod qustate;
 
 mod idhash;
 mod support;
+#[cfg(test)] mod stats;

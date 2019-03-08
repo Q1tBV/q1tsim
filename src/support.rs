@@ -59,18 +59,17 @@ pub fn reverse_bits(idx: u64, nr_bits: usize) -> u64
     res
 }
 
-/// Permute bits.
+/// Select bits.
 ///
-/// Permute  the bits in `idx`, or select bits from it. The indices of the bits
-/// to select are given in `bits`, with 0 meaning the least significant bit in
-/// `idx`. The bits are stored in the order given in `bits`, with the first bit
-/// stored as the leats significant bit in the result.
-pub fn permute_bits(idx: u64, bits: &[usize]) -> u64
+/// Select the lowest bits from `idx`, and store them at the positions in `bits`.
+pub fn shuffle_bits(idx: u64, bits: &[usize]) -> u64
 {
     let mut res = 0;
-    for (i, b) in bits.iter().enumerate()
+    let mut sidx = idx;
+    for i in bits
     {
-        res |= ((idx >> b) & 1) << i;
+        res |= (sidx & 1) << i;
+        sidx >>= 1;
     }
     res
 }
@@ -78,7 +77,7 @@ pub fn permute_bits(idx: u64, bits: &[usize]) -> u64
 #[cfg(test)]
 mod tests
 {
-    use super::{get_ranges, permute_bits, reverse_bits};
+    use super::{get_ranges, shuffle_bits, reverse_bits};
 
     #[test]
     fn test_get_ranges()
@@ -110,11 +109,11 @@ mod tests
     }
 
     #[test]
-    fn test_permute_bits()
+    fn test_shuffle_bits()
     {
-        assert_eq!(permute_bits(0xc, &[0, 3, 1, 2]), 0xa);
-        assert_eq!(permute_bits(0xfffffffffffff0ff, &[8, 9, 10, 11]), 0);
-        assert_eq!(permute_bits(0xf555555555555555, &[63, 62, 61, 60]), 0xf);
-        assert_eq!(permute_bits(0x3, &[3, 2, 1, 0]), 0xc);
+        assert_eq!(shuffle_bits(0xc, &[0, 3, 1, 2]), 0x6);
+        assert_eq!(shuffle_bits(0xfffffffffffffffa, &[8, 9, 10, 11]), 0xa00);
+        assert_eq!(shuffle_bits(0xf555555555555555, &[63, 62, 61, 60]), 0xa000000000000000);
+        assert_eq!(shuffle_bits(0x3, &[3, 2, 1, 0]), 0xc);
     }
 }
