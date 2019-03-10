@@ -14,6 +14,7 @@
 
 
 use cmatrix;
+use error;
 use gates;
 use export;
 
@@ -119,10 +120,25 @@ impl export::OpenQasm for Loop
         }
     }
 
-    fn conditional_open_qasm(&self, _condition: &str, _bit_names: &[String],
-        _bits: &[usize]) -> Result<String, String>
+    fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> error::Result<String>
     {
-        Err(String::from("Classical conditions cannot be used in conjunction with a static loop"))
+        if self.nr_iterations == 0
+        {
+            Ok(String::new())
+        }
+        else
+        {
+            let qasm_body = self.body.conditional_open_qasm(condition,
+                bit_names, bits)?;
+            let mut res = qasm_body.clone();
+            for _ in 1..self.nr_iterations
+            {
+                res += ";\n";
+                res += &qasm_body;
+            }
+            Ok(res)
+        }
     }
 }
 
@@ -134,10 +150,27 @@ impl export::CQasm for Loop
             self.body.c_qasm(bit_names, bits))
     }
 
-    fn conditional_c_qasm(&self, _condition: &str, _bit_names: &[String],
-        _bits: &[usize]) -> Result<String, String>
+    fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> error::Result<String>
     {
-        Err(String::from("Classical conditions cannot be used in conjunction with a static loop"))
+        if self.nr_iterations == 0
+        {
+            Ok(String::new())
+        }
+        else
+        {
+            // We can't create a classically controlled loop in c-Qasm. We can
+            // repeat the classically controlled loop body, however.
+            let qasm_body = self.body.conditional_c_qasm(condition,
+                bit_names, bits)?;
+            let mut res = qasm_body.clone();
+            for _ in 1..self.nr_iterations
+            {
+                res += "\n";
+                res += &qasm_body;
+            }
+            Ok(res)
+        }
     }
 }
 
@@ -281,7 +314,11 @@ mod tests
         let gate = Loop::new("myloop", 3, body);
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let res = gate.conditional_open_qasm("c == 3", &bit_names, &[0, 1]);
-        assert!(matches!(res, Err(_)));
+        let expected = String::from(
+r#"if (c == 3) h qb0; if (c == 3) h qb1; if (c == 3) cx qb0, qb1;
+if (c == 3) h qb0; if (c == 3) h qb1; if (c == 3) cx qb0, qb1;
+if (c == 3) h qb0; if (c == 3) h qb1; if (c == 3) cx qb0, qb1"#);
+        assert_eq!(res, Ok(expected));
     }
 
     #[test]
@@ -301,7 +338,18 @@ mod tests
         let gate = Loop::new("myloop", 3, body);
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let res = gate.conditional_c_qasm("c == 3", &bit_names, &[0, 1]);
-        assert!(matches!(res, Err(_)));
+        let expected = String::from(
+r#"c-h c == 3, qb0
+c-h c == 3, qb1
+c-cnot c == 3, qb0, qb1
+c-h c == 3, qb0
+c-h c == 3, qb1
+c-cnot c == 3, qb0, qb1
+c-h c == 3, qb0
+c-h c == 3, qb1
+c-cnot c == 3, qb0, qb1"#
+        );
+        assert_eq!(res, Ok(expected));
     }
 
     #[test]

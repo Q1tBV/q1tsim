@@ -17,6 +17,7 @@ extern crate ndarray;
 extern crate regex;
 
 use cmatrix;
+use error;
 use gates;
 use export;
 use support;
@@ -758,7 +759,7 @@ impl export::OpenQasm for Composite
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> Result<String, String>
+        bits: &[usize]) -> error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -784,7 +785,8 @@ impl export::CQasm for Composite
         let mut res = String::new();
         if self.ops.len() > 0
         {
-            let gate_bits: Vec<usize> = self.ops[0].bits.iter().map(|&b| bits[b]).collect();
+            let gate_bits: Vec<usize> = self.ops[0].bits.iter()
+                .map(|&b| bits[b]).collect();
             res = self.ops[0].gate.c_qasm(bit_names, &gate_bits);
             for op in self.ops[1..].iter()
             {
@@ -793,6 +795,27 @@ impl export::CQasm for Composite
             }
         }
         res
+    }
+
+    fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> error::Result<String>
+    {
+        let mut res = String::new();
+        if self.ops.len() > 0
+        {
+            let gate_bits: Vec<usize> = self.ops[0].bits.iter()
+                .map(|&b| bits[b]).collect();
+            res = self.ops[0].gate.conditional_c_qasm(condition, bit_names,
+                &gate_bits)?;
+            for op in self.ops[1..].iter()
+            {
+                let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
+                let qasm = op.gate.conditional_c_qasm(condition, bit_names,
+                    &gate_bits)?;
+                res += &format!("\n{}", qasm);
+            }
+        }
+        Ok(res)
     }
 }
 
@@ -1763,6 +1786,21 @@ mod tests
         gate.add_gate(X::new(), &[1]);
         let qasm = gate.c_qasm(&bit_names, &[0, 1]);
         assert_eq!(qasm, "cnot qb0, qb1\nx qb1");
+    }
+
+    #[test]
+    fn test_conditional_c_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+
+        let mut gate = Composite::new("XXX", 2);
+        gate.add_gate(H::new(), &[0]);
+        gate.add_gate(X::new(), &[1]);
+        let qasm = gate.conditional_c_qasm("b == 3", &bit_names, &[0, 1]);
+        let expected = String::from(
+r#"c-h b == 3, qb0
+c-x b == 3, qb1"#);
+        assert_eq!(qasm, Ok(expected));
     }
 
     #[test]

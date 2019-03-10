@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use error;
 
 /// Trait for gates that can be represented in OpenQasm.
 pub trait OpenQasm
@@ -31,7 +32,7 @@ pub trait OpenQasm
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> Result<String, String>
+        bits: &[usize]) -> error::Result<String>
     {
         Ok(format!("if ({}) {}", condition, self.open_qasm(bit_names, bits)))
     }

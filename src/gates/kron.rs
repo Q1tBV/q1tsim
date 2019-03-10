@@ -16,6 +16,7 @@
 extern crate num_complex;
 
 use cmatrix;
+use error;
 use gates;
 use export;
 
@@ -85,13 +86,12 @@ where G0: gates::Gate+export::OpenQasm, G1: export::OpenQasm
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> Result<String, String>
+        bits: &[usize]) -> error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
-        let res = format!("if ({}) {}; if ({}) {}",
-            condition, self.g0.open_qasm(bit_names, &bits[..n0]),
-            condition, self.g1.open_qasm(bit_names, &bits[n0..]));
-        Ok(res)
+        let op0 = self.g0.conditional_open_qasm(condition, bit_names, &bits[..n0])?;
+        let op1 = self.g1.conditional_open_qasm(condition, bit_names, &bits[n0..])?;
+        Ok(op0 + "; " + &op1)
     }
 }
 

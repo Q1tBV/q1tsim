@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use error;
+
 /// Trait for gates that can be represented in c-Qasm.
 pub trait CQasm
 {
@@ -30,13 +32,16 @@ pub trait CQasm
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> Result<String, String>
+        bits: &[usize]) -> error::Result<String>
     {
         let unc_qasm = self.c_qasm(bit_names, bits);
         let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
         if parts.len() != 2
         {
-            Err(format!("Unable to find gate name or argument in \"{}\"", unc_qasm))
+            // This shouldn't happen.
+            Err(error::Error::InternalError(
+                format!("Unable to find gate name or argument in \"{}\"", unc_qasm)
+            ))
         }
         else
         {
