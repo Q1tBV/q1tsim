@@ -12,6 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Enumeration for errors relating to the export of circuits
+#[derive(Debug, PartialEq)]
+pub enum ExportError
+{
+    /// Trying to export a peek into the quantum state
+    ExportPeekInvalid(&'static str),
+    /// Classical registers not available in c-Qasm
+    NoClassicalRegister,
+    /// Not using a full condition register in OpenQasm export
+    IncompleteConditionRegister,
+}
+
+impl ::std::fmt::Display for ExportError
+{
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
+    {
+        match *self
+        {
+            ExportError::ExportPeekInvalid(method) => {
+                write!(f, "Peeking into the quantum state is not a physical operation, and is not supported in {}", method)
+            },
+            ExportError::NoClassicalRegister => {
+                write!(f, "In cQasm, no classical registers can be specified. Measurements must be made to a classical bit with the same index as the qubit")
+            },
+            ExportError::IncompleteConditionRegister => {
+                write!(f, "OpenQasm can only perform conditional operations based on a complete classical register")
+            },
+        }
+    }
+}
+
+/// Type alias for a result with an export error
+pub type ExportResult<T> = ::std::result::Result<T, ExportError>;
+
 /// Enumeration for errors in the use of q1tsim
 #[derive(Debug, PartialEq)]
 pub enum Error
@@ -22,14 +56,18 @@ pub enum Error
     InvalidCBit(usize),
     /// Results asked for circuit that has not been run yet
     NotExecuted,
-    /// Not using a full register where one is exepected
-    IncompleteRegister,
-    /// Trying to peek into the quantum state where it's not possible (export, mainly)
-    PeekInvalid(&'static str),
-    /// Classical registers not available in c-Qasm
-    NoClassicalRegister,
     /// Other errors that should not occur
-    InternalError(String)
+    InternalError(String),
+    /// Error reating to the export of a circuit
+    ExportError(ExportError)
+}
+
+impl From<ExportError> for Error
+{
+    fn from(err: ExportError) -> Self
+    {
+        Error::ExportError(err)
+    }
 }
 
 impl ::std::fmt::Display for Error
@@ -47,17 +85,11 @@ impl ::std::fmt::Display for Error
             Error::NotExecuted => {
                 write!(f, "The circuit has not been executed yet")
             },
-            Error::IncompleteRegister => {
-                write!(f, "OpenQasm can only perform conditional operations based on a complete classical register")
-            },
-            Error::PeekInvalid(method) => {
-                write!(f, "Peeking into the quantum state is not a physical operation, and is not supported in {}", method)
-            }
-            Error::NoClassicalRegister => {
-                write!(f, "In cQasm, no classical registers can be specified. Measurements must be made to a classical bit with the same index as the qubit")
-            },
             Error::InternalError(ref err) => {
                 write!(f, "Internal error: {}", err)
+            },
+            Error::ExportError(ref err) => {
+                write!(f, "{}", err)
             }
         }
     }

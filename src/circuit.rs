@@ -634,11 +634,12 @@ impl Circuit
         true
     }
 
-    fn check_open_qasm_condition_bits(&self, control: &[usize]) -> error::Result<()>
+    fn check_open_qasm_condition_bits(&self, control: &[usize])
+        -> error::ExportResult<()>
     {
         if !self.is_full_register(control)
         {
-            Err(error::Error::IncompleteRegister)
+            Err(error::ExportError::IncompleteConditionRegister)
         }
         else
         {
@@ -751,10 +752,14 @@ impl Circuit
                     }
                 },
                 CircuitOp::Peek(_, _) => {
-                    return Err(error::Error::PeekInvalid("OpenQasm"));
+                    return Err(error::Error::from(
+                        error::ExportError::ExportPeekInvalid("OpenQasm")
+                    ));
                 },
                 CircuitOp::PeekAll(_) => {
-                    return Err(error::Error::PeekInvalid("OpenQasm"));
+                    return Err(error::Error::from(
+                        error::ExportError::ExportPeekInvalid("OpenQasm")
+                    ));
                 },
                 CircuitOp::Reset(qbit) => {
                     res += &format!("reset {};\n", qbit_names[qbit]);
@@ -783,11 +788,11 @@ impl Circuit
         Ok(res)
     }
 
-    fn check_c_qasm_measurement(qbit: usize, cbit: usize) -> error::Result<()>
+    fn check_c_qasm_measurement(qbit: usize, cbit: usize) -> error::ExportResult<()>
     {
         if qbit != cbit
         {
-            Err(error::Error::NoClassicalRegister)
+            Err(error::ExportError::NoClassicalRegister)
         }
         else
         {
@@ -891,10 +896,14 @@ impl Circuit
                     res += &format!("measure_all\n");
                 },
                 CircuitOp::Peek(_, _) => {
-                    return Err(error::Error::PeekInvalid("c-Qasm"));
+                    return Err(error::Error::from(
+                        error::ExportError::ExportPeekInvalid("c-Qasm")
+                    ));
                 },
                 CircuitOp::PeekAll(_) => {
-                    return Err(error::Error::PeekInvalid("c-Qasm"));
+                    return Err(error::Error::from(
+                        error::ExportError::ExportPeekInvalid("c-Qasm")
+                    ));
                 },
                 CircuitOp::Reset(qbit) => {
                     res += &format!("prep_z {}\n", qbit_names[qbit]);
