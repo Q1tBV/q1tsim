@@ -46,6 +46,70 @@ impl ::std::fmt::Display for ExportError
 /// Type alias for a result with an export error
 pub type ExportResult<T> = ::std::result::Result<T, ExportError>;
 
+/// Structure for errors encountered while parsing a composite gate description
+#[derive(Debug, PartialEq)]
+pub enum ParseError
+{
+    /// Gate name not recognised
+    UnknownGate(String),
+    /// No gate name found
+    NoGateName(String),
+    /// Wrong number of arguments to gate
+    InvalidNrArguments(String),
+    /// Invalid number of qubits to operate on
+    InvalidNrBits(String),
+    /// Unable to parse argument to gate
+    InvalidArgument(String),
+    /// Unable to find bit numbers on which the gate operates
+    NoBits(String),
+    /// Unable to parse bit number
+    InvalidBit(String),
+    /// Text occurs after a gate description
+    TrailingText(String),
+    /// Unclosed parentheses in argument expression
+    UnclosedParentheses(String),
+}
+
+impl ::std::fmt::Display for ParseError
+{
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
+    {
+        match *self
+        {
+            ParseError::UnknownGate(ref name) => {
+                write!(f, "Unknown gate \"{}\"", name)
+            },
+            ParseError::NoGateName(ref text) => {
+                write!(f, "Failed to find gate name in \"{}\"", text)
+            },
+            ParseError::InvalidNrArguments(ref name) => {
+                write!(f, "Invalid number of arguments for \"{}\" gate", name)
+            },
+            ParseError::InvalidNrBits(ref name) => {
+                write!(f, "Invalid number of bits for \"{}\" gate", name)
+            },
+            ParseError::InvalidArgument(ref text) => {
+                write!(f, "Failed to parse argument \"{}\"", text)
+            },
+            ParseError::NoBits(ref name) => {
+                write!(f, "Unable to find the bits gate {} operates on", name)
+            },
+            ParseError::InvalidBit(ref text) => {
+                write!(f, "Failed to parse bit number in \"{}\"", text)
+            },
+            ParseError::TrailingText(ref text) => {
+                write!(f, "Trailing text after gate description: \"{}\"", text)
+            },
+            ParseError::UnclosedParentheses(ref text) => {
+                write!(f, "Unclosed parentheses in expression: \"{}\"", text)
+            }
+        }
+    }
+}
+
+/// Type alias for a result with a parse error
+pub type ParseResult<T> = ::std::result::Result<T, ParseError>;
+
 /// Enumeration for errors in the use of q1tsim
 #[derive(Debug, PartialEq)]
 pub enum Error
@@ -59,7 +123,9 @@ pub enum Error
     /// Other errors that should not occur
     InternalError(String),
     /// Error reating to the export of a circuit
-    ExportError(ExportError)
+    ExportError(ExportError),
+    /// Error in parsing a composite gate description
+    ParseError(ParseError)
 }
 
 impl From<ExportError> for Error
@@ -67,6 +133,14 @@ impl From<ExportError> for Error
     fn from(err: ExportError) -> Self
     {
         Error::ExportError(err)
+    }
+}
+
+impl From<ParseError> for Error
+{
+    fn from(err: ParseError) -> Self
+    {
+        Error::ParseError(err)
     }
 }
 
@@ -89,6 +163,9 @@ impl ::std::fmt::Display for Error
                 write!(f, "Internal error: {}", err)
             },
             Error::ExportError(ref err) => {
+                write!(f, "{}", err)
+            },
+            Error::ParseError(ref err) => {
                 write!(f, "{}", err)
             }
         }

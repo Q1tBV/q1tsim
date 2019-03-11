@@ -25,67 +25,6 @@ use support;
 use export::CircuitGate;
 use super::*;
 
-/// Structure for errors encountered while parsing a composite gate description
-#[derive(Debug)]
-pub enum ParseError
-{
-    /// Gate name not recognised
-    UnknownGate(String),
-    /// No gate name found
-    NoGateName(String),
-    /// Wrong number of arguments to gate
-    InvalidNrArguments(String),
-    /// Invalid number of qubits to operate on
-    InvalidNrBits(String),
-    /// Unable to parse argument to gate
-    InvalidArgument(String),
-    /// Unable to find bit numbers on which the gate operates
-    NoBits(String),
-    /// Unable to parse bit number
-    InvalidBit(String),
-    /// Text occurs after a gate description
-    TrailingText(String),
-    /// Unclosed parentheses in argument expression
-    UnclosedParentheses(String),
-}
-
-impl ::std::fmt::Display for ParseError
-{
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
-    {
-        match *self
-        {
-            ParseError::UnknownGate(ref name) => {
-                write!(f, "Unknown gate \"{}\"", name)
-            },
-            ParseError::NoGateName(ref text) => {
-                write!(f, "Failed to find gate name in \"{}\"", text)
-            },
-            ParseError::InvalidNrArguments(ref name) => {
-                write!(f, "Invalid number of arguments for \"{}\" gate", name)
-            },
-            ParseError::InvalidNrBits(ref name) => {
-                write!(f, "Invalid number of bits for \"{}\" gate", name)
-            },
-            ParseError::InvalidArgument(ref text) => {
-                write!(f, "Failed to parse argument \"{}\"", text)
-            },
-            ParseError::NoBits(ref name) => {
-                write!(f, "Unable to find the bits gate {} operates on", name)
-            },
-            ParseError::InvalidBit(ref text) => {
-                write!(f, "Failed to parse bit number in \"{}\"", text)
-            },
-            ParseError::TrailingText(ref text) => {
-                write!(f, "Trailing text after gate description: \"{}\"", text)
-            },
-            ParseError::UnclosedParentheses(ref text) => {
-                write!(f, "Unclosed parentheses in expression: \"{}\"", text)
-            }
-        }
-    }
-}
-
 /// Structure for a description of a subgate.
 #[derive(Debug)]
 struct SubGateDesc
@@ -171,7 +110,7 @@ impl Composite
     /// Try to retrieve the name of the subgate from `desc`. On success,
     /// return the name, and the remainder of the subgate description to be
     /// parsed. On failure, return ParseError::NoGateName.
-    fn parse_gate_name(desc: &str) -> Result<(&str, &str), ParseError>
+    fn parse_gate_name(desc: &str) -> error::ParseResult<(&str, &str)>
     {
         let re = regex::Regex::new(r"(?i)^\s*([a-z][a-z0-9]*)").unwrap();
         if let Some(captures) = re.captures(desc)
@@ -182,7 +121,7 @@ impl Composite
         }
         else
         {
-            Err(ParseError::NoGateName(String::from(desc)))
+            Err(error::ParseError::NoGateName(String::from(desc)))
         }
     }
 
@@ -193,7 +132,7 @@ impl Composite
     /// "pi", which obviously indicates the number π. On success, the parsed
     /// number is returned, together with the remainder of the string to be
     /// parsed. On failure, a ParseError::InvalidArgument error is returned.
-    fn parse_real_literal(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_real_literal(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let real = regex::Regex::new(
             r"^\s*((?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?)"
@@ -212,7 +151,7 @@ impl Composite
             {
                 // It's probably impossible to get here with the above regular
                 // expression. Too large numbers are mapped to Inf.
-                Err(ParseError::InvalidArgument(String::from(expr)))
+                Err(error::ParseError::InvalidArgument(String::from(expr)))
             }
         }
         else if let Some(captures) = integer.captures(expr)
@@ -224,7 +163,7 @@ impl Composite
             }
             else
             {
-                Err(ParseError::InvalidArgument(String::from(expr)))
+                Err(error::ParseError::InvalidArgument(String::from(expr)))
             }
         }
         else if let Some(m) = pi.find(expr)
@@ -233,7 +172,7 @@ impl Composite
         }
         else
         {
-            Err(ParseError::InvalidArgument(String::from(expr)))
+            Err(error::ParseError::InvalidArgument(String::from(expr)))
         }
     }
 
@@ -243,7 +182,7 @@ impl Composite
     /// in parentheses, or a literal real number. On success, the parsed
     /// number is returned, together with the remainder of the string to be
     /// parsed. On failure, a ParseError is returned.
-    fn parse_parenthesized_expression(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_parenthesized_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let fun_open = regex::Regex::new(r"^\s*\(").unwrap();
         let fun_close = regex::Regex::new(r"^\s*\)").unwrap();
@@ -256,7 +195,7 @@ impl Composite
             }
             else
             {
-                Err(ParseError::UnclosedParentheses(String::from(expr)))
+                Err(error::ParseError::UnclosedParentheses(String::from(expr)))
             }
         }
         else
@@ -273,7 +212,7 @@ impl Composite
     /// are `sin`, `cos`, `tan`, `exp`, `ln`, and `sqrt`. On success, the parsed
     /// number is returned, together with the remainder of the string to be
     /// parsed. On failure, a ParseError is returned.
-    fn parse_function_expression(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_function_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let fun_open = regex::Regex::new(r"^\s*(sin|cos|tan|exp|ln|sqrt)\s*\(").unwrap();
         let fun_close = regex::Regex::new(r"^\s*\)").unwrap();
@@ -299,7 +238,7 @@ impl Composite
             }
             else
             {
-                Err(ParseError::UnclosedParentheses(String::from(expr)))
+                Err(error::ParseError::UnclosedParentheses(String::from(expr)))
             }
         }
         else
@@ -314,7 +253,7 @@ impl Composite
     /// to another number.  On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_power_expression(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_power_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*\^").unwrap();
         let (left, rest) = Self::parse_function_expression(expr)?;
@@ -335,7 +274,7 @@ impl Composite
     /// more times negated.  On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_negative_expression(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_negative_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*\-").unwrap();
         let mut rest = expr;
@@ -361,7 +300,7 @@ impl Composite
     /// or more expressions. On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_product_expression(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_product_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*([*/])").unwrap();
         let (mut left, mut rest) = Self::parse_negative_expression(expr)?;
@@ -389,7 +328,7 @@ impl Composite
     /// or more expressions. On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_sum_expression(expr: &str) -> Result<(f64, &str), ParseError>
+    fn parse_sum_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*([-+])").unwrap();
         let (mut left, mut rest) = Self::parse_product_expression(expr)?;
@@ -419,7 +358,7 @@ impl Composite
     /// successfully, the arguments are returned,¸together with the rest of the
     /// description string that needs to be parsed for bit numbers. On failure,
     /// ParseError::InvalidArgument is returned.
-    fn parse_gate_args(desc: &str) -> Result<(Vec<f64>, &str), ParseError>
+    fn parse_gate_args(desc: &str) -> error::ParseResult<(Vec<f64>, &str)>
     {
         let open_args = regex::Regex::new(r"^\s*\(").unwrap();
         let sep_args = regex::Regex::new(r"^\s*,").unwrap();
@@ -441,7 +380,7 @@ impl Composite
             }
             else
             {
-                Err(ParseError::UnclosedParentheses(String::from(desc)))
+                Err(error::ParseError::UnclosedParentheses(String::from(desc)))
             }
         }
         else
@@ -456,7 +395,7 @@ impl Composite
     /// string `desc`. Return the bits and the unparsed remainder of the
     /// description string on success, or a ParseError on failure.
     fn parse_gate_bits<'a>(desc: &'a str, name: &str)
-        -> Result<(Vec<usize>, &'a str), ParseError>
+        -> error::ParseResult<(Vec<usize>, &'a str)>
     {
         let re = regex::Regex::new(r"^\s*(\d+)").unwrap();
         let mut rest = desc;
@@ -473,13 +412,13 @@ impl Composite
             }
             else
             {
-                return Err(ParseError::InvalidBit(String::from(bit_txt)));
+                return Err(error::ParseError::InvalidBit(String::from(bit_txt)));
             }
         }
 
         if bits.is_empty()
         {
-            Err(ParseError::NoBits(String::from(name)))
+            Err(error::ParseError::NoBits(String::from(name)))
         }
         else
         {
@@ -491,7 +430,7 @@ impl Composite
     ///
     /// Parse the subgate description string `desc`. Returns the subgate
     /// description on success, or a ParseError on failure.
-    fn parse_gate_desc(desc: &str) -> Result<SubGateDesc, ParseError>
+    fn parse_gate_desc(desc: &str) -> error::ParseResult<SubGateDesc>
     {
         let (name, rest) = Self::parse_gate_name(desc)?;
         let (args, rest) = Self::parse_gate_args(rest)?;
@@ -500,7 +439,7 @@ impl Composite
         let rest = rest.trim();
         if !rest.is_empty()
         {
-            Err(ParseError::TrailingText(String::from(rest)))
+            Err(error::ParseError::TrailingText(String::from(rest)))
         }
         else
         {
@@ -514,15 +453,15 @@ impl Composite
     /// matches `nr_args`, and that the number of bits in `desc` is equal to
     //// `nr_bits`. Return a ParseError on failure.
     fn assert_nr_args_bits(nr_args: usize, nr_bits: usize, desc: &SubGateDesc)
-        -> Result<(), ParseError>
+        -> error::ParseResult<()>
     {
         if nr_args != desc.args.len()
         {
-            Err(ParseError::InvalidNrArguments(desc.name.clone()))
+            Err(error::ParseError::InvalidNrArguments(desc.name.clone()))
         }
         else if nr_bits != desc.bits.len()
         {
-            Err(ParseError::InvalidNrBits(desc.name.clone()))
+            Err(error::ParseError::InvalidNrBits(desc.name.clone()))
         }
         else
         {
@@ -545,7 +484,7 @@ impl Composite
     /// H 1; CX 0 1; H 1
     /// RY(4.7124) 1; CX 1 0; RY(1.5708) 1; X1
     /// ```
-    pub fn from_string(name: &str, desc: &str) -> Result<Self, ParseError>
+    pub fn from_string(name: &str, desc: &str) -> error::ParseResult<Self>
     {
         let mut gates = vec![];
         let mut max_bit = 0;
@@ -693,7 +632,7 @@ impl Composite
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Z::new(), &gate.bits);
                 },
-                _ => { return Err(ParseError::UnknownGate(gate.name)); }
+                _ => { return Err(error::ParseError::UnknownGate(gate.name)); }
             }
         }
 
@@ -886,10 +825,11 @@ mod tests
 {
     extern crate num_complex;
 
+    use super::Composite;
     use cmatrix;
-    use super::{Composite, ParseError};
-    use gates::{Gate, CCX, CX, H, X};
+    use error;
     use export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use gates::{Gate, CCX, CX, H, X};
     use self::num_complex::Complex;
 
     #[test]
@@ -1710,48 +1650,48 @@ mod tests
     {
         // Invalid gate name
         let res = Composite::from_string("XXX", "XYZ 0");
-        assert!(matches!(res, Err(ParseError::UnknownGate(_))));
+        assert!(matches!(res, Err(error::ParseError::UnknownGate(_))));
 
         // Missing gate name
         let res = Composite::from_string("XXX", "X 1; 0");
-        assert!(matches!(res, Err(ParseError::NoGateName(_))));
+        assert!(matches!(res, Err(error::ParseError::NoGateName(_))));
 
         // Invalid nr of arguments
         let res = Composite::from_string("XXX", "RX(1.2, 3.4) 1");
-        assert!(matches!(res, Err(ParseError::InvalidNrArguments(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidNrArguments(_))));
 
         // Invalid nr of bits to operate on
         let res = Composite::from_string("XXX", "H 0 1");
-        assert!(matches!(res, Err(ParseError::InvalidNrBits(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidNrBits(_))));
 
         // Invalid arguments
         let res = Composite::from_string("XXX", "RX(abc) 1");
-        assert!(matches!(res, Err(ParseError::InvalidArgument(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidArgument(_))));
 
         let res = Composite::from_string("G", "U1(12897231928172918729136192817936) 0");
-        assert!(matches!(res, Err(ParseError::InvalidArgument(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidArgument(_))));
 
         // Missing bit number
         let res = Composite::from_string("XXX", "H 0; X");
-        assert!(matches!(res, Err(ParseError::NoBits(_))));
+        assert!(matches!(res, Err(error::ParseError::NoBits(_))));
 
         // Invalid bit number
         let res = Composite::from_string("XXX", "H 117356715625188271521875");
-        assert!(matches!(res, Err(ParseError::InvalidBit(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidBit(_))));
 
         // Trailing junk
         let res = Composite::from_string("XXX", "H 0 and something");
-        assert!(matches!(res, Err(ParseError::TrailingText(_))));
+        assert!(matches!(res, Err(error::ParseError::TrailingText(_))));
 
         // Unclosed arguments
         let res = Composite::from_string("XXX", "RX(1.2a) 1");
-        assert!(matches!(res, Err(ParseError::UnclosedParentheses(_))));
+        assert!(matches!(res, Err(error::ParseError::UnclosedParentheses(_))));
 
         let res = Composite::from_string("XXX", "RX(1.2*(1+2 1");
-        assert!(matches!(res, Err(ParseError::UnclosedParentheses(_))));
+        assert!(matches!(res, Err(error::ParseError::UnclosedParentheses(_))));
 
         let res = Composite::from_string("XXX", "RX(sin(1.2 1");
-        assert!(matches!(res, Err(ParseError::UnclosedParentheses(_))));
+        assert!(matches!(res, Err(error::ParseError::UnclosedParentheses(_))));
     }
 
     #[test]
