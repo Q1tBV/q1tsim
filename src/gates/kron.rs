@@ -76,17 +76,19 @@ where G0: gates::Gate, G1: gates::Gate
 }
 
 impl<G0, G1> export::OpenQasm for Kron<G0, G1>
-where G0: gates::Gate+export::OpenQasm, G1: export::OpenQasm
+where G0: export::OpenQasm, G1: export::OpenQasm
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         let n0 = self.g0.nr_affected_bits();
-        format!("{}; {}", self.g0.open_qasm(bit_names, &bits[..n0]),
-            self.g1.open_qasm(bit_names, &bits[n0..]))
+        let op0 = self.g0.open_qasm(bit_names, &bits[..n0])?;
+        let op1 = self.g1.open_qasm(bit_names, &bits[n0..])?;
+        Ok(format!("{}; {}", op0, op1))
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.conditional_open_qasm(condition, bit_names, &bits[..n0])?;
@@ -96,13 +98,24 @@ where G0: gates::Gate+export::OpenQasm, G1: export::OpenQasm
 }
 
 impl<G0, G1> export::CQasm for Kron<G0, G1>
-where G0: gates::Gate+export::CQasm, G1: export::CQasm
+where G0: export::CQasm, G1: export::CQasm
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         let n0 = self.g0.nr_affected_bits();
-        format!("{{ {} | {} }}", self.g0.c_qasm(bit_names, &bits[..n0]),
-            self.g1.c_qasm(bit_names, &bits[n0..]))
+        let op0 = self.g0.c_qasm(bit_names, &bits[..n0])?;
+        let op1 = self.g1.c_qasm(bit_names, &bits[n0..])?;
+        Ok(format!("{{ {} | {} }}", op0, op1))
+    }
+
+    fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
+        bits: &[usize]) -> error::ExportResult<String>
+    {
+        let n0 = self.g0.nr_affected_bits();
+        let op0 = self.g0.conditional_c_qasm(condition, bit_names, &bits[..n0])?;
+        let op1 = self.g1.conditional_c_qasm(condition, bit_names, &bits[n0..])?;
+        Ok(op0 + "\n" + &op1)
     }
 }
 
@@ -237,7 +250,7 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Kron::new(H::new(), I::new()).open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "h qb0; id qb1");
+        assert_eq!(qasm, Ok(String::from("h qb0; id qb1")));
     }
 
     #[test]
@@ -254,6 +267,17 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Kron::new(H::new(), I::new()).c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "{ h qb0 | i qb1 }");
+        assert_eq!(qasm, Ok(String::from("{ h qb0 | i qb1 }")));
+    }
+
+    #[test]
+    fn test_conditional_c_qasm()
+    {
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = Kron::new(H::new(), X::new())
+            .conditional_c_qasm("b == 1", &bit_names, &[1, 0]);
+        assert_eq!(qasm, Ok(String::from(
+r#"c-h b == 1, qb1
+c-x b == 1, qb0"#)));
     }
 }

@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The identity gate
@@ -65,17 +66,19 @@ impl gates::Gate for I
 
 impl export::OpenQasm for I
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("id {}", bit_names[bits[0]])
+        Ok(format!("id {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for I
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("i {}", bit_names[bits[0]])
+        Ok(format!("i {}", bit_names[bits[0]]))
     }
 }
 
@@ -142,7 +145,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = I::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "id qb");
+        assert_eq!(qasm, Ok(String::from("id qb")));
     }
 
     #[test]
@@ -150,7 +153,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = I::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "i qb");
+        assert_eq!(qasm, Ok(String::from("i qb")));
     }
 
     #[test]

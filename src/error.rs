@@ -22,6 +22,10 @@ pub enum ExportError
     NoClassicalRegister,
     /// Not using a full condition register in OpenQasm export
     IncompleteConditionRegister,
+    /// Unable to create condition operation in c-Qasm
+    InvalidConditionalOp(String),
+    /// Trying to export in a format for which no export function was written
+    NotImplemented(&'static str, String)
 }
 
 impl ::std::fmt::Display for ExportError
@@ -38,6 +42,12 @@ impl ::std::fmt::Display for ExportError
             },
             ExportError::IncompleteConditionRegister => {
                 write!(f, "OpenQasm can only perform conditional operations based on a complete classical register")
+            },
+            ExportError::InvalidConditionalOp(ref qasm) => {
+                write!(f, "Unable to find gate name or argument in \"{}\"", qasm)
+            },
+            ExportError::NotImplemented(method, ref desc) => {
+                write!(f, "Export to {} was not implemented for \"{}\"", method, desc)
             },
         }
     }

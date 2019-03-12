@@ -17,6 +17,7 @@ extern crate num_complex;
 
 pub use cmatrix;
 use gates;
+use error;
 use export;
 
 /// Controlled gates.
@@ -187,10 +188,11 @@ macro_rules! declare_controlled_cost
 #[macro_export]
 macro_rules! declare_controlled_qasm
 {
-    ($trait_name:ident, $gate_name:ident, $method_name: ident $(, arg=$arg:ident)*) => {
+    ($trait_name:ident, $gate_name:ident, $method_name:ident $(, arg=$arg:ident)*) => {
         impl export::$trait_name for $gate_name
         {
-            fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
+            fn $method_name(&self, bit_names: &[String], bits: &[usize])
+                -> error::ExportResult<String>
             {
                 let mut res = stringify!($gate_name).to_lowercase();
                 if bits.len() > 0
@@ -201,14 +203,15 @@ macro_rules! declare_controlled_qasm
                         res += &format!(", {}", &bit_names[bit]);
                     }
                 }
-                res
+                Ok(res)
             }
         }
     };
     ($trait_name:ident, $gate_name:ident, $method_name: ident, qasm=$qasm:expr $(, arg=$arg:ident)*) => {
         impl export::$trait_name for $gate_name
         {
-            fn $method_name(&self, bit_names: &[String], bits: &[usize]) -> String
+            fn $method_name(&self, bit_names: &[String], bits: &[usize])
+                -> error::ExportResult<String>
             {
                 let mut res = String::from($qasm);
                 for (i, &bit) in bits.iter().enumerate()
@@ -225,7 +228,7 @@ macro_rules! declare_controlled_qasm
                     res = res.replace(pattern, &(0.25 * self.$arg).to_string());
                 )*
 
-                res
+                Ok(res)
             }
         }
     };
@@ -523,15 +526,15 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let open_qasm = CX::new().open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(open_qasm, "cx qb0, qb1");
+        assert_eq!(open_qasm, Ok(String::from("cx qb0, qb1")));
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let open_qasm = CCZ::new().open_qasm(&bit_names, &[0, 1, 2]);
-        assert_eq!(open_qasm, "h qb2; ccx qb0, qb1, qb2; h qb2");
+        assert_eq!(open_qasm, Ok(String::from("h qb2; ccx qb0, qb1, qb2; h qb2")));
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let open_qasm = CCRY::new(1.6).open_qasm(&bit_names, &[1, 2, 0]);
-        assert_eq!(open_qasm, "cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb1, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb0; u3(1.6/4, 0, 0) qb0");
+        assert_eq!(open_qasm, Ok(String::from("cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb1, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb0; u3(1.6/4, 0, 0) qb0")));
     }
 
     #[test]
@@ -539,15 +542,15 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let c_qasm = CX::new().c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(c_qasm, "cnot qb0, qb1");
+        assert_eq!(c_qasm, Ok(String::from("cnot qb0, qb1")));
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let c_qasm = CCZ::new().c_qasm(&bit_names, &[0, 1, 2]);
-        assert_eq!(c_qasm, "h qb2\ntoffoli qb0, qb1, qb2\nh qb2");
+        assert_eq!(c_qasm, Ok(String::from("h qb2\ntoffoli qb0, qb1, qb2\nh qb2")));
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let c_qasm = CCRY::new(1.6).c_qasm(&bit_names, &[1, 2, 0]);
-        assert_eq!(c_qasm,
+        assert_eq!(c_qasm, Ok(String::from(
 r#"cnot qb2, qb0
 ry qb0, -0.4
 cnot qb2, qb0
@@ -561,7 +564,7 @@ cnot qb1, qb2
 cnot qb1, qb0
 ry qb0, -0.4
 cnot qb1, qb0
-ry qb0, 0.4"#);
+ry qb0, 0.4"#)));
     }
 
     #[test]

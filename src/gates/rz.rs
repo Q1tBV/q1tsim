@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// Rotation around `z` axis.
@@ -103,17 +104,19 @@ impl gates::Gate for RZ
 
 impl export::OpenQasm for RZ
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("rz({}) {}", self.lambda, bit_names[bits[0]])
+        Ok(format!("rz({}) {}", self.lambda, bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for RZ
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("rz {}, {}", bit_names[bits[0]], self.lambda)
+        Ok(format!("rz {}, {}", bit_names[bits[0]], self.lambda))
     }
 }
 
@@ -181,7 +184,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = RZ::new(2.25).open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "rz(2.25) qb");
+        assert_eq!(qasm, Ok(String::from("rz(2.25) qb")));
     }
 
     #[test]
@@ -189,7 +192,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = RZ::new(2.25).c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "rz qb, 2.25");
+        assert_eq!(qasm, Ok(String::from("rz qb, 2.25")));
     }
 
     #[test]

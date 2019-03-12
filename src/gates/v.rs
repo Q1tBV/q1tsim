@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The `V` gate
@@ -62,18 +63,19 @@ impl gates::Gate for V
 
 impl export::OpenQasm for V
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]])
+        Ok(format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for V
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        let name = &bit_names[bits[0]];
-        format!("x90 {}", name)
+        Ok(format!("x90 {}", bit_names[bits[0]]))
     }
 }
 
@@ -129,18 +131,19 @@ impl gates::Gate for Vdg
 
 impl export::OpenQasm for Vdg
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]])
+        Ok(format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for Vdg
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        let name = &bit_names[bits[0]];
-        format!("mx90 {}", name)
+        Ok(format!("mx90 {}", bit_names[bits[0]]))
     }
 }
 
@@ -227,9 +230,9 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = V::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "u3(pi/2, -pi/2, pi/2) qb");
+        assert_eq!(qasm, Ok(String::from("u3(pi/2, -pi/2, pi/2) qb")));
         let qasm = Vdg::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "u3(pi/2, pi/2, -pi/2) qb");
+        assert_eq!(qasm, Ok(String::from("u3(pi/2, pi/2, -pi/2) qb")));
     }
 
     #[test]
@@ -237,9 +240,9 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = V::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "x90 qb");
+        assert_eq!(qasm, Ok(String::from("x90 qb")));
         let qasm = Vdg::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "mx90 qb");
+        assert_eq!(qasm, Ok(String::from("mx90 qb")));
     }
 
     #[test]

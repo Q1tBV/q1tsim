@@ -681,36 +681,40 @@ impl gates::Gate for Composite
 
 impl export::OpenQasm for Composite
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
         {
             let gate_bits: Vec<usize> = self.ops[0].bits.iter().map(|&b| bits[b]).collect();
-            res = self.ops[0].gate.open_qasm(bit_names, &gate_bits);
+            res = self.ops[0].gate.open_qasm(bit_names, &gate_bits)?;
             for op in self.ops[1..].iter()
             {
                 let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
-                res += &format!("; {}", op.gate.open_qasm(bit_names, &gate_bits));
+                let qasm = op.gate.open_qasm(bit_names, &gate_bits)?;
+                res += &format!("; {}", qasm);
             }
         }
-        res
+        Ok(res)
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
         {
             let gate_bits: Vec<usize> = self.ops[0].bits.iter().map(|&b| bits[b]).collect();
-            res = self.ops[0].gate.conditional_open_qasm(condition, bit_names, &gate_bits)?;
+            res = self.ops[0].gate.conditional_open_qasm(condition, bit_names,
+                &gate_bits)?;
             for op in self.ops[1..].iter()
             {
                 let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
-                let instr = op.gate.conditional_open_qasm(condition, bit_names, &gate_bits)?;
+                let qasm = op.gate.conditional_open_qasm(condition, bit_names,
+                    &gate_bits)?;
                 res += "; ";
-                res += &instr;
+                res += &qasm;
             }
         }
         Ok(res)
@@ -719,25 +723,27 @@ impl export::OpenQasm for Composite
 
 impl export::CQasm for Composite
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
         {
             let gate_bits: Vec<usize> = self.ops[0].bits.iter()
                 .map(|&b| bits[b]).collect();
-            res = self.ops[0].gate.c_qasm(bit_names, &gate_bits);
+            res = self.ops[0].gate.c_qasm(bit_names, &gate_bits)?;
             for op in self.ops[1..].iter()
             {
                 let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
-                res += &format!("\n{}", op.gate.c_qasm(bit_names, &gate_bits));
+                let qasm = op.gate.c_qasm(bit_names, &gate_bits)?;
+                res += &format!("\n{}", qasm);
             }
         }
-        res
+        Ok(res)
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -1702,7 +1708,7 @@ mod tests
         gate.add_gate(CX::new(), &[0, 1]);
         gate.add_gate(X::new(), &[1]);
         let qasm = gate.open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "cx qb0, qb1; x qb1");
+        assert_eq!(qasm, Ok(String::from("cx qb0, qb1; x qb1")));
     }
 
     #[test]
@@ -1725,7 +1731,7 @@ mod tests
         gate.add_gate(CX::new(), &[0, 1]);
         gate.add_gate(X::new(), &[1]);
         let qasm = gate.c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "cnot qb0, qb1\nx qb1");
+        assert_eq!(qasm, Ok(String::from("cnot qb0, qb1\nx qb1")));
     }
 
     #[test]

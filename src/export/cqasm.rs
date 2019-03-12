@@ -13,15 +13,22 @@
 // limitations under the License.
 
 use error;
+use gates;
 
 /// Trait for gates that can be represented in c-Qasm.
-pub trait CQasm
+pub trait CQasm: gates::Gate
 {
     /// cQasm representation
     ///
     /// Return an cQasm instruction string for this gate operating on qubits
-    /// `bits`. The array `bit_names` contains the names of all qubits.
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
+    /// `bits`. The array `bit_names` contains the names of all qubits. The
+    /// default implementation returns a NotImplemented error.
+    fn c_qasm(&self, _bit_names: &[String], _bits: &[usize])
+        -> error::ExportResult<String>
+    {
+        Err(error::ExportError::NotImplemented("c-Qasm",
+            String::from(self.description())))
+    }
 
     /// cQasm representation of conditional gate.
     ///
@@ -32,16 +39,14 @@ pub trait CQasm
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
-        let unc_qasm = self.c_qasm(bit_names, bits);
+        let unc_qasm = self.c_qasm(bit_names, bits)?;
         let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
         if parts.len() != 2
         {
-            // This shouldn't happen.
-            Err(error::Error::InternalError(
-                format!("Unable to find gate name or argument in \"{}\"", unc_qasm)
-            ))
+            // This shouldn't happen, really.
+            Err(error::ExportError::InvalidConditionalOp(unc_qasm.clone()))
         }
         else
         {

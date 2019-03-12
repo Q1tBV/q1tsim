@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The Hadamard gate.
@@ -89,17 +90,19 @@ impl gates::Gate for H
 
 impl export::OpenQasm for H
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("h {}", bit_names[bits[0]])
+        Ok(format!("h {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for H
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("h {}", bit_names[bits[0]])
+        Ok(format!("h {}", bit_names[bits[0]]))
     }
 }
 
@@ -157,7 +160,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = H::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "h qb");
+        assert_eq!(qasm, Ok(String::from("h qb")));
     }
 
     #[test]
@@ -165,7 +168,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = H::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "h qb");
+        assert_eq!(qasm, Ok(String::from("h qb")));
     }
 
     #[test]

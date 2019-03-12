@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The `T` gate
@@ -83,17 +84,19 @@ impl gates::Gate for T
 
 impl export::OpenQasm for T
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("t {}", bit_names[bits[0]])
+        Ok(format!("t {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for T
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("t {}", bit_names[bits[0]])
+        Ok(format!("t {}", bit_names[bits[0]]))
     }
 }
 
@@ -170,17 +173,19 @@ impl gates::Gate for Tdg
 
 impl export::OpenQasm for Tdg
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("tdg {}", bit_names[bits[0]])
+        Ok(format!("tdg {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for Tdg
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("tdag {}", bit_names[bits[0]])
+        Ok(format!("tdag {}", bit_names[bits[0]]))
     }
 }
 
@@ -318,9 +323,9 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = T::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "t qb");
+        assert_eq!(qasm, Ok(String::from("t qb")));
         let qasm = Tdg::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "tdg qb");
+        assert_eq!(qasm, Ok(String::from("tdg qb")));
     }
 
     #[test]
@@ -328,9 +333,9 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = T::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "t qb");
+        assert_eq!(qasm, Ok(String::from("t qb")));
         let qasm = Tdg::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "tdag qb");
+        assert_eq!(qasm, Ok(String::from("tdag qb")));
     }
 
     #[test]

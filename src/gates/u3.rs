@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// U<sub>3</sub> gate.
@@ -88,19 +89,22 @@ impl gates::Gate for U3
 
 impl export::OpenQasm for U3
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("u3({}, {}, {}) {}", self.theta, self.phi, self.lambda, bit_names[bits[0]])
+        Ok(format!("u3({}, {}, {}) {}",
+            self.theta, self.phi, self.lambda, bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for U3
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         let name = &bit_names[bits[0]];
-        format!("rz {}, {}\nry {}, {}\n; rz {} {}", name, self.lambda,
-            name, self.theta, name, self.phi)
+        Ok(format!("rz {}, {}\nry {}, {}\n; rz {} {}", name, self.lambda,
+            name, self.theta, name, self.phi))
     }
 }
 
@@ -173,7 +177,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = U3::new(1.0, 2.25, 3.5).open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "u3(1, 2.25, 3.5) qb");
+        assert_eq!(qasm, Ok(String::from("u3(1, 2.25, 3.5) qb")));
     }
 
     #[test]
@@ -181,7 +185,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = U3::new(1.0, 2.25, 3.5).c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "rz qb, 3.5\nry qb, 1\n; rz qb 2.25");
+        assert_eq!(qasm, Ok(String::from("rz qb, 3.5\nry qb, 1\n; rz qb 2.25")));
     }
 
     #[test]

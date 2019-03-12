@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The Pauli X gate.
@@ -99,17 +100,19 @@ impl gates::Gate for X
 
 impl export::OpenQasm for X
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("x {}", bit_names[bits[0]])
+        Ok(format!("x {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for X
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("x {}", bit_names[bits[0]])
+        Ok(format!("x {}", bit_names[bits[0]]))
     }
 }
 
@@ -162,7 +165,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = X::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "x qb");
+        assert_eq!(qasm, Ok(String::from("x qb")));
     }
 
     #[test]
@@ -170,6 +173,6 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = X::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "x qb");
+        assert_eq!(qasm, Ok(String::from("x qb")));
     }
 }

@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The Clifford `S` gate
@@ -89,17 +90,19 @@ impl gates::Gate for S
 
 impl export::OpenQasm for S
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("s {}", bit_names[bits[0]])
+        Ok(format!("s {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for S
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("s {}", bit_names[bits[0]])
+        Ok(format!("s {}", bit_names[bits[0]]))
     }
 }
 
@@ -182,17 +185,19 @@ impl gates::Gate for Sdg
 
 impl export::OpenQasm for Sdg
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("sdg {}", bit_names[bits[0]])
+        Ok(format!("sdg {}", bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for Sdg
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("sdag {}", bit_names[bits[0]])
+        Ok(format!("sdag {}", bit_names[bits[0]]))
     }
 }
 
@@ -278,9 +283,9 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = S::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "s qb");
+        assert_eq!(qasm, Ok(String::from("s qb")));
         let qasm = Sdg::new().open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "sdg qb");
+        assert_eq!(qasm, Ok(String::from("sdg qb")));
     }
 
     #[test]
@@ -288,9 +293,9 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = S::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "s qb");
+        assert_eq!(qasm, Ok(String::from("s qb")));
         let qasm = Sdg::new().c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "sdag qb");
+        assert_eq!(qasm, Ok(String::from("sdag qb")));
     }
 
     #[test]

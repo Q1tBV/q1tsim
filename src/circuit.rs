@@ -680,12 +680,12 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    res += &format!("{};\n", gate.open_qasm(&qbit_names, bits));
+                    res += &format!("{};\n", gate.open_qasm(&qbit_names, bits)?);
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
                     if control.is_empty()
                     {
-                        res += &format!("{};\n", gate.open_qasm(&qbit_names, bits));
+                        res += &format!("{};\n", gate.open_qasm(&qbit_names, bits)?);
                     }
                     else
                     {
@@ -707,13 +707,13 @@ impl Circuit
                     {
                         Basis::X => {
                             res += &format!("{};\n",
-                                gates::H::new().open_qasm(&qbit_names, &[qbit]));
+                                gates::H::new().open_qasm(&qbit_names, &[qbit])?);
                         },
                         Basis::Y => {
                             res += &format!("{};\n",
-                                gates::Sdg::new().open_qasm(&qbit_names, &[qbit]));
+                                gates::Sdg::new().open_qasm(&qbit_names, &[qbit])?);
                             res += &format!("{};\n",
-                                gates::H::new().open_qasm(&qbit_names, &[qbit]));
+                                gates::H::new().open_qasm(&qbit_names, &[qbit])?);
                         }
                         _ => {}
                     }
@@ -725,14 +725,14 @@ impl Circuit
                         Basis::X => {
                             let names = [String::from("q")];
                             res += &format!("{};\n",
-                                gates::H::new().open_qasm(&names, &[0]));
+                                gates::H::new().open_qasm(&names, &[0])?);
                         },
                         Basis::Y => {
                             let names = [String::from("q")];
                             res += &format!("{};\n",
-                                gates::Sdg::new().open_qasm(&names, &[0]));
+                                gates::Sdg::new().open_qasm(&names, &[0])?);
                             res += &format!("{};\n",
-                                gates::H::new().open_qasm(&names, &[0]));
+                                gates::H::new().open_qasm(&names, &[0])?);
                         }
                         _ => {}
                     }
@@ -826,12 +826,12 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    res += &format!("{}\n", gate.c_qasm(&qbit_names, bits));
+                    res += &format!("{}\n", gate.c_qasm(&qbit_names, bits)?);
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
                     if control.is_empty()
                     {
-                        res += &format!("{}\n", gate.c_qasm(&qbit_names, bits));
+                        res += &format!("{}\n", gate.c_qasm(&qbit_names, bits)?);
                     }
                     else
                     {
@@ -845,7 +845,8 @@ impl Circuit
                             conditions.push(cbit_names[idx].as_str());
                         }
                         let condition = conditions.join(", ");
-                        let gate_qasm = gate.conditional_c_qasm(&condition, &qbit_names, bits)?;
+                        let gate_qasm = gate.conditional_c_qasm(&condition,
+                            &qbit_names, bits)?;
                         res += &format!("{}\n", gate_qasm);
                         for (shift, &idx) in control.iter().enumerate()
                         {
@@ -877,16 +878,16 @@ impl Circuit
                             for bit in 0..self.nr_qbits
                             {
                                 res += &format!("{}\n",
-                                    gates::H::new().c_qasm(&qbit_names, &[bit]));
+                                    gates::H::new().c_qasm(&qbit_names, &[bit])?);
                             }
                         },
                         Basis::Y => {
                             for bit in 0..self.nr_qbits
                             {
                                 res += &format!("{}\n",
-                                    gates::Sdg::new().c_qasm(&qbit_names, &[bit]));
+                                    gates::Sdg::new().c_qasm(&qbit_names, &[bit])?);
                                 res += &format!("{}\n",
-                                    gates::H::new().c_qasm(&qbit_names, &[bit]));
+                                    gates::H::new().c_qasm(&qbit_names, &[bit])?);
                             }
                         },
                         _ => {

@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// Phase gate.
@@ -88,18 +89,20 @@ impl gates::Gate for U1
 
 impl export::OpenQasm for U1
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("u1({}) {}", self.lambda, bit_names[bits[0]])
+        Ok(format!("u1({}) {}", self.lambda, bit_names[bits[0]]))
     }
 }
 
 impl export::CQasm for U1
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         // U1 is R_Z up to a phase
-        format!("rz {}, {}", bit_names[bits[0]], self.lambda)
+        Ok(format!("rz {}, {}", bit_names[bits[0]], self.lambda))
     }
 }
 
@@ -162,7 +165,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = U1::new(::std::f64::consts::PI).open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "u1(3.141592653589793) qb");
+        assert_eq!(qasm, Ok(String::from("u1(3.141592653589793) qb")));
     }
 
     #[test]
@@ -170,7 +173,7 @@ mod tests
     {
         let bit_names = [String::from("qb")];
         let qasm = U1::new(::std::f64::consts::PI).c_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "rz qb, 3.141592653589793");
+        assert_eq!(qasm, Ok(String::from("rz qb, 3.141592653589793")));
     }
 
     #[test]

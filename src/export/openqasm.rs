@@ -13,15 +13,22 @@
 // limitations under the License.
 
 use error;
+use gates;
 
 /// Trait for gates that can be represented in OpenQasm.
-pub trait OpenQasm
+pub trait OpenQasm: gates::Gate
 {
     /// OpenQasm representation
     ///
     /// Return an OpenQasm instruction string for this gate operating on qubits
-    /// `bits`. The array `bit_names` contains the names of all qubits.
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String;
+    /// `bits`. The array `bit_names` contains the names of all qubits. The
+    /// default implementation returns a NotImplemented error.
+    fn open_qasm(&self, _bit_names: &[String], _bits: &[usize])
+        -> error::ExportResult<String>
+    {
+        Err(error::ExportError::NotImplemented("OpenQasm",
+            String::from(self.description())))
+    }
 
     /// OpenQasm representation of conditional gate.
     ///
@@ -32,9 +39,10 @@ pub trait OpenQasm
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
-        Ok(format!("if ({}) {}", condition, self.open_qasm(bit_names, bits)))
+        let uncond_qasm = self.open_qasm(bit_names, bits)?;
+        Ok(format!("if ({}) {}", condition, uncond_qasm))
     }
 }
 

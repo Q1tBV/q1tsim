@@ -17,6 +17,7 @@ extern crate num_complex;
 
 use cmatrix;
 use gates;
+use error;
 use export;
 
 /// The `Swap` gate
@@ -103,19 +104,21 @@ impl gates::Gate for Swap
 
 impl export::OpenQasm for Swap
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         let b0 = &bit_names[bits[0]];
         let b1 = &bit_names[bits[1]];
-        format!("cx {}, {}; cx {}, {}; cx {}, {}", b0, b1, b1, b0, b0, b1)
+        Ok(format!("cx {}, {}; cx {}, {}; cx {}, {}", b0, b1, b1, b0, b0, b1))
     }
 }
 
 impl export::CQasm for Swap
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!("swap {}, {}", bit_names[bits[0]], bit_names[bits[1]])
+        Ok(format!("swap {}, {}", bit_names[bits[0]], bit_names[bits[1]]))
     }
 }
 
@@ -229,7 +232,7 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Swap::new().open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "cx qb0, qb1; cx qb1, qb0; cx qb0, qb1");
+        assert_eq!(qasm, Ok(String::from("cx qb0, qb1; cx qb1, qb0; cx qb0, qb1")));
     }
 
     #[test]
@@ -237,7 +240,7 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = Swap::new().c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "swap qb0, qb1");
+        assert_eq!(qasm, Ok(String::from("swap qb0, qb1")));
     }
 
     #[test]

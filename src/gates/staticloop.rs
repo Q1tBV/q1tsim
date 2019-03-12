@@ -101,27 +101,28 @@ impl gates::Gate for Loop
 
 impl export::OpenQasm for Loop
 {
-    fn open_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn open_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
         if self.nr_iterations == 0
         {
-            String::new()
+            Ok(String::new())
         }
         else
         {
-            let qasm_body = self.body.open_qasm(bit_names, bits);
+            let qasm_body = self.body.open_qasm(bit_names, bits)?;
             let mut res = qasm_body.clone();
             for _ in 1..self.nr_iterations
             {
                 res += ";\n";
                 res += &qasm_body;
             }
-            res
+            Ok(res)
         }
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
         if self.nr_iterations == 0
         {
@@ -144,14 +145,16 @@ impl export::OpenQasm for Loop
 
 impl export::CQasm for Loop
 {
-    fn c_qasm(&self, bit_names: &[String], bits: &[usize]) -> String
+    fn c_qasm(&self, bit_names: &[String], bits: &[usize])
+        -> error::ExportResult<String>
     {
-        format!(".{}({})\n{}\n.end", self.label, self.nr_iterations,
-            self.body.c_qasm(bit_names, bits))
+        let body_qasm = self.body.c_qasm(bit_names, bits)?;
+        Ok(format!(".{}({})\n{}\n.end", self.label, self.nr_iterations,
+            body_qasm))
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> error::ExportResult<String>
     {
         if self.nr_iterations == 0
         {
@@ -298,13 +301,16 @@ mod tests
         let gate = Loop::new("myloop", 0, body);
         let bit_names = [String::from("qb0")];
         let qasm = gate.open_qasm(&bit_names, &[0]);
-        assert_eq!(qasm, "");
+        assert_eq!(qasm, Ok(String::new()));
 
         let body = Composite::from_string("body", "H 0; H 1; CX 0 1").unwrap();
         let gate = Loop::new("myloop", 3, body);
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = gate.open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, "h qb0; h qb1; cx qb0, qb1;\nh qb0; h qb1; cx qb0, qb1;\nh qb0; h qb1; cx qb0, qb1");
+        assert_eq!(qasm, Ok(String::from(
+r#"h qb0; h qb1; cx qb0, qb1;
+h qb0; h qb1; cx qb0, qb1;
+h qb0; h qb1; cx qb0, qb1"#)));
     }
 
     #[test]
@@ -328,7 +334,8 @@ if (c == 3) h qb0; if (c == 3) h qb1; if (c == 3) cx qb0, qb1"#);
         let gate = Loop::new("myloop", 3, body);
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let qasm = gate.c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(qasm, ".myloop(3)\nh qb0\nh qb1\ncnot qb0, qb1\n.end");
+        assert_eq!(qasm,
+            Ok(String::from(".myloop(3)\nh qb0\nh qb1\ncnot qb0, qb1\n.end")));
     }
 
     #[test]
