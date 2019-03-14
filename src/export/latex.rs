@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use error;
+use gates;
 use support;
 
 /// Structure to build up contents of LaTeX export
@@ -96,22 +98,41 @@ impl LatexExportState
         self.in_use.resize(nr_bits, false);
     }
 
+    fn get_bit_indices(&self, qbits: &[usize], cbits: Option<&[usize]>)
+        -> error::Result<Vec<usize>>
+    {
+        if let Some(&bit) = qbits.iter().find(|&&b| b >= self.nr_qbits)
+        {
+            return Err(error::Error::InvalidQBit(bit));
+        }
+
+        let mut bits = qbits.to_vec();
+        if let Some(cbs) = cbits
+        {
+            if let Some(&bit) = cbs.iter().find(|&&b| b >= self.nr_cbits)
+            {
+                return Err(error::Error::InvalidCBit(bit));
+            }
+            bits.extend(cbs.iter().map(|&b| self.nr_qbits + b));
+        }
+
+        Ok(bits)
+    }
+
     /// Ensure that fields are free.
     ///
     /// Ensure that the fields for the bits in `qbits` and (optionally) `cbits`
     /// are currently unoccupied. If not, add a new column to the export.
     pub fn reserve(&mut self, qbits: &[usize], cbits: Option<&[usize]>)
+        -> error::Result<()>
     {
-        let mut bits = qbits.to_vec();
-        if let Some(cbs) = cbits
-        {
-            bits.extend(cbs.iter().map(|&b| self.nr_qbits + b));
-        }
-
+        let bits = self.get_bit_indices(qbits, cbits)?;
         if bits.iter().any(|&b| self.in_use[b])
         {
             self.add_column();
         }
+
+        Ok(())
     }
 
     /// Ensure that fields are free.
@@ -120,13 +141,9 @@ impl LatexExportState
     /// as weel as all field in the range between the minimum and maximum bit,
     /// are currently unoccupied. If not, add a new column to the export.
     pub fn reserve_range(&mut self, qbits: &[usize], cbits: Option<&[usize]>)
+        -> error::Result<()>
     {
-        let mut bits = qbits.to_vec();
-        if let Some(cbs) = cbits
-        {
-            bits.extend(cbs.iter().map(|&b| self.nr_qbits + b));
-        }
-
+        let bits = self.get_bit_indices(qbits, cbits)?;
         if let Some(&first) = bits.iter().min()
         {
             let last = *bits.iter().max().unwrap();
@@ -135,6 +152,8 @@ impl LatexExportState
                 self.add_column();
             }
         }
+
+        Ok(())
     }
 
     /// Ensure all fields are free.
@@ -158,13 +177,9 @@ impl LatexExportState
     /// with a controlled operation bit, and for which no operation should be
     /// drawn between them.
     pub fn claim_range(&mut self, qbits: &[usize], cbits: Option<&[usize]>)
+        -> error::Result<()>
     {
-        let mut bits = qbits.to_vec();
-        if let Some(cbs) = cbits
-        {
-            bits.extend(cbs.iter().map(|&b| self.nr_qbits + b));
-        }
-
+        let bits = self.get_bit_indices(qbits, cbits)?;
         if let Some(&first) = bits.iter().min()
         {
             let last = *bits.iter().max().unwrap();
@@ -173,6 +188,8 @@ impl LatexExportState
                 self.in_use[bit] = true;
             }
         }
+
+        Ok(())
     }
 
     /// Set the contents of a field
@@ -198,9 +215,10 @@ impl LatexExportState
     /// `basis` to the export. If `basis` is `None`, no basis string is drawn in
     /// the measurement.
     pub fn set_measurement(&mut self, qbit: usize, cbit: usize, basis: Option<&str>)
+        -> error::Result<()>
     {
         let cbit_idx = self.nr_qbits + cbit;
-        self.reserve_range(&[qbit], Some(&[cbit]));
+        self.reserve_range(&[qbit], Some(&[cbit]))?;
         let meter = if let Some(b) = basis
             {
                 format!(r"\meterB{{{}}}", b)
@@ -211,16 +229,18 @@ impl LatexExportState
             };
         self.set_field(qbit, meter);
         self.set_field(cbit_idx, format!(r"\cw \cwx[{}]", qbit as isize - cbit_idx as isize));
-        self.claim_range(&[qbit], Some(&[cbit]));
+        self.claim_range(&[qbit], Some(&[cbit]))
     }
 
     /// Add a reset
     ///
     /// Add the reset of quantum bit `qbit` to the export.
     pub fn set_reset(&mut self, qbit: usize)
+        -> error::Result<()>
     {
-        self.reserve(&[qbit], None);
+        self.reserve(&[qbit], None)?;
         self.set_field(qbit, String::from(r"\push{~\ket{0}~} \ar @{|-{}} [0,-1]"));
+        Ok(())
     }
 
     /// Add classical control
@@ -232,10 +252,20 @@ impl LatexExportState
     /// The first bit in `control` corresponds to the least significant bit of
     /// `target`, the last bit in `control` to the most significant bit.
     pub fn set_condition(&mut self, control: &[usize], target: u64, qbits: &[usize])
+        -> error::Result<()>
     {
+        if let Some(&bit) = qbits.iter().find(|&&b| b >= self.nr_qbits)
+        {
+            return Err(error::Error::InvalidQBit(bit));
+        }
+        if let Some(&bit) = control.iter().find(|&&b| b >= self.nr_cbits)
+        {
+            return Err(error::Error::InvalidCBit(bit));
+        }
+
         if qbits.is_empty()
         {
-            return;
+            return Ok(());
         }
 
         let mut pbit = *qbits.iter().max().unwrap();
@@ -250,7 +280,7 @@ impl LatexExportState
             pbit = bit;
         }
 
-        self.claim_range(qbits, Some(control));
+        self.claim_range(qbits, Some(control))
     }
 
     /// Open a loop
@@ -267,17 +297,18 @@ impl LatexExportState
     /// Close a loop
     ///
     /// Close the loop opened last by a call to `start_loop()`.
-    pub fn end_loop(&mut self)
+    pub fn end_loop(&mut self) -> error::Result<()>
     {
         if let Some((start, count)) = self.open_loops.pop()
         {
             let end = self.matrix.len() - 1;
             self.loops.push((start, end, count));
             self.reserve_all();
+            Ok(())
         }
         else
         {
-            panic!("Unable to close loop, because no loop is currently open");
+            Err(error::Error::from(error::ExportError::CantCloseLoop))
         }
     }
 
@@ -298,8 +329,13 @@ impl LatexExportState
     /// Add a barrier for the quantum bits in `qbits`. Note that the placement
     /// of barriers may sometimes be off because the spacing between elements
     /// is not constant. It may therefore need some manual adjustment.
-    pub fn set_barrier(&mut self, qbits: &[usize])
+    pub fn set_barrier(&mut self, qbits: &[usize]) -> error::Result<()>
     {
+        if let Some(&bit) = qbits.iter().find(|&&b| b >= self.nr_qbits)
+        {
+            return Err(error::Error::InvalidQBit(bit));
+        }
+
         let ranges = support::get_ranges(qbits);
 
         self.add_column();
@@ -307,6 +343,8 @@ impl LatexExportState
         {
             self.set_field(first, format!(r"\qw \barrier{{{}}}", last - first))
         }
+
+        Ok(())
     }
 
     /// Export to LaTeX
@@ -436,13 +474,19 @@ impl LatexExportState
 }
 
 /// Trait for gates that can be drawn in LaTeX
-pub trait Latex
+pub trait Latex: gates::Gate
 {
     /// Add this gate to the export state.
     ///
     /// Add the execution of this gate on the bits in `bits`, to the export
-    /// state `state`.
-    fn latex(&self, bits: &[usize], state: &mut LatexExportState);
+    /// state `state`. The default implementation returns a NotImplemented error.
+    fn latex(&self, _bits: &[usize], _state: &mut LatexExportState)
+        -> error::Result<()>
+    {
+        Err(error::Error::from(
+            error::ExportError::NotImplemented("LaTeX", String::from(self.description()))
+        ))
+    }
 
     /// Checked add to the export state.
     ///
@@ -454,15 +498,18 @@ pub trait Latex
     /// operation are occupied as well), should provide their own implementation
     /// of this function.
     fn latex_checked(&self, bits: &[usize], state: &mut LatexExportState)
+        -> error::Result<()>
     {
-        state.reserve(bits, None);
-        self.latex(bits, state);
+        state.reserve(bits, None)?;
+        self.latex(bits, state)
     }
 }
 
 #[cfg(test)]
 mod tests
 {
+    use error;
+
     use super::LatexExportState;
 
     #[test]
@@ -514,29 +561,29 @@ mod tests
     fn test_reserve()
     {
         let mut state = LatexExportState::new(2, 2);
-        state.reserve(&[0], None);
+        assert_eq!(state.reserve(&[0], None), Ok(()));
         assert_eq!(state.in_use, vec![false; 4]);
         assert_eq!(state.matrix, vec![vec![None; 4]]);
 
         state.in_use[0] = true;
-        state.reserve(&[1], None);
+        assert_eq!(state.reserve(&[1], None), Ok(()));
         assert_eq!(state.in_use, vec![true, false, false, false]);
         assert_eq!(state.matrix, vec![vec![None, None, None, None]]);
 
-        state.reserve(&[0], None);
+        assert_eq!(state.reserve(&[0], None), Ok(()));
         assert_eq!(state.in_use, vec![false; 4]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 2]);
 
         state.in_use[3] = true;
-        state.reserve(&[0, 1], None);
+        assert_eq!(state.reserve(&[0, 1], None), Ok(()));
         assert_eq!(state.in_use, vec![false, false, false, true]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 2]);
 
-        state.reserve(&[0, 1], Some(&[0]));
+        assert_eq!(state.reserve(&[0, 1], Some(&[0])), Ok(()));
         assert_eq!(state.in_use, vec![false, false, false, true]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 2]);
 
-        state.reserve(&[0, 1], Some(&[1]));
+        assert_eq!(state.reserve(&[0, 1], Some(&[1])), Ok(()));
         assert_eq!(state.in_use, vec![false, false, false, false]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 3]);
     }
@@ -545,26 +592,26 @@ mod tests
     fn test_reserve_range()
     {
         let mut state = LatexExportState::new(2, 2);
-        state.reserve_range(&[0], None);
+        assert_eq!(state.reserve_range(&[0], None), Ok(()));
         assert_eq!(state.in_use, vec![false; 4]);
         assert_eq!(state.matrix, vec![vec![None; 4]]);
 
-        state.reserve_range(&[0,1], None);
+        assert_eq!(state.reserve_range(&[0,1], None), Ok(()));
         assert_eq!(state.in_use, vec![false; 4]);
         assert_eq!(state.matrix, vec![vec![None; 4]]);
 
         state.in_use[1] = true;
-        state.reserve_range(&[0,1], None);
+        assert_eq!(state.reserve_range(&[0,1], None), Ok(()));
         assert_eq!(state.in_use, vec![false; 4]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 2]);
 
         state.in_use[1] = true;
-        state.reserve_range(&[0], Some(&[1]));
+        assert_eq!(state.reserve_range(&[0], Some(&[1])), Ok(()));
         assert_eq!(state.in_use, vec![false; 4]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 3]);
 
         state.in_use[1] = true;
-        state.reserve_range(&[], Some(&[0, 1]));
+        assert_eq!(state.reserve_range(&[], Some(&[0, 1])), Ok(()));
         assert_eq!(state.in_use, vec![false, true, false, false]);
         assert_eq!(state.matrix, vec![vec![None; 4]; 3]);
     }
@@ -593,13 +640,13 @@ mod tests
         let mut state = LatexExportState::new(2, 2);
         state.add_column();
 
-        state.claim_range(&[0, 1], None);
+        assert_eq!(state.claim_range(&[0, 1], None), Ok(()));
         assert_eq!(state.in_use, vec![true, true, false, false]);
 
         state.add_column();
         assert_eq!(state.in_use, vec![false; 4]);
 
-        state.claim_range(&[0], Some(&[0]));
+        assert_eq!(state.claim_range(&[0], Some(&[0])), Ok(()));
         assert_eq!(state.in_use, vec![true, true, true, false]);
     }
 
@@ -634,8 +681,8 @@ mod tests
     fn test_set_measurement()
     {
         let mut state = LatexExportState::new(2, 2);
-        state.set_measurement(0, 1, None);
-        state.set_measurement(1, 0, Some("X"));
+        assert_eq!(state.set_measurement(0, 1, None), Ok(()));
+        assert_eq!(state.set_measurement(1, 0, Some("X")), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \meter & \qw & \qw \\
@@ -650,7 +697,7 @@ r#"\Qcircuit @C=1em @R=.7em {
     fn test_set_reset()
     {
         let mut state = LatexExportState::new(2, 0);
-        state.set_reset(0);
+        assert_eq!(state.set_reset(0), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \push{~\ket{0}~} \ar @{|-{}} [0,-1] & \qw \\
@@ -663,16 +710,16 @@ r#"\Qcircuit @C=1em @R=.7em {
     fn test_set_condition()
     {
         let mut state = LatexExportState::new(2, 2);
-        state.reserve_range(&[], None);
-        state.set_condition(&[0, 1], 2, &[]);
+        assert_eq!(state.reserve_range(&[], None), Ok(()));
+        assert_eq!(state.set_condition(&[0, 1], 2, &[]), Ok(()));
 
-        state.reserve_range(&[0], Some(&[0, 1]));
+        assert_eq!(state.reserve_range(&[0], Some(&[0, 1])), Ok(()));
         state.set_field(0, String::from(r"\gate{X}"));
-        state.set_condition(&[0, 1], 2, &[0]);
+        assert_eq!(state.set_condition(&[0, 1], 2, &[0]), Ok(()));
 
-        state.reserve_range(&[1], Some(&[0, 1]));
+        assert_eq!(state.reserve_range(&[1], Some(&[0, 1])), Ok(()));
         state.set_field(1, String::from(r"\gate{H}"));
-        state.set_condition(&[0, 1], 1, &[1]);
+        assert_eq!(state.set_condition(&[0, 1], 1, &[1]), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{X} & \qw & \qw \\
@@ -688,14 +735,14 @@ r#"\Qcircuit @C=1em @R=.7em {
     {
         let mut state = LatexExportState::new(2, 0);
         state.start_loop(23);
-        state.reserve(&[0, 1], None);
+        assert_eq!(state.reserve(&[0, 1], None), Ok(()));
         state.set_field(0, String::from(r"\gate{H}"));
         state.set_field(1, String::from(r"\gate{X}"));
         state.add_cds(0, 1, r"\leftrightarrow");
-        state.reserve(&[0, 1], None);
+        assert_eq!(state.reserve(&[0, 1], None), Ok(()));
         state.set_field(0, String::from(r"\gate{H}"));
         state.set_field(1, String::from(r"\gate{X}"));
-        state.end_loop();
+        assert_eq!(state.end_loop(), Ok(()));
 
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
@@ -708,34 +755,35 @@ r#"\Qcircuit @C=1em @R=.7em {
     }
 
     #[test]
-    #[should_panic]
-    fn test_loop_close_panic()
+    fn test_loop_close_error()
     {
         let mut state = LatexExportState::new(2, 0);
-        state.end_loop();
+        assert_eq!(state.end_loop(),
+            Err(error::Error::ExportError(error::ExportError::CantCloseLoop))
+        );
     }
 
     #[test]
     fn test_set_barrier()
     {
         let mut state = LatexExportState::new(3, 0);
-        state.reserve_range(&[0, 2], None);
+        assert_eq!(state.reserve_range(&[0, 2], None), Ok(()));
         state.set_field(0, String::from(r"\gate{X}"));
         state.set_field(1, String::from(r"\gate{X}"));
         state.set_field(2, String::from(r"\gate{X}"));
-        state.set_barrier(&[0]);
+        assert_eq!(state.set_barrier(&[0]), Ok(()));
 
-        state.reserve_range(&[0, 2], None);
+        assert_eq!(state.reserve_range(&[0, 2], None), Ok(()));
         state.set_field(0, String::from(r"\gate{X}"));
         state.set_field(1, String::from(r"\gate{X}"));
         state.set_field(2, String::from(r"\gate{X}"));
-        state.set_barrier(&[0, 2]);
+        assert_eq!(state.set_barrier(&[0, 2]), Ok(()));
 
-        state.reserve_range(&[0, 2], None);
+        assert_eq!(state.reserve_range(&[0, 2], None), Ok(()));
         state.set_field(0, String::from(r"\gate{X}"));
         state.set_field(1, String::from(r"\gate{X}"));
         state.set_field(2, String::from(r"\gate{X}"));
-        state.set_barrier(&[0, 1, 2]);
+        assert_eq!(state.set_barrier(&[0, 1, 2]), Ok(()));
 
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
@@ -750,7 +798,7 @@ r#"\Qcircuit @C=1em @R=.7em {
     fn test_no_init()
     {
         let mut state = LatexExportState::new(1, 1);
-        state.set_measurement(0, 0, None);
+        assert_eq!(state.set_measurement(0, 0, None), Ok(()));
 
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {

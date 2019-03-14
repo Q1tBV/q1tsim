@@ -180,26 +180,33 @@ impl export::CQasm for Loop
 impl export::Latex for Loop
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        if self.nr_iterations == 1
+        self.check_nr_bits(bits)?;
+
+        if self.nr_iterations == 0
         {
-            self.body.latex(bits, state);
+            Ok(())
+        }
+        else if self.nr_iterations == 1
+        {
+            self.body.latex(bits, state)
         }
         else if self.nr_iterations == 2
         {
-            self.body.latex(bits, state);
-            self.body.latex_checked(bits, state);
+            self.body.latex(bits, state)?;
+            self.body.latex_checked(bits, state)
         }
-        else if self.nr_iterations > 2
+        else
         {
             let min = *bits.iter().min().unwrap();
             let max = *bits.iter().max().unwrap();
 
             state.start_loop(self.nr_iterations);
-            self.body.latex(bits, state);
+            self.body.latex(bits, state)?;
             state.add_cds(min, max - min, r"\cdots");
-            self.body.latex_checked(bits, state);
-            state.end_loop();
+            self.body.latex_checked(bits, state)?;
+            state.end_loop()
         }
     }
 }
@@ -365,7 +372,7 @@ c-cnot c == 3, qb0, qb1"#
         let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
         let gate = Loop::new("myloop", 0, body);
         let mut state = LatexExportState::new(2, 0);
-        gate.latex(&[0, 1], &mut state);
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qw \\
@@ -376,7 +383,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
         let gate = Loop::new("myloop", 1, body);
         let mut state = LatexExportState::new(2, 0);
-        gate.latex(&[0, 1], &mut state);
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{H} & \ctrl{1} & \qw \\
@@ -387,7 +394,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
         let gate = Loop::new("myloop", 2, body);
         let mut state = LatexExportState::new(2, 0);
-        gate.latex(&[0, 1], &mut state);
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{H} & \ctrl{1} & \gate{H} & \ctrl{1} & \qw \\
@@ -398,7 +405,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
         let gate = Loop::new("myloop", 15, body);
         let mut state = LatexExportState::new(2, 0);
-        gate.latex(&[0, 1], &mut state);
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     & \mbox{} \POS"2,2"."2,2"."2,6"."2,6"!C*+<.7em>\frm{^\}},+U*++!D{15\times}\\

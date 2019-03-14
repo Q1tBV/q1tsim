@@ -17,6 +17,7 @@ extern crate ndarray;
 extern crate num_complex;
 
 use cmatrix;
+use error;
 use permutation;
 
 #[macro_use] mod controlled;
@@ -256,6 +257,23 @@ pub trait Gate
             }
 
             state.assign(&res);
+        }
+    }
+
+    /// Check the number of bits
+    ///
+    /// Check if the number of bit indices in `bits` is equal to the number
+    /// of bits this gate operates on. If not, return an InvalidNrBits error.
+    fn check_nr_bits(&self, bits: &[usize]) -> error::Result<()>
+    {
+        if bits.len() != self.nr_affected_bits()
+        {
+            Err(error::Error::InvalidNrBits(bits.len(), self.nr_affected_bits(),
+                String::from(self.description())))
+        }
+        else
+        {
+            Ok(())
         }
     }
 }

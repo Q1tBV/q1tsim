@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// Rotation around `x` axis.
 ///
 /// The `R`<sub>`X`</sub>`(θ)` gate rotates the qubit around the `x` axis of the
@@ -132,10 +134,13 @@ impl export::CQasm for RX
 impl export::Latex for RX
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "RX gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         let contents = format!(r"\gate{{R_x({:.4})}}", self.theta);
         state.set_field(bits[0], contents);
+        Ok(())
     }
 }
 
@@ -214,7 +219,7 @@ mod tests
     {
         let gate = RX::new(::std::f64::consts::FRAC_PI_2);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{R_x(1.5708)} & \qw \\
@@ -223,7 +228,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = RX::new(-24.0);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{R_x(-24.0000)} & \qw \\

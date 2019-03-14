@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The Pauli Z gate.
 ///
 /// The Z gate rotates the state over π radians around the `z` axis of
@@ -99,10 +101,13 @@ impl export::CQasm for Z
 impl export::Latex for Z
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "Z gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         let symbol = if state.is_controlled() { r"\control \qw" } else { r"\gate{Z}" };
         state.set_field(bits[0], String::from(symbol));
+        Ok(())
     }
 }
 
@@ -168,7 +173,7 @@ mod tests
     {
         let gate = Z::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{Z} & \qw \\

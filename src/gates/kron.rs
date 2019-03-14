@@ -20,6 +20,8 @@ use error;
 use gates;
 use export;
 
+use gates::Gate;
+
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
 pub struct Kron<G0, G1>
@@ -120,13 +122,16 @@ where G0: export::CQasm, G1: export::CQasm
 }
 
 impl<G0, G1> export::Latex for Kron<G0, G1>
-where G0: gates::Gate+export::Latex, G1: export::Latex
+where G0: export::Latex, G1: export::Latex
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
+        self.check_nr_bits(bits)?;
+
         let n0 = self.g0.nr_affected_bits();
-        self.g0.latex(&bits[..n0], state);
-        self.g1.latex(&bits[n0..], state);
+        self.g0.latex(&bits[..n0], state)?;
+        self.g1.latex(&bits[n0..], state)
     }
 }
 

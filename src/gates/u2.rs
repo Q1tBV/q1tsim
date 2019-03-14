@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// U<sub>2</sub> gate.
 ///
 /// The `U`<sub>`2`</sub>`(ϕ, λ)` gate transforms a qubit by the matrix
@@ -101,10 +103,13 @@ impl export::CQasm for U2
 impl export::Latex for U2
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "U2 gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         let contents = format!(r"\gate{{U_2({:.4}, {:.4})}}", self.phi, self.lambda);
         state.set_field(bits[0], contents);
+        Ok(())
     }
 }
 
@@ -181,7 +186,7 @@ mod tests
     {
         let gate = U2::new(::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_2(0.7854, 0.6931)} & \qw \\
@@ -190,7 +195,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = U2::new(-1.2, ::std::f64::consts::LN_2);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_2(-1.2000, 0.6931)} & \qw \\
@@ -199,7 +204,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = U2::new(::std::f64::consts::FRAC_PI_4, -3.14);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_2(0.7854, -3.1400)} & \qw \\

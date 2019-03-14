@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The Clifford `S` gate
 ///
 /// The `S` gate rotates the state over π/2 radians around the `z` axis of
@@ -109,9 +111,12 @@ impl export::CQasm for S
 impl export::Latex for S
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "S gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         state.set_field(bits[0], String::from(r"\gate{S}"));
+        Ok(())
     }
 }
 
@@ -204,9 +209,12 @@ impl export::CQasm for Sdg
 impl export::Latex for Sdg
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "Sdg gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         state.set_field(bits[0], String::from(r"\gate{S^\dagger}"));
+        Ok(())
     }
 }
 
@@ -303,7 +311,7 @@ mod tests
     {
         let gate = S::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{S} & \qw \\
@@ -312,7 +320,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = Sdg::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{S^\dagger} & \qw \\

@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// Phase gate.
 ///
 /// The `U`<sub>`1`</sub>`(λ)` gate shifts the phase of the |1〉 component of a
@@ -109,10 +111,13 @@ impl export::CQasm for U1
 impl export::Latex for U1
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "U1 gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         let contents = format!(r"\gate{{U_1({:.4})}}", self.lambda);
         state.set_field(bits[0], contents);
+        Ok(())
     }
 }
 
@@ -181,7 +186,7 @@ mod tests
     {
         let gate = U1::new(::std::f64::consts::FRAC_PI_4);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_1(0.7854)} & \qw \\
@@ -190,7 +195,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = U1::new(-1.2);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_1(-1.2000)} & \qw \\

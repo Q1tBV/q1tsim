@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The identity gate
 ///
 /// The identity gate leaves the qubits on which it acts unchanged.
@@ -85,9 +87,11 @@ impl export::CQasm for I
 impl export::Latex for I
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "I gate operates on a single bit");
+        self.check_nr_bits(bits)?;
         state.set_field(bits[0], String::from(r"\qw"));
+        Ok(())
     }
 }
 
@@ -161,7 +165,7 @@ mod tests
     {
         let gate = I::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qw & \qw \\

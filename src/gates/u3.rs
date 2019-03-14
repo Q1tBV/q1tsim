@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// U<sub>3</sub> gate.
 ///
 /// The `U`<sub>`3`</sub>`(θ, ϕ, λ)` gate is the univeral single-qubit
@@ -111,11 +113,14 @@ impl export::CQasm for U3
 impl export::Latex for U3
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "U3 gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         let contents = format!(r"\gate{{U_3({:.4}, {:.4}, {:.4})}}",
             self.theta, self.phi, self.lambda);
         state.set_field(bits[0], contents);
+        Ok(())
     }
 }
 
@@ -193,7 +198,7 @@ mod tests
     {
         let gate = U3::new(0.17, ::std::f64::consts::FRAC_PI_4, ::std::f64::consts::LN_2);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_3(0.1700, 0.7854, 0.6931)} & \qw \\
@@ -202,7 +207,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = U3::new(::std::f64::consts::PI, -1.2, ::std::f64::consts::LN_2);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_3(3.1416, -1.2000, 0.6931)} & \qw \\
@@ -211,7 +216,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = U3::new(::std::f64::consts::FRAC_PI_2, 12.0, -3.14);
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_3(1.5708, 12.0000, -3.1400)} & \qw \\

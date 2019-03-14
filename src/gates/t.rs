@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The `T` gate
 ///
 /// The `T` gate rotates the state over π/4 radians around the `z` axis of
@@ -103,9 +105,12 @@ impl export::CQasm for T
 impl export::Latex for T
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "T gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         state.set_field(bits[0], String::from(r"\gate{T}"));
+        Ok(())
     }
 }
 
@@ -192,9 +197,12 @@ impl export::CQasm for Tdg
 impl export::Latex for Tdg
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "Tdg gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         state.set_field(bits[0], String::from(r"\gate{T^\dagger}"));
+        Ok(())
     }
 }
 
@@ -343,7 +351,7 @@ mod tests
     {
         let gate = T::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{T} & \qw \\
@@ -352,7 +360,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = Tdg::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{T^\dagger} & \qw \\

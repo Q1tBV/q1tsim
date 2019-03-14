@@ -924,7 +924,7 @@ impl Circuit
         Ok(res)
     }
 
-    pub fn latex(&self) -> String
+    pub fn latex(&self) -> error::Result<String>
     {
         let mut state = export::LatexExportState::new(self.nr_qbits, self.nr_cbits);
         for op in self.ops.iter()
@@ -932,14 +932,14 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    gate.latex_checked(bits, &mut state);
+                    gate.latex_checked(bits, &mut state)?;
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
-                    state.reserve_range(bits, Some(control));
+                    state.reserve_range(bits, Some(control))?;
                     let controlled = state.set_controlled(true);
-                    gate.latex(bits, &mut state);
+                    gate.latex(bits, &mut state)?;
                     state.set_controlled(controlled);
-                    state.set_condition(control, target, bits);
+                    state.set_condition(control, target, bits)?;
                 },
                 CircuitOp::Measure(qbit, cbit, basis) => {
                     let basis_lbl = match basis
@@ -948,7 +948,7 @@ impl Circuit
                         Basis::Y => Some("Y"),
                         _        => None
                     };
-                    state.set_measurement(qbit, cbit, basis_lbl);
+                    state.set_measurement(qbit, cbit, basis_lbl)?;
                 }
                 CircuitOp::MeasureAll(ref cbits, basis) => {
                     let basis_lbl = match basis
@@ -959,32 +959,40 @@ impl Circuit
                     };
                     for (qbit, &cbit) in cbits.iter().enumerate()
                     {
-                        state.set_measurement(qbit, cbit, basis_lbl);
+                        state.set_measurement(qbit, cbit, basis_lbl)?;
                     }
                 },
                 CircuitOp::Peek(_, _) => {
-                    unimplemented!();
+                    return Err(error::Error::from(
+                        error::ExportError::NotImplemented("LaTeX",
+                            String::from("peek")
+                        )
+                    ));
                 },
                 CircuitOp::PeekAll(_) => {
-                    unimplemented!();
+                    return Err(error::Error::from(
+                        error::ExportError::NotImplemented("LaTeX",
+                            String::from("peek all")
+                        )
+                    ));
                 },
                 CircuitOp::Reset(qbit) => {
-                    state.set_reset(qbit);
+                    state.set_reset(qbit)?;
                 },
                 CircuitOp::ResetAll => {
-                    state.reserve_range(&[0, self.nr_qbits-1], None);
+                    state.reserve_range(&[0, self.nr_qbits-1], None)?;
                     for qbit in 0..self.nr_qbits
                     {
-                        state.set_reset(qbit);
+                        state.set_reset(qbit)?;
                     }
                 },
                 CircuitOp::Barrier(ref qbits) => {
-                    state.set_barrier(qbits);
+                    state.set_barrier(qbits)?;
                 }
             }
         }
 
-        state.code()
+        Ok(state.code())
     }
 }
 
@@ -1828,13 +1836,13 @@ x q[1]
             barrier(&[1]);
         }).unwrap();
 
-        assert_eq!(circuit.latex(),
+        assert_eq!(circuit.latex(), Ok(String::from(
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{H} & \meter & \qw & \targ & \push{~\ket{0}~} \ar @{|-{}} [0,-1] & \meterB{Y} & \push{~\ket{0}~} \ar @{|-{}} [0,-1] & \qw & \qw & \qw \\
     \lstick{\ket{0}} & \gate{X} & \qw & \meterB{X} & \qw & \push{~\ket{0}~} \ar @{|-{}} [0,-1] & \qw & \meterB{Y} & \meterB{Y} & \qw \barrier{0} & \qw \\
     \lstick{0} & \cw & \cw \cwx[-2] & \cw & \cctrlo{-2} & \cw & \cw & \cw \cwx[-1] & \cw \cwx[-1] & \cw & \cw \\
     \lstick{0} & \cw & \cw & \cw \cwx[-2] & \cctrl{-1} & \cw & \cw \cwx[-3] & \cw & \cw & \cw & \cw \\
 }
-"#);
+"#)));
     }
 }

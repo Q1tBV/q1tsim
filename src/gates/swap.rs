@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The `Swap` gate
 ///
 /// The `Swap` gate swap two qubits.
@@ -125,8 +127,9 @@ impl export::CQasm for Swap
 impl export::Latex for Swap
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 2, "Swap gate operates on two bits");
+        self.check_nr_bits(bits)?;
 
         let (mut b0, mut b1) = (bits[0], bits[1]);
         if b1 < b0
@@ -136,13 +139,16 @@ impl export::Latex for Swap
 
         state.set_field(b0, format!(r"\qswap \qwx[{}]", b1-b0));
         state.set_field(b1, String::from(r"\qswap"));
+
+        Ok(())
     }
 
     fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        state.reserve_range(bits, None);
-        self.latex(bits, state);
-        state.claim_range(bits, None);
+        state.reserve_range(bits, None)?;
+        self.latex(bits, state)?;
+        state.claim_range(bits, None)
     }
 }
 
@@ -248,7 +254,7 @@ mod tests
     {
         let gate = Swap::new();
         let mut state = LatexExportState::new(2, 0);
-        gate.latex_checked(&[0, 1], &mut state);
+        assert_eq!(gate.latex_checked(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qswap \qwx[1] & \qw \\
@@ -258,7 +264,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = Swap::new();
         let mut state = LatexExportState::new(2, 0);
-        gate.latex_checked(&[1, 0], &mut state);
+        assert_eq!(gate.latex_checked(&[1, 0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qswap \qwx[1] & \qw \\

@@ -25,7 +25,9 @@ pub enum ExportError
     /// Unable to create condition operation in c-Qasm
     InvalidConditionalOp(String),
     /// Trying to export in a format for which no export function was written
-    NotImplemented(&'static str, String)
+    NotImplemented(&'static str, String),
+    /// Trying to close a loop where none is open in LaTeX export
+    CantCloseLoop
 }
 
 impl ::std::fmt::Display for ExportError
@@ -49,6 +51,9 @@ impl ::std::fmt::Display for ExportError
             ExportError::NotImplemented(method, ref desc) => {
                 write!(f, "Export to {} was not implemented for \"{}\"", method, desc)
             },
+            ExportError::CantCloseLoop => {
+                write!(f, "Unable to close loop, because no loop is currently open")
+            }
         }
     }
 }
@@ -124,6 +129,8 @@ pub type ParseResult<T> = ::std::result::Result<T, ParseError>;
 #[derive(Debug, PartialEq)]
 pub enum Error
 {
+    /// Number of bits passed does not match gate
+    InvalidNrBits(usize, usize, String),
     /// Invalid index for quantum bit
     InvalidQBit(usize),
     /// Invalid index for classical bit
@@ -160,6 +167,9 @@ impl ::std::fmt::Display for Error
     {
         match *self
         {
+            Error::InvalidNrBits(actual, expected, ref desc) => {
+                write!(f, "Expected {} bits for \"{}\", got {}", actual, desc, expected)
+            },
             Error::InvalidQBit(bit) => {
                 write!(f, "Invalid index {} for a quantum bit", bit)
             },

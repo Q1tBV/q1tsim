@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The Hadamard gate.
 ///
 /// The Hadamard gate maps the zero state |0&rang; to the symmetric combination
@@ -109,9 +111,11 @@ impl export::CQasm for H
 impl export::Latex for H
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "H gate operates on a single bit");
+        self.check_nr_bits(bits)?;
         state.set_field(bits[0], String::from(r"\gate{H}"));
+        Ok(())
     }
 }
 
@@ -176,7 +180,7 @@ mod tests
     {
         let gate = H::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{H} & \qw \\

@@ -20,6 +20,8 @@ use gates;
 use error;
 use export;
 
+use gates::Gate;
+
 /// The `V` gate
 ///
 /// The `V` gate is the square root of the `X` gate.
@@ -82,9 +84,12 @@ impl export::CQasm for V
 impl export::Latex for V
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "V gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         state.set_field(bits[0], String::from(r"\gate{V}"));
+        Ok(())
     }
 }
 
@@ -150,9 +155,12 @@ impl export::CQasm for Vdg
 impl export::Latex for Vdg
 {
     fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
+        -> error::Result<()>
     {
-        assert!(bits.len() == 1, "Vdg gate operates on a single bit");
+        self.check_nr_bits(bits)?;
+
         state.set_field(bits[0], String::from(r"\gate{V^\dagger}"));
+        Ok(())
     }
 }
 
@@ -250,7 +258,7 @@ mod tests
     {
         let gate = V::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{V} & \qw \\
@@ -259,7 +267,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = Vdg::new();
         let mut state = LatexExportState::new(1, 0);
-        gate.latex_checked(&[0], &mut state);
+        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{V^\dagger} & \qw \\
