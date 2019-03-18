@@ -24,7 +24,13 @@ use gates::Gate;
 
 /// The `V` gate
 ///
-/// The `V` gate is the square root of the `X` gate.
+/// The `V` gate is the square root of the `X` gate. The associated matrix is
+/// ```text
+///     ┌         ┐
+/// 1/2 │ 1+i 1-i │
+///     │ 1-i 1+i │
+///     └         ┘
+/// ```
 pub struct V
 {
 }
