@@ -328,7 +328,7 @@ impl Composite
     /// or more expressions. On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_sum_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    pub fn parse_sum_expression(expr: &str) -> error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*([-+])").unwrap();
         let (mut left, mut rest) = Self::parse_product_expression(expr)?;

@@ -201,12 +201,34 @@ macro_rules! declare_controlled_qasm
                 -> error::ExportResult<String>
             {
                 let mut res = stringify!($gate_name).to_lowercase();
+                let args: Vec<String> = vec![
+                    $(
+                        format!("{}", self.$arg),
+                    )*
+                ];
+                if stringify!($trait_name) == "OpenQasm"
+                {
+                    if !args.is_empty()
+                    {
+                        res += "(";
+                        res += &args.join(", ");
+                        res += ")";
+                    }
+                }
                 if bits.len() > 0
                 {
                     res += &format!(" {}", bit_names[bits[0]]);
                     for &bit in bits[1..].iter()
                     {
                         res += &format!(", {}", &bit_names[bit]);
+                    }
+                }
+                if stringify!($trait_name) == "CQasm"
+                {
+                    if !args.is_empty()
+                    {
+                        res += ", ";
+                        res += &args.join(", ");
                     }
                 }
                 Ok(res)
@@ -228,11 +250,29 @@ macro_rules! declare_controlled_qasm
                 $(
                     let pattern = concat!("{", stringify!($arg), "}");
                     res = res.replace(pattern, &self.$arg.to_string());
-                    let pattern = concat!("{half_", stringify!($arg), "}");
-                    res = res.replace(pattern, &(0.5 * self.$arg).to_string());
-                    let pattern = concat!("{quarter_", stringify!($arg), "}");
-                    res = res.replace(pattern, &(0.25 * self.$arg).to_string());
                 )*
+
+                let mut off = 0;
+                while let Some(i) = res[off..].find('{')
+                {
+                    let istart = off + i;
+                    if let Some(len) = res[istart..].find('}')
+                    {
+                        let iend = istart + len + 1;
+                        let replacement;
+                        match gates::Composite::parse_sum_expression(&res[istart+1..iend-1])
+                        {
+                            Ok((val, "")) => { replacement = Some(val.to_string()); },
+                            _             => { replacement = None; }
+                        }
+                        if let Some(repl) = replacement
+                        {
+                            res.replace_range(istart..iend, &repl);
+                        }
+                    }
+
+                    off = istart + 1;
+                }
 
                 Ok(res)
             }
@@ -316,7 +356,7 @@ declare_controlled!(
     cost=2.0*CX::cost() + 2.0*gates::U3::cost(),
     arg=theta,
     open_qasm="cx {0}, {1}; u3(-{theta}/2, 0, 0) {1}; cx {0}, {1}; u3({theta}/2, 0, 0) {1}",
-    c_qasm="cnot {0}, {1}\nry {1}, -{half_theta}\ncnot {0}, {1}\nry {1}, {half_theta}");
+    c_qasm="cnot {0}, {1}\nry {1}, -{0.5 * {theta}}\ncnot {0}, {1}\nry {1}, {0.5 * {theta}}");
 declare_controlled!(
     /// Controlled `R`<sub>`Z`</sub> gate.
     CRZ, gates::RZ,
@@ -325,23 +365,32 @@ declare_controlled!(
 
 declare_controlled!(
     /// Controlled `S` gate.
-    CS, gates::S, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+    CS, gates::S, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    open_qasm="cu1(pi/2) {0}, {1}",
+    c_qasm="crk {0}, {1}, 1");
 declare_controlled!(
     /// Controlled `S`<sup>`†`</sup> gate.
-    CSdg, gates::Sdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+    CSdg, gates::Sdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    open_qasm="cu1(-pi/2) {0}, {1}",
+    c_qasm="cr {0}, {1}, -1.570796326794897");
 
 declare_controlled!(
     /// Controlled `T` gate.
-    CT, gates::T, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+    CT, gates::T, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    open_qasm="cu1(pi/4) {0}, {1}",
+    c_qasm="crk {0}, {1}, 2");
 declare_controlled!(
     /// Controlled `T`<sup>`†`</sup> gate.
-    CTdg, gates::Tdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost());
+    CTdg, gates::Tdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    open_qasm="cu1(-pi/4) {0}, {1}",
+    c_qasm="cr {0}, {1}, -0.7853981633974483");
 
 declare_controlled!(
     /// Controlled `U`<sub>`1`</sub> gate.
     CU1, gates::U1,
     cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
-    arg=lambda);
+    arg=lambda,
+    c_qasm="cr {0}, {1}, {lambda}");
 declare_controlled!(
     /// Controlled `U`<sub>`2`</sub> gate.
     CU2, gates::U2,
@@ -351,7 +400,15 @@ declare_controlled!(
     /// Controlled `U`<sub>`3`</sub> gate.
     CU3, gates::U3,
     cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
-    arg=theta, arg=phi, arg=lambda);
+    arg=theta, arg=phi, arg=lambda,
+    c_qasm=r#"rz {1}, {0.5 * ({lambda}-{phi})}
+cnot {0}, {1}
+rz {1}, {-0.5 * ({phi}+{lambda})}
+ry {1}, {-0.5 * {theta}}
+cnot {0}, {1}
+ry {1}, {0.5 * {theta}}
+rz {1}, {phi}
+rz {0}, {0.5 * ({phi} + {lambda})}"#);
 
 declare_controlled!(
     /// Controlled `V` gate.
@@ -380,19 +437,19 @@ declare_controlled!(
     arg=theta,
     open_qasm="cx {1}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {1}, {2}; u3({theta}/4, 0, 0) {2}; cx {0}, {1}; cx {1}, {2}; u3({theta}/4, 0, 0) {2}; cx {1}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {0}, {1}; cx {0}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {0}, {2}; u3({theta}/4, 0, 0) {2}",
     c_qasm=r#"cnot {1}, {2}
-ry {2}, -{quarter_theta}
+ry {2}, {-0.25 * {theta}}
 cnot {1}, {2}
-ry {2}, {quarter_theta}
+ry {2}, {0.25 * {theta}}
 cnot {0}, {1}
 cnot {1}, {2}
-ry {2}, {quarter_theta}
+ry {2}, {0.25 * {theta}}
 cnot {1}, {2}
-ry {2}, -{quarter_theta}
+ry {2}, {-0.25 * {theta}}
 cnot {0}, {1}
 cnot {0}, {2}
-ry {2}, -{quarter_theta}
+ry {2}, {-0.25 * {theta}}
 cnot {0}, {2}
-ry {2}, {quarter_theta}"#);
+ry {2}, {0.25 * {theta}}"#);
 
 declare_controlled!(
     /// Doubly controlled `X` gate.
@@ -411,7 +468,7 @@ mod tests
 {
     use gates::{gate_test, Gate, H, X};
     use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use super::{C, CCRY, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CV, CX, CY, CZ};
+    use super::{C, CCRY, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CTdg, CU1, CU3, CV, CX, CY, CZ};
     use cmatrix;
 
     #[test]
@@ -543,6 +600,22 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let open_qasm = CCRY::new(1.6).open_qasm(&bit_names, &[1, 2, 0]);
         assert_eq!(open_qasm, Ok(String::from("cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb2, qb0; u3(1.6/4, 0, 0) qb0; cx qb2, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb2; cx qb1, qb0; u3(-1.6/4, 0, 0) qb0; cx qb1, qb0; u3(1.6/4, 0, 0) qb0")));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CU1::new(1.2345678).open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("cu1(1.2345678) qb0, qb1")));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CU3::new(1.2345678, 3.1415, -0.9876).open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("cu3(1.2345678, 3.1415, -0.9876) qb0, qb1")));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CS::new().open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("cu1(pi/2) qb0, qb1")));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CTdg::new().open_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("cu1(-pi/4) qb0, qb1")));
     }
 
     #[test]
@@ -573,6 +646,30 @@ cnot qb1, qb0
 ry qb0, -0.4
 cnot qb1, qb0
 ry qb0, 0.4"#)));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CU1::new(1.2345678).c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("cr qb0, qb1, 1.2345678")));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CU3::new(1.2345678, 3.1415, -0.9876).c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from(
+r#"rz qb1, -2.06455
+cnot qb0, qb1
+rz qb1, -1.07695
+ry qb1, -0.6172839
+cnot qb0, qb1
+ry qb1, 0.6172839
+rz qb1, 3.1415
+rz qb0, 1.07695"#)));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CS::new().c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("crk qb0, qb1, 1")));
+
+        let bit_names = [String::from("qb0"), String::from("qb1")];
+        let qasm = CTdg::new().c_qasm(&bit_names, &[0, 1]);
+        assert_eq!(qasm, Ok(String::from("cr qb0, qb1, -0.7853981633974483")));
     }
 
     #[test]
