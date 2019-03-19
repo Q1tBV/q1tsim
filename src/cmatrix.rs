@@ -1,5 +1,5 @@
 // Copyright 2019 Q1t BV
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,10 +21,11 @@ pub const COMPLEX_ONE:    num_complex::Complex64 = num_complex::Complex { re: 1.
 pub const COMPLEX_HSQRT2: num_complex::Complex64 = num_complex::Complex { re: ::std::f64::consts::FRAC_1_SQRT_2, im: 0.0 };
 pub const COMPLEX_I:      num_complex::Complex64 = num_complex::Complex { re: 0.0, im: 1.0 };
 
-pub type CVector = ndarray::Array1<num_complex::Complex64>;
-pub type CMatrix = ndarray::Array2<num_complex::Complex64>;
-pub type CVecSliceMut<'a> = ndarray::ArrayViewMut1<'a, num_complex::Complex64>;
-pub type CMatSliceMut<'a> = ndarray::ArrayViewMut2<'a, num_complex::Complex64>;
+pub type CNumber = num_complex::Complex64;
+pub type CVector = ndarray::Array1<CNumber>;
+pub type CMatrix = ndarray::Array2<CNumber>;
+pub type CVecSliceMut<'a> = ndarray::ArrayViewMut1<'a, CNumber>;
+pub type CMatSliceMut<'a> = ndarray::ArrayViewMut2<'a, CNumber>;
 
 /// Compute the Kronecker product `v0` ⊗ `v1`.
 pub fn kron_vec(v0: &CVector, v1: &CVector) -> CVector
@@ -53,7 +54,7 @@ pub fn kron_mat(a0: &CMatrix, a1: &CMatrix) -> CMatrix
     res
 }
 
-#[cfg(test)]
+#[macro_export]
 macro_rules! assert_complex_vector_eq
 {
     ($a0:expr, $a1:expr) => {
@@ -87,7 +88,7 @@ macro_rules! assert_complex_vector_eq
     }
 }
 
-#[cfg(test)]
+#[macro_export]
 macro_rules! assert_complex_matrix_eq
 {
     ($a0:expr, $a1:expr) => {
