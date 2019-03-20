@@ -60,7 +60,7 @@ impl gates::Gate for I
         cmatrix::CMatrix::eye(2)
     }
 
-    fn apply_slice(&self, _state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, _state: cmatrix::CVecSliceMut)
     {
         // Identity, leave state unchanged, so do nothing
     }

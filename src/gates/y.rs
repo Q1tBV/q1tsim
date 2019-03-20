@@ -63,9 +63,9 @@ impl gates::Gate for Y
         array![[z, -i], [i, z]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
-        gates::X::transform(state);
+        gates::X::transform(state.view_mut());
         let n = state.len() / 2;
         {
             let mut slice = state.slice_mut(s![..n]);
@@ -77,9 +77,9 @@ impl gates::Gate for Y
         }
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
-        gates::X::transform_mat(state);
+        gates::X::transform_mat(state.view_mut());
         let n = state.rows() / 2;
         {
             let mut slice = state.slice_mut(s![..n, ..]);

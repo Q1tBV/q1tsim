@@ -77,22 +77,62 @@ pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> permutation::
 
 /// Apply a gate
 ///
-/// Apply gate `gate` operating on the bits in `bits` to a matrix `matrix`. The
-/// number of rows in `matrix` must be 2^`nr_bits`.
-fn apply_gate<G>(matrix: &mut cmatrix::CMatrix, gate: &G, bits: &[usize], nr_bits: usize)
+/// Apply gate `gate` operating on the bits in `bits` to a vector `vec`. The
+/// number of elements in `vec` must be 2^`nr_bits`.
+pub fn apply_gate_slice<G>(mut vec: cmatrix::CVecSliceMut, gate: &G,
+    bits: &[usize], nr_bits: usize)
 where G: Gate + ?Sized
 {
     let gate_bits = gate.nr_affected_bits();
     assert!(gate_bits == bits.len(),
-        "The number of bits affected by the gate does not match the provided number of bits.");
+        "The number of bits affected by the {} gate should be {}, but {} bits were provided.",
+        gate.description(), gate_bits, bits.len()
+    );
+    assert!(vec.len() == 1 << nr_bits,
+        "The number of bits in the state does not match the total number of bits.");
 
-    if gate_bits == 1
+    if let &[bit] = bits
     {
-        let block_size = 1 << (nr_bits - bits[0]);
-        let nr_blocks = 1 << bits[0];
+        let block_size = 1 << (nr_bits - bit);
+        let nr_blocks = 1 << bit;
         for i in 0..nr_blocks
         {
-            gate.apply_mat_slice(&mut matrix.slice_mut(s![i*block_size..(i+1)*block_size, ..]));
+            gate.apply_slice(vec.slice_mut(s![i*block_size..(i+1)*block_size]));
+        }
+    }
+    else
+    {
+        let perm = bit_permutation(nr_bits, bits);
+        let mut work = cmatrix::CVector::zeros(1 << nr_bits);
+        perm.apply_inverse_vec_into(vec.view(), work.view_mut());
+        gate.apply_slice(work.view_mut());
+        perm.apply_vec_into(work.view(), vec);
+    }
+}
+
+/// Apply a gate
+///
+/// Apply gate `gate` operating on the bits in `bits` to a matrix `matrix`. The
+/// number of rows in `matrix` must be 2^`nr_bits`.
+fn apply_gate_mat_slice<G>(mut matrix: cmatrix::CMatSliceMut, gate: &G,
+    bits: &[usize], nr_bits: usize)
+where G: Gate + ?Sized
+{
+    let gate_bits = gate.nr_affected_bits();
+    assert!(gate_bits == bits.len(),
+        "The number of bits affected by the {} gate should be {}, but {} bits were provided.",
+        gate.description(), gate_bits, bits.len()
+    );
+    assert!(matrix.rows() == 1 << nr_bits,
+        "The number of bits in the state does not match the total number of bits.");
+
+    if let &[bit] = bits
+    {
+        let block_size = 1 << (nr_bits - bit);
+        let nr_blocks = 1 << bit;
+        for i in 0..nr_blocks
+        {
+            gate.apply_mat_slice(matrix.slice_mut(s![i*block_size..(i+1)*block_size, ..]));
         }
     }
     else
@@ -101,9 +141,9 @@ where G: Gate + ?Sized
         let inv_perm = perm.inverse();
 
         // FIXME: see if we can find a cleaner way to do this
-        *matrix = matrix.select(ndarray::Axis(0), inv_perm.indices());
-        gate.apply_mat(matrix);
-        *matrix = matrix.select(ndarray::Axis(0), perm.indices());
+        let mut work = matrix.select(ndarray::Axis(0), inv_perm.indices());
+        gate.apply_mat_slice(work.view_mut());
+        matrix.assign(&work.select(ndarray::Axis(0), perm.indices()));
     }
 }
 
@@ -134,12 +174,12 @@ pub trait Gate
     /// up until |11...1〉.
     fn apply(&self, state: &mut cmatrix::CVector)
     {
-        self.apply_slice(&mut state.view_mut());
+        self.apply_slice(state.view_mut());
     }
 
     fn apply_mat(&self, state: &mut cmatrix::CMatrix)
     {
-        self.apply_mat_slice(&mut state.view_mut());
+        self.apply_mat_slice(state.view_mut());
     }
 
     /// Apply a gate.
@@ -150,7 +190,7 @@ pub trait Gate
     /// of `r`/2<sup>`n`</sup> rows corresponds to qustates with basis states
     /// |00...0〉 for the affected qubits, the second block to |00...1〉, etc.,
     /// up until |11...1〉.
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         let nr_bits = self.nr_affected_bits();
         assert!(state.len() % (1 << nr_bits) == 0,
@@ -205,7 +245,7 @@ pub trait Gate
         }
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         let nr_bits = self.nr_affected_bits();
         assert!(state.len() % (1 << nr_bits) == 0,
@@ -284,12 +324,12 @@ where G: Gate
 {
     for i in 0..state.cols()
     {
-        gate.apply_slice(&mut state.column_mut(i));
+        gate.apply_slice(state.column_mut(i));
     }
     assert_complex_matrix_eq!(&*state, result);
 }
 
-pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCRY, CCX, CCZ};
+pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCRX, CCRY, CCRZ, CCX, CCZ};
 pub use self::composite::Composite;
 pub use self::hadamard::H;
 pub use self::identity::I;

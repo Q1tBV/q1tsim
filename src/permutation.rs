@@ -125,15 +125,29 @@ impl Permutation
 
     /// Permute a vector
     ///
-    /// Apply this permutation to vector `v`.
-    pub fn apply_vec<T>(&self, v: &mut ndarray::Array1<T>, work: &mut ndarray::Array1<T>)
+    /// Apply this permutation to vector `v`, and store the result in `perm_v`.
+    pub fn apply_vec_into<T>(&self, v: ndarray::ArrayView1<T>,
+        mut perm_v: ndarray::ArrayViewMut1<T>)
     where T: Copy
     {
         for (new_idx, &old_idx) in self.idxs.iter().enumerate()
         {
-            work[new_idx] = v[old_idx];
+            perm_v[new_idx] = v[old_idx];
         }
-        ::std::mem::swap(v, work);
+    }
+
+    /// Permute a vector
+    ///
+    /// Apply the inverse of this permutation to vector `v`, and store the
+    /// result in `inv_perm_v`.
+    pub fn apply_inverse_vec_into<T>(&self, v: ndarray::ArrayView1<T>,
+        mut inv_perm_v: ndarray::ArrayViewMut1<T>)
+    where T: Copy
+    {
+        for (new_idx, &old_idx) in self.idxs.iter().enumerate()
+        {
+            inv_perm_v[old_idx] = v[new_idx];
+        }
     }
 
     /// Transform a matrix
@@ -227,16 +241,16 @@ mod tests
     fn test_apply_vec()
     {
         let perm = Permutation::new(vec![1, 3, 0, 2]);
-        let mut v = array![1, 3, 5, 7];
+        let v = array![1, 3, 5, 7];
         let mut work = array![0, 0, 0, 0];
-        perm.apply_vec(&mut v, &mut work);
-        assert_eq!(v, array![3, 7, 1, 5]);
+        perm.apply_vec_into(v.view(), work.view_mut());
+        assert_eq!(work, array![3, 7, 1, 5]);
 
         let perm = Permutation::new(vec![1, 3, 5, 2, 7, 0, 4, 6]);
-        let mut v = array![1.2, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9];
+        let v = array![1.2, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9];
         let mut work = array![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        perm.apply_vec(&mut v, &mut work);
-        assert_eq!(v, array![2.3, 4.5, 6.7, 3.4, 8.9, 1.2, 5.6, 7.8]);
+        perm.apply_vec_into(v.view(), work.view_mut());
+        assert_eq!(work, array![2.3, 4.5, 6.7, 3.4, 8.9, 1.2, 5.6, 7.8]);
     }
 
     #[test]

@@ -65,15 +65,15 @@ where G0: gates::Gate, G1: gates::Gate
         cmatrix::kron_mat(&self.g0.matrix(), &self.g1.matrix())
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 4 == 0, "Number of rows is not a multiple of four.");
 
         let n = state.len() / 2;
 
-        self.g0.apply_slice(state);
-        self.g1.apply_slice(&mut state.slice_mut(s![..n]));
-        self.g1.apply_slice(&mut state.slice_mut(s![n..]));
+        self.g0.apply_slice(state.view_mut());
+        self.g1.apply_slice(state.slice_mut(s![..n]));
+        self.g1.apply_slice(state.slice_mut(s![n..]));
     }
 }
 

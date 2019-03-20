@@ -568,6 +568,10 @@ impl Composite
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(H::new(), &gate.bits);
                 },
+                "i" => {
+                    Self::assert_nr_args_bits(0, 1, &gate)?;
+                    composite.add_gate(I::new(), &gate.bits);
+                },
                 "rx" => {
                     Self::assert_nr_args_bits(1, 1, &gate)?;
                     composite.add_gate(RX::new(gate.args[0]), &gate.bits);
@@ -670,12 +674,24 @@ impl gates::Gate for Composite
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let mut res = cmatrix::CMatrix::eye(1 << self.nr_bits);
+        self.apply_mat_slice(res.view_mut());
+        res
+    }
+
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    {
         for op in self.ops.iter()
         {
-            apply_gate(&mut res, &*op.gate, &op.bits, self.nr_bits);
+            apply_gate_slice(state.view_mut(), &*op.gate, &op.bits, self.nr_bits);
         }
+    }
 
-        res
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    {
+        for op in self.ops.iter()
+        {
+            apply_gate_mat_slice(state.view_mut(), &*op.gate, &op.bits, self.nr_bits);
+        }
     }
 }
 
@@ -1209,6 +1225,19 @@ mod tests
                 assert_complex_matrix_eq!(gate.matrix(), array![
                     [x,  x],
                     [x, -x]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
+        match Composite::from_string("G", "I 0")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z],
+                    [z, o]
                 ]);
             },
             // LCOV_EXCL_START

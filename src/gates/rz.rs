@@ -73,7 +73,7 @@ impl gates::Gate for RZ
         array![[p.conj(), z], [z, p]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -88,7 +88,7 @@ impl gates::Gate for RZ
         }
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 

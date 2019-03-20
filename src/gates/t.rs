@@ -65,7 +65,7 @@ impl gates::Gate for T
         array![[o, z], [z, x+x*i]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -74,7 +74,7 @@ impl gates::Gate for T
         slice *= num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -157,7 +157,7 @@ impl gates::Gate for Tdg
         array![[o, z], [z, x-x*i]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -166,7 +166,7 @@ impl gates::Gate for Tdg
         slice *= num_complex::Complex::from_polar(&1.0, &-::std::f64::consts::FRAC_PI_4);
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 

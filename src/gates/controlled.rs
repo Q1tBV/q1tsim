@@ -75,16 +75,16 @@ where G: gates::Gate
         res
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         let n = state.len() / 2;
-        self.gate.apply_slice(&mut state.slice_mut(s![n..]));
+        self.gate.apply_slice(state.slice_mut(s![n..]));
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         let n = state.len() / 2;
-        self.gate.apply_mat_slice(&mut state.slice_mut(s![n.., ..]));
+        self.gate.apply_mat_slice(state.slice_mut(s![n.., ..]));
     }
 }
 
@@ -311,7 +311,7 @@ macro_rules! declare_controlled_impl_gate
             fn description(&self) -> &str { self.cgate.description() }
             fn nr_affected_bits(&self) -> usize { self.cgate.nr_affected_bits() }
             fn matrix(&self) -> $crate::cmatrix::CMatrix { self.cgate.matrix() }
-            fn apply_slice(&self, state: &mut $crate::cmatrix::CVecSliceMut)
+            fn apply_slice(&self, state: $crate::cmatrix::CVecSliceMut)
             {
                 self.cgate.apply_slice(state);
             }

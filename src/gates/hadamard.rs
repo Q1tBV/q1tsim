@@ -39,7 +39,7 @@ impl H
         H { }
     }
 
-    pub fn transform(state: &mut cmatrix::CVecSliceMut)
+    pub fn transform(mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -84,7 +84,7 @@ impl gates::Gate for H
         array![[x, x], [x, -x]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, state: cmatrix::CVecSliceMut)
     {
         Self::transform(state);
     }

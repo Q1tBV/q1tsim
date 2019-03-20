@@ -72,14 +72,14 @@ impl gates::Gate for RX
         array![[c, -si], [-si, c]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
 
         let mut s = state.to_owned();
         s *= si;
-        *state *= c;
+        state *= c;
 
         let n = state.len() / 2;
         {
@@ -92,14 +92,14 @@ impl gates::Gate for RX
         }
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         let cos_t   = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let sin_t_i = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
 
         let mut s = state.to_owned();
         s *= sin_t_i;
-        *state *= cos_t;
+        state *= cos_t;
 
         let n = state.rows() / 2;
         {

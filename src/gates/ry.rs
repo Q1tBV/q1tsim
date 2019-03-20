@@ -72,14 +72,14 @@ impl gates::Gate for RY
         array![[c, -s], [s, c]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         let cos_t = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let sin_t = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
 
         let mut s = state.to_owned();
         s *= sin_t;
-        *state *= cos_t;
+        state *= cos_t;
 
         let n = state.len() / 2;
         {
@@ -92,14 +92,14 @@ impl gates::Gate for RY
         }
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         let cos_t = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let sin_t = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
 
         let mut s = state.to_owned();
         s *= sin_t;
-        *state *= cos_t;
+        state *= cos_t;
 
         let n = state.rows() / 2;
         {

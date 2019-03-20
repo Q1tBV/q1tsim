@@ -75,26 +75,23 @@ impl gates::Gate for Loop
     fn matrix(&self) -> cmatrix::CMatrix
     {
         let mut res = cmatrix::CMatrix::eye(1 << self.nr_affected_bits());
-        for _ in 0..self.nr_iterations
-        {
-            self.body.apply_mat(&mut res);
-        }
+        self.apply_mat_slice(res.view_mut());
         res
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         for _ in 0..self.nr_iterations
         {
-            self.body.apply_slice(state);
+            self.body.apply_slice(state.view_mut());
         }
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         for _ in 0..self.nr_iterations
         {
-            self.body.apply_mat_slice(state);
+            self.body.apply_mat_slice(state.view_mut());
         }
     }
 }
@@ -278,7 +275,7 @@ mod tests
     #[test]
     fn test_apply_mat()
     {
-        let body = Composite::from_string("body", "Sdg 0").unwrap();
+        let body = Composite::from_string("body", "Sdg 0; I 1").unwrap();
         let gate = Loop::new("myloop", 3, body);
         let z = cmatrix::COMPLEX_ZERO;
         let o = cmatrix::COMPLEX_ONE;

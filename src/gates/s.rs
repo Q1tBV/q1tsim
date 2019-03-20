@@ -71,7 +71,7 @@ impl gates::Gate for S
         array![[o, z], [z, i]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -80,7 +80,7 @@ impl gates::Gate for S
         slice *= cmatrix::COMPLEX_I;
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -169,7 +169,7 @@ impl gates::Gate for Sdg
         array![[o, z], [z, -i]]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -178,7 +178,7 @@ impl gates::Gate for Sdg
         slice *= -cmatrix::COMPLEX_I;
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 

@@ -37,7 +37,7 @@ impl Swap
         Swap { }
     }
 
-    pub fn transform(state: &mut cmatrix::CVecSliceMut)
+    pub fn transform(mut state: cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 4 == 0, "Number of rows is not a mutiple of 4.");
 
@@ -48,7 +48,7 @@ impl Swap
         }
     }
 
-    pub fn transform_mat(state: &mut cmatrix::CMatSliceMut)
+    pub fn transform_mat(mut state: cmatrix::CMatSliceMut)
     {
         assert!(state.len() % 4 == 0, "Number of rows is not a multiple of 4.");
 
@@ -93,12 +93,12 @@ impl gates::Gate for Swap
         ]
     }
 
-    fn apply_slice(&self, state: &mut cmatrix::CVecSliceMut)
+    fn apply_slice(&self, state: cmatrix::CVecSliceMut)
     {
         Self::transform(state);
     }
 
-    fn apply_mat_slice(&self, state: &mut cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, state: cmatrix::CMatSliceMut)
     {
         Self::transform_mat(state);
     }

@@ -131,29 +131,9 @@ impl QuState
             gate.description(), gate_bits, bits.len()
         );
 
-        if gate_bits == 1
+        for m in self.state_counts.iter_mut()
         {
-            let block_size = 1 << (self.nr_bits - bits[0]);
-            let nr_blocks = 1 << bits[0];
-            for m in self.state_counts.iter_mut()
-            {
-                for i in 0..nr_blocks
-                {
-                    gate.apply_slice(&mut m.coefs.slice_mut(s![i*block_size..(i+1)*block_size]));
-                }
-            }
-        }
-        else
-        {
-            let perm = gates::bit_permutation(self.nr_bits, bits);
-            let inv_perm = perm.inverse();
-            let mut work = cmatrix::CVector::zeros(1 << self.nr_bits);
-            for m in self.state_counts.iter_mut()
-            {
-                inv_perm.apply_vec(&mut m.coefs, &mut work);
-                gate.apply(&mut m.coefs);
-                perm.apply_vec(&mut m.coefs, &mut work);
-            }
+            gates::apply_gate_slice(m.coefs.view_mut(), gate, bits, self.nr_bits);
         }
     }
 
@@ -261,17 +241,16 @@ impl QuState
                 let nr_blocks = 1 << bits[0];
                 for i in 0..nr_blocks
                 {
-                    gate.apply_slice(&mut m.coefs.slice_mut(s![i*block_size..(i+1)*block_size]));
+                    gate.apply_slice(m.coefs.slice_mut(s![i*block_size..(i+1)*block_size]));
                 }
             }
             else
             {
                 let perm = gates::bit_permutation(self.nr_bits, bits);
-                let inv_perm = perm.inverse();
                 let mut work = cmatrix::CVector::zeros(1 << self.nr_bits);
-                inv_perm.apply_vec(&mut m.coefs, &mut work);
-                gate.apply(&mut m.coefs);
-                perm.apply_vec(&mut m.coefs, &mut work);
+                perm.apply_inverse_vec_into(m.coefs.view(), work.view_mut());
+                gate.apply_slice(work.view_mut());
+                perm.apply_vec_into(work.view(), m.coefs.view_mut());
             }
 
             off += m.count;
