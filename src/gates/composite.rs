@@ -457,11 +457,11 @@ impl Composite
     {
         if nr_args != desc.args.len()
         {
-            Err(error::ParseError::InvalidNrArguments(desc.name.clone()))
+            Err(error::ParseError::InvalidNrArguments(desc.args.len(), nr_args, desc.name.clone()))
         }
         else if nr_bits != desc.bits.len()
         {
-            Err(error::ParseError::InvalidNrBits(desc.name.clone()))
+            Err(error::ParseError::InvalidNrBits(desc.bits.len(), nr_bits, desc.name.clone()))
         }
         else
         {
@@ -500,9 +500,17 @@ impl Composite
         {
             match gate.name.to_lowercase().as_str()
             {
+                "ccrx" => {
+                    Self::assert_nr_args_bits(1, 3, &gate)?;
+                    composite.add_gate(CCRX::new(gate.args[0]), &gate.bits);
+                },
                 "ccry" => {
                     Self::assert_nr_args_bits(1, 3, &gate)?;
                     composite.add_gate(CCRY::new(gate.args[0]), &gate.bits);
+                },
+                "ccrz" => {
+                    Self::assert_nr_args_bits(1, 3, &gate)?;
+                    composite.add_gate(CCRZ::new(gate.args[0]), &gate.bits);
                 },
                 "ccx" => {
                     Self::assert_nr_args_bits(0, 3, &gate)?;
@@ -543,6 +551,18 @@ impl Composite
                 "ctdg" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
                     composite.add_gate(CTdg::new(), &gate.bits);
+                },
+                "cu1" => {
+                    Self::assert_nr_args_bits(1, 2, &gate)?;
+                    composite.add_gate(CU1::new(gate.args[0]), &gate.bits);
+                },
+                "cu2" => {
+                    Self::assert_nr_args_bits(2, 2, &gate)?;
+                    composite.add_gate(CU2::new(gate.args[0], gate.args[1]), &gate.bits);
+                },
+                "cu3" => {
+                    Self::assert_nr_args_bits(3, 2, &gate)?;
+                    composite.add_gate(CU3::new(gate.args[0], gate.args[1], gate.args[2]), &gate.bits);
                 },
                 "cv" => {
                     Self::assert_nr_args_bits(0, 2, &gate)?;
@@ -986,6 +1006,63 @@ mod tests
         let x = cmatrix::COMPLEX_HSQRT2;
         let i = cmatrix::COMPLEX_I;
 
+        match Composite::from_string("G", "CCRX(3.141592653589793) 0 1 2")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z, z, z,  z,  z],
+                    [z, o, z, z, z, z,  z,  z],
+                    [z, z, o, z, z, z,  z,  z],
+                    [z, z, z, o, z, z,  z,  z],
+                    [z, z, z, z, o, z,  z,  z],
+                    [z, z, z, z, z, o,  z,  z],
+                    [z, z, z, z, z, z,  z, -i],
+                    [z, z, z, z, z, z, -i,  z]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
+        match Composite::from_string("G", "CCRY(3.141592653589793) 0 1 2")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z, z, z, z,  z],
+                    [z, o, z, z, z, z, z,  z],
+                    [z, z, o, z, z, z, z,  z],
+                    [z, z, z, o, z, z, z,  z],
+                    [z, z, z, z, o, z, z,  z],
+                    [z, z, z, z, z, o, z,  z],
+                    [z, z, z, z, z, z, z, -o],
+                    [z, z, z, z, z, z, o,  z]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
+        match Composite::from_string("G", "CCRZ(3.141592653589793) 0 1 2")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z, z, z,  z, z],
+                    [z, o, z, z, z, z,  z, z],
+                    [z, z, o, z, z, z,  z, z],
+                    [z, z, z, o, z, z,  z, z],
+                    [z, z, z, z, o, z,  z, z],
+                    [z, z, z, z, z, o,  z, z],
+                    [z, z, z, z, z, z, -i, z],
+                    [z, z, z, z, z, z,  z, i]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
         match Composite::from_string("G", "CCX 0 1 2")
         {
             Ok(gate) => {
@@ -1137,6 +1214,51 @@ mod tests
                     [z, o, z,       z],
                     [z, z, o,       z],
                     [z, z, z, x*(o-i)]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
+        match Composite::from_string("G", "CU1(1.570796326794897) 0 1")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z],
+                    [z, o, z, z],
+                    [z, z, o, z],
+                    [z, z, z, i]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
+        match Composite::from_string("G", "CU2(0.7853981633974483, 0.6931471805599453) 0 1")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z],
+                    [z, o, z, z],
+                    [z, z, Complex::new(0.7071067811865476, 0.0), Complex::new(-0.5439340435069544, -0.4518138513969824)],
+                    [z, z, Complex::new(               0.5, 0.5), Complex::new(0.06513881252516862,  0.7041000888388035)]
+                ]);
+            },
+            // LCOV_EXCL_START
+            Err(err) => { panic!("{}", err); }
+            // LCOV_EXCL_STOP
+        }
+
+        match Composite::from_string("G", "CU3(0.32, 0.7853981633974483, 0.6931471805599453) 0 1")
+        {
+            Ok(gate) => {
+                assert_complex_matrix_eq!(gate.matrix(), array![
+                    [o, z, z, z],
+                    [z, o, z, z],
+                    [z, z, Complex::new(0.9872272833756269,                0.0), Complex::new( -0.1225537622232209, -0.1017981646382380)],
+                    [z, z, Complex::new(0.1126549842634128, 0.1126549842634128), Complex::new(0.09094356700076842,  0.9830294892130130)]
                 ]);
             },
             // LCOV_EXCL_START
@@ -1699,11 +1821,11 @@ mod tests
 
         // Invalid nr of arguments
         let res = Composite::from_string("XXX", "RX(1.2, 3.4) 1");
-        assert!(matches!(res, Err(error::ParseError::InvalidNrArguments(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidNrArguments(2, 1, _))));
 
         // Invalid nr of bits to operate on
         let res = Composite::from_string("XXX", "H 0 1");
-        assert!(matches!(res, Err(error::ParseError::InvalidNrBits(_))));
+        assert!(matches!(res, Err(error::ParseError::InvalidNrBits(2, 1, _))));
 
         // Invalid arguments
         let res = Composite::from_string("XXX", "RX(abc) 1");

@@ -70,9 +70,9 @@ pub enum ParseError
     /// No gate name found
     NoGateName(String),
     /// Wrong number of arguments to gate
-    InvalidNrArguments(String),
+    InvalidNrArguments(usize, usize, String),
     /// Invalid number of qubits to operate on
-    InvalidNrBits(String),
+    InvalidNrBits(usize, usize, String),
     /// Unable to parse argument to gate
     InvalidArgument(String),
     /// Unable to find bit numbers on which the gate operates
@@ -97,11 +97,11 @@ impl ::std::fmt::Display for ParseError
             ParseError::NoGateName(ref text) => {
                 write!(f, "Failed to find gate name in \"{}\"", text)
             },
-            ParseError::InvalidNrArguments(ref name) => {
-                write!(f, "Invalid number of arguments for \"{}\" gate", name)
+            ParseError::InvalidNrArguments(actual, expected, ref name) => {
+                write!(f, "Expected {} arguments to \"{}\" gate, got {}", expected, name, actual)
             },
-            ParseError::InvalidNrBits(ref name) => {
-                write!(f, "Invalid number of bits for \"{}\" gate", name)
+            ParseError::InvalidNrBits(actual, expected, ref name) => {
+                write!(f, "Expected {} bits for \"{}\" gate, got {}", expected, name, actual)
             },
             ParseError::InvalidArgument(ref text) => {
                 write!(f, "Failed to parse argument \"{}\"", text)
@@ -168,7 +168,7 @@ impl ::std::fmt::Display for Error
         match *self
         {
             Error::InvalidNrBits(actual, expected, ref desc) => {
-                write!(f, "Expected {} bits for \"{}\", got {}", actual, desc, expected)
+                write!(f, "Expected {} bits for \"{}\", got {}", expected, desc, actual)
             },
             Error::InvalidQBit(bit) => {
                 write!(f, "Invalid index {} for a quantum bit", bit)
