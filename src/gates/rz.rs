@@ -107,7 +107,7 @@ impl gates::Gate for RZ
 impl export::OpenQasm for RZ
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("rz({}) {}", self.lambda, bit_names[bits[0]]))
     }
@@ -116,7 +116,7 @@ impl export::OpenQasm for RZ
 impl export::CQasm for RZ
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("rz {}, {}", bit_names[bits[0]], self.lambda))
     }

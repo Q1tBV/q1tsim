@@ -92,7 +92,7 @@ impl gates::Gate for U3
 impl export::OpenQasm for U3
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("u3({}, {}, {}) {}",
             self.theta, self.phi, self.lambda, bit_names[bits[0]]))
@@ -102,7 +102,7 @@ impl export::OpenQasm for U3
 impl export::CQasm for U3
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let name = &bit_names[bits[0]];
         Ok(format!("rz {}, {}\nry {}, {}\n; rz {} {}", name, self.lambda,

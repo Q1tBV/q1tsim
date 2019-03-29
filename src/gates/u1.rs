@@ -92,7 +92,7 @@ impl gates::Gate for U1
 impl export::OpenQasm for U1
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("u1({}) {}", self.lambda, bit_names[bits[0]]))
     }
@@ -101,7 +101,7 @@ impl export::OpenQasm for U1
 impl export::CQasm for U1
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         // U1 is R_Z up to a phase
         Ok(format!("rz {}, {}", bit_names[bits[0]], self.lambda))

@@ -116,7 +116,7 @@ impl gates::Gate for RY
 impl export::OpenQasm for RY
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         // For some reason, the web interface on QX claims RY is not a defined
         // gate, even though it is defined in the specification. Replace by U3.
@@ -128,7 +128,7 @@ impl export::OpenQasm for RY
 impl export::CQasm for RY
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("ry {}, {}", bit_names[bits[0]], self.theta))
     }

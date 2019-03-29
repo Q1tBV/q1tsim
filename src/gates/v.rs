@@ -72,7 +72,7 @@ impl gates::Gate for V
 impl export::OpenQasm for V
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]]))
     }
@@ -81,7 +81,7 @@ impl export::OpenQasm for V
 impl export::CQasm for V
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("x90 {}", bit_names[bits[0]]))
     }
@@ -143,7 +143,7 @@ impl gates::Gate for Vdg
 impl export::OpenQasm for Vdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]]))
     }
@@ -152,7 +152,7 @@ impl export::OpenQasm for Vdg
 impl export::CQasm for Vdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("mx90 {}", bit_names[bits[0]]))
     }

@@ -116,7 +116,7 @@ impl gates::Gate for RX
 impl export::OpenQasm for RX
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("rx({}) {}", self.theta, bit_names[bits[0]]))
     }
@@ -125,7 +125,7 @@ impl export::OpenQasm for RX
 impl export::CQasm for RX
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("rx {}, {}", bit_names[bits[0]], self.theta))
     }

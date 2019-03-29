@@ -81,7 +81,7 @@ impl<G0, G1> export::OpenQasm for Kron<G0, G1>
 where G0: export::OpenQasm, G1: export::OpenQasm
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.open_qasm(bit_names, &bits[..n0])?;
@@ -90,7 +90,7 @@ where G0: export::OpenQasm, G1: export::OpenQasm
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.conditional_open_qasm(condition, bit_names, &bits[..n0])?;
@@ -103,7 +103,7 @@ impl<G0, G1> export::CQasm for Kron<G0, G1>
 where G0: export::CQasm, G1: export::CQasm
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.c_qasm(bit_names, &bits[..n0])?;
@@ -112,7 +112,7 @@ where G0: export::CQasm, G1: export::CQasm
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.conditional_c_qasm(condition, bit_names, &bits[..n0])?;

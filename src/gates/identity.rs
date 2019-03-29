@@ -69,7 +69,7 @@ impl gates::Gate for I
 impl export::OpenQasm for I
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("id {}", bit_names[bits[0]]))
     }
@@ -78,7 +78,7 @@ impl export::OpenQasm for I
 impl export::CQasm for I
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("i {}", bit_names[bits[0]]))
     }

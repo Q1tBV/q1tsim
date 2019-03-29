@@ -95,7 +95,7 @@ impl gates::Gate for Y
 impl export::OpenQasm for Y
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("y {}", bit_names[bits[0]]))
     }
@@ -104,7 +104,7 @@ impl export::OpenQasm for Y
 impl export::CQasm for Y
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("y {}", bit_names[bits[0]]))
     }

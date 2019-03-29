@@ -93,7 +93,7 @@ impl gates::Gate for H
 impl export::OpenQasm for H
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("h {}", bit_names[bits[0]]))
     }
@@ -102,7 +102,7 @@ impl export::OpenQasm for H
 impl export::CQasm for H
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("h {}", bit_names[bits[0]]))
     }

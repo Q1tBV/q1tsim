@@ -83,7 +83,7 @@ impl gates::Gate for U2
 impl export::OpenQasm for U2
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("u2({}, {}) {}", self.phi, self.lambda, bit_names[bits[0]]))
     }
@@ -92,7 +92,7 @@ impl export::OpenQasm for U2
 impl export::CQasm for U2
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let name = &bit_names[bits[0]];
         Ok(format!("rz {}, {}\nh {}\nrz {} {}", name,

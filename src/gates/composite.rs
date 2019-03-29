@@ -718,7 +718,7 @@ impl gates::Gate for Composite
 impl export::OpenQasm for Composite
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -736,7 +736,7 @@ impl export::OpenQasm for Composite
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -760,7 +760,7 @@ impl export::OpenQasm for Composite
 impl export::CQasm for Composite
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -779,7 +779,7 @@ impl export::CQasm for Composite
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0

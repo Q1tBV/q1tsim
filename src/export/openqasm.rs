@@ -24,10 +24,11 @@ pub trait OpenQasm: gates::Gate
     /// `bits`. The array `bit_names` contains the names of all qubits. The
     /// default implementation returns a NotImplemented error.
     fn open_qasm(&self, _bit_names: &[String], _bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
-        Err(error::ExportError::NotImplemented("OpenQasm",
-            String::from(self.description())))
+        Err(error::Error::from(
+            error::ExportError::NotImplemented("OpenQasm", String::from(self.description()))
+        ))
     }
 
     /// OpenQasm representation of conditional gate.
@@ -39,7 +40,7 @@ pub trait OpenQasm: gates::Gate
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         let uncond_qasm = self.open_qasm(bit_names, bits)?;
         Ok(format!("if ({}) {}", condition, uncond_qasm))

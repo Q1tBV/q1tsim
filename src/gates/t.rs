@@ -87,7 +87,7 @@ impl gates::Gate for T
 impl export::OpenQasm for T
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("t {}", bit_names[bits[0]]))
     }
@@ -96,7 +96,7 @@ impl export::OpenQasm for T
 impl export::CQasm for T
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("t {}", bit_names[bits[0]]))
     }
@@ -179,7 +179,7 @@ impl gates::Gate for Tdg
 impl export::OpenQasm for Tdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("tdg {}", bit_names[bits[0]]))
     }
@@ -188,7 +188,7 @@ impl export::OpenQasm for Tdg
 impl export::CQasm for Tdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("tdag {}", bit_names[bits[0]]))
     }

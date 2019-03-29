@@ -24,10 +24,11 @@ pub trait CQasm: gates::Gate
     /// `bits`. The array `bit_names` contains the names of all qubits. The
     /// default implementation returns a NotImplemented error.
     fn c_qasm(&self, _bit_names: &[String], _bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
-        Err(error::ExportError::NotImplemented("c-Qasm",
-            String::from(self.description())))
+        Err(error::Error::from(
+            error::ExportError::NotImplemented("c-Qasm", String::from(self.description()))
+        ))
     }
 
     /// cQasm representation of conditional gate.
@@ -39,14 +40,16 @@ pub trait CQasm: gates::Gate
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         let unc_qasm = self.c_qasm(bit_names, bits)?;
         let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
         if parts.len() != 2
         {
             // This shouldn't happen, really.
-            Err(error::ExportError::InvalidConditionalOp(unc_qasm.clone()))
+            Err(error::Error::from(
+                error::ExportError::InvalidConditionalOp(unc_qasm.clone())
+            ))
         }
         else
         {

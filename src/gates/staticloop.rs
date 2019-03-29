@@ -99,7 +99,7 @@ impl gates::Gate for Loop
 impl export::OpenQasm for Loop
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         if self.nr_iterations == 0
         {
@@ -119,7 +119,7 @@ impl export::OpenQasm for Loop
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         if self.nr_iterations == 0
         {
@@ -143,7 +143,7 @@ impl export::OpenQasm for Loop
 impl export::CQasm for Loop
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let body_qasm = self.body.c_qasm(bit_names, bits)?;
         Ok(format!(".{}({})\n{}\n.end", self.label, self.nr_iterations,
@@ -151,7 +151,7 @@ impl export::CQasm for Loop
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::ExportResult<String>
+        bits: &[usize]) -> error::Result<String>
     {
         if self.nr_iterations == 0
         {

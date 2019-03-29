@@ -107,7 +107,7 @@ impl gates::Gate for Swap
 impl export::OpenQasm for Swap
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         let b0 = &bit_names[bits[0]];
         let b1 = &bit_names[bits[1]];
@@ -118,7 +118,7 @@ impl export::OpenQasm for Swap
 impl export::CQasm for Swap
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::ExportResult<String>
+        -> error::Result<String>
     {
         Ok(format!("swap {}, {}", bit_names[bits[0]], bit_names[bits[1]]))
     }

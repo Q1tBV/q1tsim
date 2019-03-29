@@ -198,7 +198,7 @@ macro_rules! declare_controlled_qasm
         impl export::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize])
-                -> error::ExportResult<String>
+                -> error::Result<String>
             {
                 let mut res = stringify!($gate_name).to_lowercase();
                 let args: Vec<String> = vec![
@@ -239,7 +239,7 @@ macro_rules! declare_controlled_qasm
         impl export::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize])
-                -> error::ExportResult<String>
+                -> error::Result<String>
             {
                 let mut res = String::from($qasm);
                 for (i, &bit) in bits.iter().enumerate()
