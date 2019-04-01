@@ -283,6 +283,58 @@ impl LatexExportState
         self.claim_range(qbits, Some(control))
     }
 
+    /// Add a simple block gate
+    ///
+    /// Add a gate with description `desc` operating on qubits `qbits` as a
+    /// simple box containing the description. If the gate opertes on mutiple
+    /// disjoint ranges of qbits, it is drawn using mutiple boxes connected by
+    /// wires.
+    pub fn add_block_gate(&mut self, qbits: &[usize], desc: &str) -> error::Result<()>
+    {
+        self.reserve_range(qbits, None)?;
+
+        let ranges = support::get_ranges(qbits);
+
+        let (first, last) = ranges[0];
+        if last == first
+        {
+            self.set_field(first, format!(r"\gate{{{}}}", desc));
+        }
+        else
+        {
+            self.set_field(first,
+                format!(r"\multigate{{{}}}{{{}}}", last-first, desc));
+            for bit in first+1..last+1
+            {
+                self.set_field(bit, format!(r"\ghost{{{}}}", desc));
+            }
+        }
+
+        let mut prev_last = last;
+        for &(first, last) in ranges[1..].iter()
+        {
+            if last == first
+            {
+                self.set_field(first,
+                    format!(r"\gate{{{}}} \qwx[{}]", desc, prev_last as isize - first as isize));
+            }
+            else
+            {
+                self.set_field(first,
+                    format!(r"\multigate{{{}}}{{{}}} \qwx[{}]",
+                        last - first, desc, prev_last as isize - first as isize));
+                for bit in first+1..last+1
+                {
+                    self.set_field(bit, format!(r"\ghost{{{}}}", desc));
+                }
+            }
+
+            prev_last = last;
+        }
+
+        self.claim_range(&qbits, None)
+    }
+
     /// Open a loop
     ///
     /// Open a loop of `count` ieterations at the current row in the export
@@ -480,12 +532,11 @@ pub trait Latex: gates::Gate
     ///
     /// Add the execution of this gate on the bits in `bits`, to the export
     /// state `state`. The default implementation returns a NotImplemented error.
-    fn latex(&self, _bits: &[usize], _state: &mut LatexExportState)
+    fn latex(&self, bits: &[usize], state: &mut LatexExportState)
         -> error::Result<()>
     {
-        Err(error::Error::from(
-            error::ExportError::NotImplemented("LaTeX", String::from(self.description()))
-        ))
+        self.check_nr_bits(bits)?;
+        state.add_block_gate(bits, self.description())
     }
 
     /// Checked add to the export state.
@@ -508,9 +559,22 @@ pub trait Latex: gates::Gate
 #[cfg(test)]
 mod tests
 {
+    use cmatrix;
     use error;
+    use gates;
 
-    use super::LatexExportState;
+    use super::{LatexExportState, Latex};
+
+    struct NoLatexGate;
+
+    impl gates::Gate for NoLatexGate
+    {
+        fn cost(&self) -> f64 { 0.0 }
+        fn description(&self) -> &str { "NLG" }
+        fn nr_affected_bits(&self) -> usize { 3 }
+        fn matrix(&self) -> cmatrix::CMatrix { unimplemented!() }
+    }
+    impl Latex for NoLatexGate {}
 
     #[test]
     fn test_new()
@@ -731,6 +795,40 @@ r#"\Qcircuit @C=1em @R=.7em {
     }
 
     #[test]
+    fn test_add_block_gate()
+    {
+        let mut state = LatexExportState::new(1, 0);
+        assert_eq!(state.add_block_gate(&[0], "G"), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{G} & \qw \\
+}
+"#);
+
+        let mut state = LatexExportState::new(3, 0);
+        assert_eq!(state.add_block_gate(&[1, 0, 2], "G"), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \multigate{2}{G} & \qw \\
+    \lstick{\ket{0}} & \ghost{G} & \qw \\
+    \lstick{\ket{0}} & \ghost{G} & \qw \\
+}
+"#);
+
+        let mut state = LatexExportState::new(5, 0);
+        assert_eq!(state.add_block_gate(&[1, 0, 3], "G"), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \multigate{1}{G} & \qw \\
+    \lstick{\ket{0}} & \ghost{G} & \qw \\
+    \lstick{\ket{0}} & \qw & \qw \\
+    \lstick{\ket{0}} & \gate{G} \qwx[-2] & \qw \\
+    \lstick{\ket{0}} & \qw & \qw \\
+}
+"#);
+    }
+
+    #[test]
     fn test_loop()
     {
         let mut state = LatexExportState::new(2, 0);
@@ -812,6 +910,24 @@ r#"\Qcircuit @C=1em @R=.7em {
 r#"\Qcircuit @C=1em @R=.7em {
      & \meter & \qw \\
      & \cw \cwx[-1] & \cw \\
+}
+"#);
+    }
+
+    #[test]
+    fn test_default_trait_impl()
+    {
+        let gate = NoLatexGate {};
+        let mut state = LatexExportState::new(5, 0);
+        assert_eq!(gate.latex(&[1, 2, 4], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 2, 3], &mut state), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \qw & \gate{NLG} & \qw \\
+    \lstick{\ket{0}} & \multigate{1}{NLG} & \qw & \qw \\
+    \lstick{\ket{0}} & \ghost{NLG} & \multigate{1}{NLG} \qwx[-2] & \qw \\
+    \lstick{\ket{0}} & \qw & \ghost{NLG} & \qw \\
+    \lstick{\ket{0}} & \gate{NLG} \qwx[-2] & \qw & \qw \\
 }
 "#);
     }

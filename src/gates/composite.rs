@@ -20,7 +20,6 @@ use cmatrix;
 use error;
 use gates;
 use export;
-use support;
 
 use export::CircuitGate;
 use super::*;
@@ -818,53 +817,12 @@ impl export::Latex for Composite
                 // the latex() method on the sub-gate.
                 op.gate.latex_checked(&gate_bits, state)?;
             }
+            Ok(())
         }
         else
         {
-            let ranges = support::get_ranges(bits);
-
-            let (first, last) = ranges[0];
-            if last == first
-            {
-                state.set_field(first, format!(r"\gate{{{}}}", self.description()));
-            }
-            else
-            {
-                state.set_field(first,
-                    format!(r"\multigate{{{}}}{{{}}}", last-first, self.description()));
-                for bit in first+1..last+1
-                {
-                    state.set_field(bit, format!(r"\ghost{{{}}}", self.description()));
-                }
-            }
-
-            let mut prev_last = last;
-            for &(first, last) in ranges[1..].iter()
-            {
-                if last == first
-                {
-                    state.set_field(first,
-                        format!(r"\gate{{{}}} \qwx[{}]", self.description(),
-                            prev_last as isize - first as isize));
-                }
-                else
-                {
-                    state.set_field(first,
-                        format!(r"\multigate{{{}}}{{{}}} \qwx[{}]",
-                            last - first, self.description(),
-                            prev_last as isize - first as isize));
-                    for bit in first+1..last+1
-                    {
-                        state.set_field(bit, format!(r"\ghost{{{}}}",
-                            self.description()));
-                    }
-                }
-
-                prev_last = last;
-            }
+            state.add_block_gate(bits, self.description())
         }
-
-        Ok(())
     }
 }
 

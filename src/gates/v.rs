@@ -93,9 +93,7 @@ impl export::Latex for V
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        state.set_field(bits[0], String::from(r"\gate{V}"));
-        Ok(())
+        state.add_block_gate(bits, "V")
     }
 }
 
@@ -164,9 +162,7 @@ impl export::Latex for Vdg
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        state.set_field(bits[0], String::from(r"\gate{V^\dagger}"));
-        Ok(())
+        state.add_block_gate(bits, r"V^\dagger")
     }
 }
 

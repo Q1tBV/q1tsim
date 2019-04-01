@@ -114,10 +114,8 @@ impl export::Latex for U1
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        let contents = format!(r"\gate{{U_1({:.4})}}", self.lambda);
-        state.set_field(bits[0], contents);
-        Ok(())
+        let contents = format!("U_1({:.4})", self.lambda);
+        state.add_block_gate(bits, &contents)
     }
 }
 

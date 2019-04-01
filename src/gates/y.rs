@@ -116,9 +116,7 @@ impl export::Latex for Y
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        state.set_field(bits[0], String::from(r"\gate{Y}"));
-        Ok(())
+        state.add_block_gate(bits, "Y")
     }
 }
 

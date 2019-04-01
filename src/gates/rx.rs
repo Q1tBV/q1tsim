@@ -137,10 +137,8 @@ impl export::Latex for RX
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        let contents = format!(r"\gate{{R_x({:.4})}}", self.theta);
-        state.set_field(bits[0], contents);
-        Ok(())
+        let contents = format!("R_x({:.4})", self.theta);
+        state.add_block_gate(bits, &contents)
     }
 }
 

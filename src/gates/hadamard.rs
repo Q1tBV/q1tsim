@@ -114,8 +114,7 @@ impl export::Latex for H
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-        state.set_field(bits[0], String::from(r"\gate{H}"));
-        Ok(())
+        state.add_block_gate(bits, "H")
     }
 }
 

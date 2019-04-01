@@ -128,10 +128,8 @@ impl export::Latex for RZ
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        let contents = format!(r"\gate{{R_z({:.4})}}", self.lambda);
-        state.set_field(bits[0], contents);
-        Ok(())
+        let contents = format!("R_z({:.4})", self.lambda);
+        state.add_block_gate(bits, &contents)
     }
 }
 

@@ -116,11 +116,8 @@ impl export::Latex for U3
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-
-        let contents = format!(r"\gate{{U_3({:.4}, {:.4}, {:.4})}}",
-            self.theta, self.phi, self.lambda);
-        state.set_field(bits[0], contents);
-        Ok(())
+        let contents = format!("U_3({:.4}, {:.4}, {:.4})", self.theta, self.phi, self.lambda);
+        state.add_block_gate(bits, &contents)
     }
 }
 
