@@ -192,7 +192,7 @@ impl export::Latex for Loop
         else if self.nr_iterations == 2
         {
             self.body.latex(bits, state)?;
-            self.body.latex_checked(bits, state)
+            self.body.latex(bits, state)
         }
         else
         {
@@ -201,8 +201,8 @@ impl export::Latex for Loop
 
             state.start_loop(self.nr_iterations);
             self.body.latex(bits, state)?;
-            state.add_cds(min, max - min, r"\cdots");
-            self.body.latex_checked(bits, state)?;
+            state.add_cds(min, max - min, r"\cdots")?;
+            self.body.latex(bits, state)?;
             state.end_loop()
         }
     }

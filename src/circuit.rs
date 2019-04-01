@@ -932,14 +932,15 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    gate.latex_checked(bits, &mut state)?;
+                    gate.latex(bits, &mut state)?;
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
-                    state.reserve_range(bits, Some(control))?;
+                    state.start_range_op(bits, Some(control))?;
                     let controlled = state.set_controlled(true);
                     gate.latex(bits, &mut state)?;
                     state.set_controlled(controlled);
                     state.set_condition(control, target, bits)?;
+                    state.end_range_op();
                 },
                 CircuitOp::Measure(qbit, cbit, basis) => {
                     let basis_lbl = match basis
@@ -980,11 +981,12 @@ impl Circuit
                     state.set_reset(qbit)?;
                 },
                 CircuitOp::ResetAll => {
-                    state.reserve_range(&[0, self.nr_qbits-1], None)?;
+                    state.start_range_op(&[0, self.nr_qbits-1], None)?;
                     for qbit in 0..self.nr_qbits
                     {
                         state.set_reset(qbit)?;
                     }
+                    state.end_range_op();
                 },
                 CircuitOp::Barrier(ref qbits) => {
                     state.set_barrier(qbits)?;

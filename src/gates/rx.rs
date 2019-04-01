@@ -217,7 +217,7 @@ mod tests
     {
         let gate = RX::new(::std::f64::consts::FRAC_PI_2);
         let mut state = LatexExportState::new(1, 0);
-        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{R_x(1.5708)} & \qw \\
@@ -226,7 +226,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = RX::new(-24.0);
         let mut state = LatexExportState::new(1, 0);
-        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{R_x(-24.0000)} & \qw \\

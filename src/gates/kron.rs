@@ -130,8 +130,8 @@ where G0: export::Latex, G1: export::Latex
         self.check_nr_bits(bits)?;
 
         let n0 = self.g0.nr_affected_bits();
-        self.g0.latex_checked(&bits[..n0], state)?;
-        self.g1.latex_checked(&bits[n0..], state)
+        self.g0.latex(&bits[..n0], state)?;
+        self.g1.latex(&bits[n0..], state)
     }
 }
 

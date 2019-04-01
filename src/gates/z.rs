@@ -106,8 +106,7 @@ impl export::Latex for Z
         self.check_nr_bits(bits)?;
 
         let symbol = if state.is_controlled() { r"\control \qw" } else { r"\gate{Z}" };
-        state.set_field(bits[0], String::from(symbol));
-        Ok(())
+        state.set_field(bits[0], String::from(symbol))
     }
 }
 
@@ -173,7 +172,7 @@ mod tests
     {
         let gate = Z::new();
         let mut state = LatexExportState::new(1, 0);
-        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{Z} & \qw \\

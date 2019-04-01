@@ -260,7 +260,7 @@ mod tests
     {
         let gate = V::new();
         let mut state = LatexExportState::new(1, 0);
-        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{V} & \qw \\
@@ -269,7 +269,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = Vdg::new();
         let mut state = LatexExportState::new(1, 0);
-        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{V^\dagger} & \qw \\

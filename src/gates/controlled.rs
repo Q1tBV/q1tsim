@@ -96,6 +96,8 @@ where G: gates::Gate + export::Latex
     {
         self.check_nr_bits(bits)?;
 
+        state.start_range_op(bits, None)?;
+
         // We can only reasonably draw this if the controlled gate
         // operates on bits all above or all below the control bit
         let control = bits[0];
@@ -103,11 +105,11 @@ where G: gates::Gate + export::Latex
         let max = *bits[1..].iter().max().unwrap();
         if min > control && max > control
         {
-            state.set_field(control, format!(r"\ctrl{{{}}}", min - control));
+            state.set_field(control, format!(r"\ctrl{{{}}}", min - control))?;
         }
         else if min < control && max < control
         {
-            state.set_field(control, format!(r"\ctrl{{{}}}", max as isize - control as isize));
+            state.set_field(control, format!(r"\ctrl{{{}}}", max as isize - control as isize))?;
         }
         else
         {
@@ -120,15 +122,9 @@ where G: gates::Gate + export::Latex
         self.gate.latex(&bits[1..], state)?;
         state.set_controlled(controlled);
 
-        Ok(())
-    }
+        state.end_range_op();
 
-    fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
-    {
-        state.reserve_range(bits, None)?;
-        self.latex(bits, state)?;
-        state.claim_range(bits, None)
+        Ok(())
     }
 }
 
@@ -290,12 +286,6 @@ macro_rules! declare_controlled_latex
                 -> error::Result<()>
             {
                 self.cgate.latex(bits, state)
-            }
-
-            fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
-                -> error::Result<()>
-            {
-                self.cgate.latex_checked(bits, state)
             }
         }
     }
@@ -783,7 +773,7 @@ rz qb0, 1.07695"#)));
     {
         let gate = CS::new();
         let mut state = LatexExportState::new(2, 0);
-        assert_eq!(gate.latex_checked(&[0, 1], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \ctrl{1} & \qw \\
@@ -793,7 +783,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = CV::new();
         let mut state = LatexExportState::new(2, 0);
-        assert_eq!(gate.latex_checked(&[1, 0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[1, 0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{V} & \qw \\
@@ -803,7 +793,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = CCRX::new(-0.26);
         let mut state = LatexExportState::new(3, 0);
-        assert_eq!(gate.latex_checked(&[2, 1, 0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[2, 1, 0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{R_x(-0.2600)} & \qw \\
@@ -819,6 +809,6 @@ r#"\Qcircuit @C=1em @R=.7em {
     {
         let gate = CCX::new();
         let mut state = LatexExportState::new(3, 0);
-        let _ltx = gate.latex_checked(&[1, 2, 0], &mut state);
+        let _ltx = gate.latex(&[1, 2, 0], &mut state);
     }
 }

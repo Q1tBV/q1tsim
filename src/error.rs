@@ -27,7 +27,9 @@ pub enum ExportError
     /// Trying to export in a format for which no export function was written
     NotImplemented(&'static str, String),
     /// Trying to close a loop where none is open in LaTeX export
-    CantCloseLoop
+    CantCloseLoop,
+    /// Trying to reserve range in LaTeX export, but previous reservation is open
+    RangeAlreadyOpen
 }
 
 impl ::std::fmt::Display for ExportError
@@ -53,6 +55,9 @@ impl ::std::fmt::Display for ExportError
             },
             ExportError::CantCloseLoop => {
                 write!(f, "Unable to close loop, because no loop is currently open")
+            },
+            ExportError::RangeAlreadyOpen => {
+                write!(f, "Trying to reserve range of bits, but a previous reservation is still open")
             }
         }
     }

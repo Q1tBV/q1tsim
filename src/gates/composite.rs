@@ -811,11 +811,7 @@ impl export::Latex for Composite
             for op in self.ops.iter()
             {
                 let gate_bits: Vec<usize> = op.bits.iter().map(|&b| bits[b]).collect();
-                // The composite gate may take up more than one column, so for
-                // each gate in the composition, we need to ensure there's
-                // place available. Therefore, use latex_checked() instead of
-                // the latex() method on the sub-gate.
-                op.gate.latex_checked(&gate_bits, state)?;
+                op.gate.latex(&gate_bits, state)?;
             }
             Ok(())
         }
@@ -1869,7 +1865,7 @@ c-x b == 3, qb1"#);
     {
         let gate = Composite::from_string("CZ", "H 1; CX 0 1; H 1").unwrap();
         let mut state = LatexExportState::new(2, 0);
-        assert_eq!(gate.latex_checked(&[0, 1], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qw & \ctrl{1} & \qw & \qw \\
@@ -1880,7 +1876,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = Composite::from_string("CZ", "H 1; CX 0 1; H 1").unwrap();
         let mut state = LatexExportState::new(2, 0);
         state.set_expand_composite(false);
-        assert_eq!(gate.latex_checked(&[0, 1], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \multigate{1}{CZ} & \qw \\
@@ -1891,7 +1887,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = Composite::from_string("CZ", "H 1; CX 0 1; H 1").unwrap();
         let mut state = LatexExportState::new(3, 0);
         state.set_expand_composite(false);
-        assert_eq!(gate.latex_checked(&[0, 2], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 2], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{CZ} & \qw \\
@@ -1903,7 +1899,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = Composite::from_string("G", "H 0; CX 1 2; H 0").unwrap();
         let mut state = LatexExportState::new(4, 0);
         state.set_expand_composite(false);
-        assert_eq!(gate.latex_checked(&[0, 2, 3], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 2, 3], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{G} & \qw \\
@@ -1916,7 +1912,7 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = Composite::from_string("G", "H 0; CX 1 2; H 0").unwrap();
         let mut state = LatexExportState::new(4, 0);
         state.set_expand_composite(false);
-        assert_eq!(gate.latex_checked(&[0, 1, 3], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 1, 3], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \multigate{1}{G} & \qw \\

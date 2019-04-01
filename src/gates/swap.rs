@@ -137,18 +137,12 @@ impl export::Latex for Swap
             ::std::mem::swap(&mut b0, &mut b1);
         }
 
-        state.set_field(b0, format!(r"\qswap \qwx[{}]", b1-b0));
-        state.set_field(b1, String::from(r"\qswap"));
+        state.start_range_op(bits, None)?;
+        state.set_field(b0, format!(r"\qswap \qwx[{}]", b1-b0))?;
+        state.set_field(b1, String::from(r"\qswap"))?;
+        state.end_range_op();
 
         Ok(())
-    }
-
-    fn latex_checked(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
-    {
-        state.reserve_range(bits, None)?;
-        self.latex(bits, state)?;
-        state.claim_range(bits, None)
     }
 }
 
@@ -254,7 +248,7 @@ mod tests
     {
         let gate = Swap::new();
         let mut state = LatexExportState::new(2, 0);
-        assert_eq!(gate.latex_checked(&[0, 1], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qswap \qwx[1] & \qw \\
@@ -264,7 +258,7 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         let gate = Swap::new();
         let mut state = LatexExportState::new(2, 0);
-        assert_eq!(gate.latex_checked(&[1, 0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[1, 0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qswap \qwx[1] & \qw \\

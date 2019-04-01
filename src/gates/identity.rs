@@ -90,8 +90,7 @@ impl export::Latex for I
         -> error::Result<()>
     {
         self.check_nr_bits(bits)?;
-        state.set_field(bits[0], String::from(r"\qw"));
-        Ok(())
+        state.set_field(bits[0], String::from(r"\qw"))
     }
 }
 
@@ -165,7 +164,7 @@ mod tests
     {
         let gate = I::new();
         let mut state = LatexExportState::new(1, 0);
-        assert_eq!(gate.latex_checked(&[0], &mut state), Ok(()));
+        assert_eq!(gate.latex(&[0], &mut state), Ok(()));
         assert_eq!(state.code(),
 r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qw & \qw \\
