@@ -130,8 +130,8 @@ where G0: export::Latex, G1: export::Latex
         self.check_nr_bits(bits)?;
 
         let n0 = self.g0.nr_affected_bits();
-        self.g0.latex(&bits[..n0], state)?;
-        self.g1.latex(&bits[n0..], state)
+        self.g0.latex_checked(&bits[..n0], state)?;
+        self.g1.latex_checked(&bits[n0..], state)
     }
 }
 
@@ -139,7 +139,7 @@ where G0: export::Latex, G1: export::Latex
 mod tests
 {
     use gates::{gate_test, CX, Gate, H, I, Kron, X};
-    use export::{OpenQasm, CQasm};
+    use export::{Latex, LatexExportState, OpenQasm, CQasm};
     use cmatrix;
 
     #[test]
@@ -284,5 +284,40 @@ mod tests
         assert_eq!(qasm, Ok(String::from(
 r#"c-h b == 1, qb1
 c-x b == 1, qb0"#)));
+    }
+
+    #[test]
+    fn test_latex()
+    {
+        let gate = Kron::new(H::new(), X::new());
+        let mut state = LatexExportState::new(2, 0);
+        assert_eq!(gate.latex(&[0, 1], &mut state), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{H} & \qw \\
+    \lstick{\ket{0}} & \gate{X} & \qw \\
+}
+"#);
+
+        let gate = Kron::new(H::new(), X::new());
+        let mut state = LatexExportState::new(2, 0);
+        assert_eq!(gate.latex(&[1, 0], &mut state), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \gate{X} & \qw \\
+    \lstick{\ket{0}} & \gate{H} & \qw \\
+}
+"#);
+
+        let gate = Kron::new(CX::new(), X::new());
+        let mut state = LatexExportState::new(3, 0);
+        assert_eq!(gate.latex(&[0, 2, 1], &mut state), Ok(()));
+        assert_eq!(state.code(),
+r#"\Qcircuit @C=1em @R=.7em {
+    \lstick{\ket{0}} & \ctrl{2} & \qw & \qw \\
+    \lstick{\ket{0}} & \qw & \gate{X} & \qw \\
+    \lstick{\ket{0}} & \targ & \qw & \qw \\
+}
+"#);
     }
 }
