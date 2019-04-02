@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// The Pauli X gate.
 ///
@@ -38,7 +30,7 @@ impl X
         X { }
     }
 
-    pub fn transform(mut state: cmatrix::CVecSliceMut)
+    pub fn transform(mut state: crate::cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -49,7 +41,7 @@ impl X
         }
     }
 
-    pub fn transform_mat(mut state: cmatrix::CMatSliceMut)
+    pub fn transform_mat(mut state: crate::cmatrix::CMatSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -65,11 +57,11 @@ impl X
     }
 }
 
-impl gates::Gate for X
+impl crate::gates::Gate for X
 {
     fn cost(&self) -> f64
     {
-        gates::U3::cost()
+        crate::gates::U3::cost()
     }
 
     fn description(&self) -> &str
@@ -82,46 +74,46 @@ impl gates::Gate for X
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         array![[z, o], [o, z]]
     }
 
-    fn apply_slice(&self, state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, state: crate::cmatrix::CVecSliceMut)
     {
         Self::transform(state);
     }
 
-    fn apply_mat_slice(&self, state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, state: crate::cmatrix::CMatSliceMut)
     {
         Self::transform_mat(state);
     }
 }
 
-impl export::OpenQasm for X
+impl crate::export::OpenQasm for X
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("x {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for X
+impl crate::export::CQasm for X
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("x {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for X
+impl crate::export::Latex for X
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
 
@@ -133,9 +125,8 @@ impl export::Latex for X
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, X};
-    use export::{LatexExportState, Latex, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate, X};
+    use crate::export::{LatexExportState, Latex, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -148,17 +139,17 @@ mod tests
     fn test_matrix()
     {
         let x = X::new();
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         assert_complex_matrix_eq!(x.matrix(), array![[z, o], [o, z]]);
     }
 
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[z, o, x, -x],[o, z, x, x]];
         gate_test(X::new(), &mut state, &result);

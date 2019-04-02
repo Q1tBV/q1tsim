@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// The Pauli Y gate.
 ///
@@ -39,11 +31,11 @@ impl Y
     }
 }
 
-impl gates::Gate for Y
+impl crate::gates::Gate for Y
 {
     fn cost(&self) -> f64
     {
-        gates::U3::cost()
+        crate::gates::U3::cost()
     }
 
     fn description(&self) -> &str
@@ -56,64 +48,64 @@ impl gates::Gate for Y
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let i = crate::cmatrix::COMPLEX_I;
         array![[z, -i], [i, z]]
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
-        gates::X::transform(state.view_mut());
+        crate::gates::X::transform(state.view_mut());
         let n = state.len() / 2;
         {
             let mut slice = state.slice_mut(s![..n]);
-            slice *= -cmatrix::COMPLEX_I;
+            slice *= -crate::cmatrix::COMPLEX_I;
         }
         {
             let mut slice = state.slice_mut(s![n..]);
-            slice *=  cmatrix::COMPLEX_I;
+            slice *=  crate::cmatrix::COMPLEX_I;
         }
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
-        gates::X::transform_mat(state.view_mut());
+        crate::gates::X::transform_mat(state.view_mut());
         let n = state.rows() / 2;
         {
             let mut slice = state.slice_mut(s![..n, ..]);
-            slice *= -cmatrix::COMPLEX_I;
+            slice *= -crate::cmatrix::COMPLEX_I;
         }
         {
             let mut slice = state.slice_mut(s![n.., ..]);
-            slice *=  cmatrix::COMPLEX_I;
+            slice *=  crate::cmatrix::COMPLEX_I;
         }
     }
 }
 
-impl export::OpenQasm for Y
+impl crate::export::OpenQasm for Y
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("y {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for Y
+impl crate::export::CQasm for Y
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("y {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for Y
+impl crate::export::Latex for Y
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.add_block_gate(bits, "Y")
@@ -123,9 +115,8 @@ impl export::Latex for Y
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, Y};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate, Y};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -145,18 +136,18 @@ mod tests
     fn test_matrix()
     {
         let y = Y::new();
-        let z = cmatrix::COMPLEX_ZERO;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let i = crate::cmatrix::COMPLEX_I;
         assert_complex_matrix_eq!(y.matrix(), array![[z, -i], [i, z]]);
     }
 
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[z, -i, -i*x, i*x], [i, z, i*x, i*x]];
         gate_test(Y::new(), &mut state, &result);

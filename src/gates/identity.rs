@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// The identity gate
 ///
@@ -38,7 +30,7 @@ impl I
     }
 }
 
-impl gates::Gate for I
+impl crate::gates::Gate for I
 {
     fn cost(&self) -> f64
     {
@@ -55,39 +47,39 @@ impl gates::Gate for I
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        cmatrix::CMatrix::eye(2)
+        crate::cmatrix::CMatrix::eye(2)
     }
 
-    fn apply_slice(&self, _state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, _state: crate::cmatrix::CVecSliceMut)
     {
         // Identity, leave state unchanged, so do nothing
     }
 }
 
-impl export::OpenQasm for I
+impl crate::export::OpenQasm for I
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("id {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for I
+impl crate::export::CQasm for I
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("i {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for I
+impl crate::export::Latex for I
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.set_field(bits[0], String::from(r"\qw"))
@@ -97,9 +89,8 @@ impl export::Latex for I
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, I};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate, I};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -125,8 +116,8 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         let i = I::new();
         assert_complex_matrix_eq!(i.matrix(), array![[o, z], [z, o]]);
     }
@@ -134,9 +125,9 @@ mod tests
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
 
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[o, z, x, x], [z, o, x, -x]];

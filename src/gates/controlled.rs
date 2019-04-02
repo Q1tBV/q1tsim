@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-pub use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// Controlled gates.
 ///
@@ -28,14 +20,14 @@ use gates::Gate;
 /// the control bit is zero, it leaves the target unchanged; when the control
 /// bit is one, the gate is applied.
 pub struct C<G>
-where G: gates::Gate
+where G: crate::gates::Gate
 {
     gate: G,
     desc: String
 }
 
 impl<G> C<G>
-where G: gates::Gate
+where G: crate::gates::Gate
 {
     /// Create a new controlled gate for `gate`.
     pub fn new(gate: G) -> Self
@@ -45,8 +37,8 @@ where G: gates::Gate
     }
 }
 
-impl<G> gates::Gate for C<G>
-where G: gates::Gate
+impl<G> crate::gates::Gate for C<G>
+where G: crate::gates::Gate
 {
     fn cost(&self) -> f64
     {
@@ -64,35 +56,35 @@ where G: gates::Gate
         1 + self.gate.nr_affected_bits()
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
         let gm = self.gate.matrix();
         let gsize = gm.rows();
 
-        let mut res = cmatrix::CMatrix::eye(2*gsize);
+        let mut res = crate::cmatrix::CMatrix::eye(2*gsize);
         res.slice_mut(s![gsize.., gsize..]).assign(&gm);
 
         res
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         let n = state.len() / 2;
         self.gate.apply_slice(state.slice_mut(s![n..]));
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         let n = state.len() / 2;
         self.gate.apply_mat_slice(state.slice_mut(s![n.., ..]));
     }
 }
 
-impl<G> export::Latex for C<G>
-where G: gates::Gate + export::Latex
+impl<G> crate::export::Latex for C<G>
+where G: crate::gates::Gate + crate::export::Latex
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
 
@@ -136,7 +128,7 @@ macro_rules! declare_controlled_type
         pub struct $name
         {
             $( #[allow(dead_code)] $arg: f64, )*
-            cgate: gates::C<$gate_type>
+            cgate: $crate::gates::C<$gate_type>
         }
     }
 }
@@ -152,7 +144,7 @@ macro_rules! declare_controlled_impl
                 $name
                 {
                     $( $arg: $arg, )*
-                    cgate: gates::C::new(<$gate_type>::new($($arg, )*))
+                    cgate: $crate::gates::C::new(<$gate_type>::new($($arg, )*))
                 }
             }
         }
@@ -165,7 +157,7 @@ macro_rules! declare_controlled_impl
                 $name
                 {
                     $( $arg: $arg, )*
-                    cgate: gates::C::new(<$gate_type>::new($($arg, )*))
+                    cgate: $crate::gates::C::new(<$gate_type>::new($($arg, )*))
                 }
             }
             pub fn cost() -> f64
@@ -191,10 +183,10 @@ macro_rules! declare_controlled_cost
 macro_rules! declare_controlled_qasm
 {
     ($trait_name:ident, $gate_name:ident, $method_name:ident $(, arg=$arg:ident)*) => {
-        impl export::$trait_name for $gate_name
+        impl $crate::export::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize])
-                -> error::Result<String>
+                -> $crate::error::Result<String>
             {
                 let mut res = stringify!($gate_name).to_lowercase();
                 let args: Vec<String> = vec![
@@ -232,10 +224,10 @@ macro_rules! declare_controlled_qasm
         }
     };
     ($trait_name:ident, $gate_name:ident, $method_name: ident, qasm=$qasm:expr $(, arg=$arg:ident)*) => {
-        impl export::$trait_name for $gate_name
+        impl $crate::export::$trait_name for $gate_name
         {
             fn $method_name(&self, bit_names: &[String], bits: &[usize])
-                -> error::Result<String>
+                -> $crate::error::Result<String>
             {
                 let mut res = String::from($qasm);
                 for (i, &bit) in bits.iter().enumerate()
@@ -256,7 +248,7 @@ macro_rules! declare_controlled_qasm
                     {
                         let iend = istart + len + 1;
                         let replacement;
-                        match gates::Composite::parse_sum_expression(&res[istart+1..iend-1])
+                        match crate::gates::Composite::parse_sum_expression(&res[istart+1..iend-1])
                         {
                             Ok((val, "")) => { replacement = Some(val.to_string()); },
                             _             => { replacement = None; }
@@ -280,10 +272,10 @@ macro_rules! declare_controlled_qasm
 macro_rules! declare_controlled_latex
 {
     ($gate_name:ident) => {
-        impl export::Latex for $gate_name
+        impl $crate::export::Latex for $gate_name
         {
-            fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-                -> error::Result<()>
+            fn latex(&self, bits: &[usize], state: &mut $crate::export::LatexExportState)
+                -> $crate::error::Result<()>
             {
                 self.cgate.latex(bits, state)
             }
@@ -295,7 +287,7 @@ macro_rules! declare_controlled_latex
 macro_rules! declare_controlled_impl_gate
 {
     ($name:ident, $gate_type:ty $(, cost=$cost:expr)*) => {
-        impl gates::Gate for $name
+        impl $crate::gates::Gate for $name
         {
             declare_controlled_cost!($($cost)*);
             fn description(&self) -> &str { self.cgate.description() }
@@ -332,13 +324,13 @@ macro_rules! declare_controlled
 
 declare_controlled!(
     /// Controlled Hadamard gate.
-    CH, gates::H,
-    cost=2.0*CX::cost() + 5.0*gates::U1::cost() + 3.0*gates::U2::cost() + gates::U3::cost());
+    CH, crate::gates::H,
+    cost=2.0*CX::cost() + 5.0*crate::gates::U1::cost() + 3.0*crate::gates::U2::cost() + crate::gates::U3::cost());
 
 declare_controlled!(
     /// Controlled `R`<sub>`X`</sub> gate.
-    CRX, gates::RX,
-    cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
+    CRX, crate::gates::RX,
+    cost=2.0*CX::cost() + crate::gates::U1::cost() + 2.0*crate::gates::U3::cost(),
     arg=theta,
     open_qasm="s {1}; cx {0}, {1}; ry(-{theta}/2) {1}; cx {0}, {1}; ry({theta}/2) {1}; sdg {1}",
     c_qasm=r#"s {1}
@@ -349,54 +341,54 @@ ry {1}, {0.5 * {theta}}
 sdag {1}"#);
 declare_controlled!(
     /// Controlled `R`<sub>`Y`</sub> gate.
-    CRY, gates::RY,
-    cost=2.0*CX::cost() + 2.0*gates::U3::cost(),
+    CRY, crate::gates::RY,
+    cost=2.0*CX::cost() + 2.0*crate::gates::U3::cost(),
     arg=theta,
     open_qasm="cx {0}, {1}; u3(-{theta}/2, 0, 0) {1}; cx {0}, {1}; u3({theta}/2, 0, 0) {1}",
     c_qasm="cnot {0}, {1}\nry {1}, -{0.5 * {theta}}\ncnot {0}, {1}\nry {1}, {0.5 * {theta}}");
 declare_controlled!(
     /// Controlled `R`<sub>`Z`</sub> gate.
-    CRZ, gates::RZ,
-    cost=2.0*CX::cost() + 2.0*gates::U1::cost(),
+    CRZ, crate::gates::RZ,
+    cost=2.0*CX::cost() + 2.0*crate::gates::U1::cost(),
     arg=lambda);
 
 declare_controlled!(
     /// Controlled `S` gate.
-    CS, gates::S, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    CS, crate::gates::S, cost=2.0*CX::cost() + 3.0*crate::gates::U1::cost(),
     open_qasm="cu1(pi/2) {0}, {1}",
     c_qasm="crk {0}, {1}, 1");
 declare_controlled!(
     /// Controlled `S`<sup>`†`</sup> gate.
-    CSdg, gates::Sdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    CSdg, crate::gates::Sdg, cost=2.0*CX::cost() + 3.0*crate::gates::U1::cost(),
     open_qasm="cu1(-pi/2) {0}, {1}",
     c_qasm="cr {0}, {1}, -1.570796326794897");
 
 declare_controlled!(
     /// Controlled `T` gate.
-    CT, gates::T, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    CT, crate::gates::T, cost=2.0*CX::cost() + 3.0*crate::gates::U1::cost(),
     open_qasm="cu1(pi/4) {0}, {1}",
     c_qasm="crk {0}, {1}, 2");
 declare_controlled!(
     /// Controlled `T`<sup>`†`</sup> gate.
-    CTdg, gates::Tdg, cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    CTdg, crate::gates::Tdg, cost=2.0*CX::cost() + 3.0*crate::gates::U1::cost(),
     open_qasm="cu1(-pi/4) {0}, {1}",
     c_qasm="cr {0}, {1}, -0.7853981633974483");
 
 declare_controlled!(
     /// Controlled `U`<sub>`1`</sub> gate.
-    CU1, gates::U1,
-    cost=2.0*CX::cost() + 3.0*gates::U1::cost(),
+    CU1, crate::gates::U1,
+    cost=2.0*CX::cost() + 3.0*crate::gates::U1::cost(),
     arg=lambda,
     c_qasm="cr {0}, {1}, {lambda}");
 declare_controlled!(
     /// Controlled `U`<sub>`2`</sub> gate.
-    CU2, gates::U2,
-    cost=2.0*CX::cost() + 2.0*gates::U1::cost() + gates::U2::cost(),
+    CU2, crate::gates::U2,
+    cost=2.0*CX::cost() + 2.0*crate::gates::U1::cost() + crate::gates::U2::cost(),
     arg=phi, arg=lambda);
 declare_controlled!(
     /// Controlled `U`<sub>`3`</sub> gate.
-    CU3, gates::U3,
-    cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost(),
+    CU3, crate::gates::U3,
+    cost=2.0*CX::cost() + crate::gates::U1::cost() + 2.0*crate::gates::U3::cost(),
     arg=theta, arg=phi, arg=lambda,
     c_qasm=r#"rz {1}, {0.5 * ({lambda}-{phi})}
 cnot {0}, {1}
@@ -409,27 +401,27 @@ rz {0}, {0.5 * ({phi} + {lambda})}"#);
 
 declare_controlled!(
     /// Controlled `V` gate.
-    CV, gates::V,
-    cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost());
+    CV, crate::gates::V,
+    cost=2.0*CX::cost() + crate::gates::U1::cost() + 2.0*crate::gates::U3::cost());
 declare_controlled!(
     /// Controlled `V`<sup>`†`</sup> gate.
-    CVdg, gates::Vdg,
-    cost=2.0*CX::cost() + gates::U1::cost() + 2.0*gates::U3::cost());
+    CVdg, crate::gates::Vdg,
+    cost=2.0*CX::cost() + crate::gates::U1::cost() + 2.0*crate::gates::U3::cost());
 
 declare_controlled!(
     /// Controlled `X` gate.
-    CX, gates::X, cost=1001.0,
+    CX, crate::gates::X, cost=1001.0,
     c_qasm="cnot {0}, {1}");
 declare_controlled!(
     /// Controlled `Y` gate.
-    CY, gates::Y, cost=CX::cost() + 2.0*gates::U1::cost());
+    CY, crate::gates::Y, cost=CX::cost() + 2.0*crate::gates::U1::cost());
 declare_controlled!(
     /// Controlled `Z` gate.
-    CZ, gates::Z, cost=CX::cost() + 2.0*gates::U2::cost());
+    CZ, crate::gates::Z, cost=CX::cost() + 2.0*crate::gates::U2::cost());
 
 declare_controlled!(
     /// Doubly controlled `R`<sub>`X`</sub> gate.
-    CCRX, gates::CRX,
+    CCRX, crate::gates::CRX,
     cost=2.0*CX::cost() + 3.0*CRX::cost(),
     arg=theta,
     open_qasm="s {2}; cx {1}, {2}; ry(-{theta}/4) {2}; cx {1}, {2}; ry({theta}/4) {2}; cx {0}, {1}; cx {1}, {2}; ry({theta}/4) {2}; cx {1}, {2}; ry(-{theta}/4) {2}; cx {0}, {1}; cx {0}, {2}; ry(-{theta}/4) {2}; cx {0}, {2}; ry({theta}/4) {2}; sdg {2}",
@@ -451,8 +443,8 @@ ry {2}, {0.25 * {theta}}
 sdag {2}"#);
 declare_controlled!(
     /// Doubly controlled `R`<sub>`Y`</sub> gate.
-    CCRY, gates::CRY,
-    cost=6.0 * gates::U3::cost() + 8.0*CX::cost(),
+    CCRY, crate::gates::CRY,
+    cost=6.0 * crate::gates::U3::cost() + 8.0*CX::cost(),
     arg=theta,
     open_qasm="cx {1}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {1}, {2}; u3({theta}/4, 0, 0) {2}; cx {0}, {1}; cx {1}, {2}; u3({theta}/4, 0, 0) {2}; cx {1}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {0}, {1}; cx {0}, {2}; u3(-{theta}/4, 0, 0) {2}; cx {0}, {2}; u3({theta}/4, 0, 0) {2}",
     c_qasm=r#"cnot {1}, {2}
@@ -471,7 +463,7 @@ cnot {0}, {2}
 ry {2}, {0.25 * {theta}}"#);
 declare_controlled!(
     /// Doubly controlled `R`<sub>`Z`</sub> gate.
-    CCRZ, gates::CRZ,
+    CCRZ, crate::gates::CRZ,
     cost=2.0*CX::cost() + 3.0*CRZ::cost(),
     arg=lambda,
     open_qasm="crz({lambda}/2) {1}, {2}; cx {0}, {1}; crz(-{lambda}/2) {1}, {2}; cx {0}, {1}; crz({lambda}/2) {0}, {2}",
@@ -483,24 +475,24 @@ cr {0}, {2}, {0.5 * {lambda}}"#);
 
 declare_controlled!(
     /// Doubly controlled `X` gate.
-    CCX, gates::CX,
-    cost=6.0*CX::cost() + 7.0*gates::U1::cost() + 2.0*gates::U2::cost(),
+    CCX, crate::gates::CX,
+    cost=6.0*CX::cost() + 7.0*crate::gates::U1::cost() + 2.0*crate::gates::U2::cost(),
     c_qasm="toffoli {0}, {1}, {2}");
 declare_controlled!(
     /// Doubly controlled `Z` gate.
-    CCZ, gates::CZ,
-    cost=CCX::cost() + 2.0*gates::H::cost(),
+    CCZ, crate::gates::CZ,
+    cost=CCX::cost() + 2.0*crate::gates::H::cost(),
     open_qasm="h {2}; ccx {0}, {1}, {2}; h {2}",
     c_qasm="h {2}\ntoffoli {0}, {1}, {2}\nh {2}");
 
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, H, X};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::gates::{gate_test, Gate, H, X};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use super::{C, CCRX, CCRY, CCRZ, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CTdg,
         CU1, CU3, CV, CX, CY, CZ};
-    use cmatrix;
+    use crate::cmatrix;
 
     #[test]
     fn test_description()

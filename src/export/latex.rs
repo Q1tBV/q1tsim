@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use error;
-use gates;
-use support;
-
 /// Structure to build up contents of LaTeX export
 ///
 /// Struct `LatexExportState` is used to build up the matrix containing the
@@ -104,11 +100,11 @@ impl LatexExportState
     }
 
     fn get_bit_indices(&self, qbits: &[usize], cbits: Option<&[usize]>)
-        -> error::Result<Vec<usize>>
+        -> crate::error::Result<Vec<usize>>
     {
         if let Some(&bit) = qbits.iter().find(|&&b| b >= self.nr_qbits)
         {
-            return Err(error::Error::InvalidQBit(bit));
+            return Err(crate::error::Error::InvalidQBit(bit));
         }
 
         let mut bits = qbits.to_vec();
@@ -116,7 +112,7 @@ impl LatexExportState
         {
             if let Some(&bit) = cbs.iter().find(|&&b| b >= self.nr_cbits)
             {
-                return Err(error::Error::InvalidCBit(bit));
+                return Err(crate::error::Error::InvalidCBit(bit));
             }
             bits.extend(cbs.iter().map(|&b| self.nr_qbits + b));
         }
@@ -129,7 +125,7 @@ impl LatexExportState
     /// Ensure that the fields for the bits in `qbits` and (optionally) `cbits`
     /// are currently unoccupied. If not, add a new column to the export.
     pub fn reserve(&mut self, qbits: &[usize], cbits: Option<&[usize]>)
-        -> error::Result<()>
+        -> crate::error::Result<()>
     {
         let bits = self.get_bit_indices(qbits, cbits)?;
         if bits.iter().any(|&b| self.in_use[b])
@@ -158,7 +154,7 @@ impl LatexExportState
     /// as well as all field in the range between the minimum and maximum bit,
     /// are currently unoccupied. If not, add a new column to the export.
     pub fn start_range_op(&mut self, qbits: &[usize], cbits: Option<&[usize]>)
-        -> error::Result<()>
+        -> crate::error::Result<()>
     {
         let bits = self.get_bit_indices(qbits, cbits)?;
         if let Some(&first) = bits.iter().min()
@@ -182,7 +178,7 @@ impl LatexExportState
                 }
                 else
                 {
-                    return Err(error::Error::from(error::ExportError::RangeAlreadyOpen));
+                    return Err(crate::error::Error::from(crate::error::ExportError::RangeAlreadyOpen));
                 }
             }
 
@@ -210,7 +206,7 @@ impl LatexExportState
     ///
     /// Set the contents of the field corresponding to bit `bit` to the LaTeX
     /// code in `contents`.
-    pub fn set_field(&mut self, bit: usize, contents: String) -> error::Result<()>
+    pub fn set_field(&mut self, bit: usize, contents: String) -> crate::error::Result<()>
     {
         if self.reserved_ranges.is_empty()
         {
@@ -229,7 +225,7 @@ impl LatexExportState
     /// `basis` to the export. If `basis` is `None`, no basis string is drawn in
     /// the measurement.
     pub fn set_measurement(&mut self, qbit: usize, cbit: usize, basis: Option<&str>)
-        -> error::Result<()>
+        -> crate::error::Result<()>
     {
         let cbit_idx = self.nr_qbits + cbit;
         self.start_range_op(&[qbit], Some(&[cbit]))?;
@@ -251,8 +247,7 @@ impl LatexExportState
     /// Add a reset
     ///
     /// Add the reset of quantum bit `qbit` to the export.
-    pub fn set_reset(&mut self, qbit: usize)
-        -> error::Result<()>
+    pub fn set_reset(&mut self, qbit: usize) -> crate::error::Result<()>
     {
         self.set_field(qbit, String::from(r"\push{~\ket{0}~} \ar @{|-{}} [0,-1]"))
     }
@@ -266,15 +261,15 @@ impl LatexExportState
     /// The first bit in `control` corresponds to the least significant bit of
     /// `target`, the last bit in `control` to the most significant bit.
     pub fn set_condition(&mut self, control: &[usize], target: u64, qbits: &[usize])
-        -> error::Result<()>
+        -> crate::error::Result<()>
     {
         if let Some(&bit) = qbits.iter().find(|&&b| b >= self.nr_qbits)
         {
-            return Err(error::Error::InvalidQBit(bit));
+            return Err(crate::error::Error::InvalidQBit(bit));
         }
         if let Some(&bit) = control.iter().find(|&&b| b >= self.nr_cbits)
         {
-            return Err(error::Error::InvalidCBit(bit));
+            return Err(crate::error::Error::InvalidCBit(bit));
         }
 
         if qbits.is_empty()
@@ -303,9 +298,9 @@ impl LatexExportState
     /// simple box containing the description. If the gate opertes on mutiple
     /// disjoint ranges of qbits, it is drawn using mutiple boxes connected by
     /// wires.
-    pub fn add_block_gate(&mut self, qbits: &[usize], desc: &str) -> error::Result<()>
+    pub fn add_block_gate(&mut self, qbits: &[usize], desc: &str) -> crate::error::Result<()>
     {
-        let ranges = support::get_ranges(qbits);
+        let ranges = crate::support::get_ranges(qbits);
         if !ranges.is_empty()
         {
             self.start_range_op(qbits, None)?;
@@ -367,7 +362,7 @@ impl LatexExportState
     /// Close a loop
     ///
     /// Close the loop opened last by a call to `start_loop()`.
-    pub fn end_loop(&mut self) -> error::Result<()>
+    pub fn end_loop(&mut self) -> crate::error::Result<()>
     {
         if let Some((start, count)) = self.open_loops.pop()
         {
@@ -378,7 +373,7 @@ impl LatexExportState
         }
         else
         {
-            Err(error::Error::from(error::ExportError::CantCloseLoop))
+            Err(crate::error::Error::from(crate::error::ExportError::CantCloseLoop))
         }
     }
 
@@ -387,7 +382,7 @@ impl LatexExportState
     /// This function adds the string in `label` in the middle of the range of
     /// qbits starting at `bit` and going `count` bits down. This is usually
     /// used to add the dots used to indicate a repeated subcircuit in loops.
-    pub fn add_cds(&mut self, bit: usize, count: usize, label: &str) -> error::Result<()>
+    pub fn add_cds(&mut self, bit: usize, count: usize, label: &str) -> crate::error::Result<()>
     {
         self.reserve_all();
         self.set_field(bit, format!(r"\cds{{{}}}{{{}}}", count, label))?;
@@ -400,14 +395,14 @@ impl LatexExportState
     /// Add a barrier for the quantum bits in `qbits`. Note that the placement
     /// of barriers may sometimes be off because the spacing between elements
     /// is not constant. It may therefore need some manual adjustment.
-    pub fn set_barrier(&mut self, qbits: &[usize]) -> error::Result<()>
+    pub fn set_barrier(&mut self, qbits: &[usize]) -> crate::error::Result<()>
     {
         if let Some(&bit) = qbits.iter().find(|&&b| b >= self.nr_qbits)
         {
-            return Err(error::Error::InvalidQBit(bit));
+            return Err(crate::error::Error::InvalidQBit(bit));
         }
 
-        let ranges = support::get_ranges(qbits);
+        let ranges = crate::support::get_ranges(qbits);
 
         self.add_column();
         for (first, last) in ranges
@@ -545,14 +540,14 @@ impl LatexExportState
 }
 
 /// Trait for gates that can be drawn in LaTeX
-pub trait Latex: gates::Gate
+pub trait Latex: crate::gates::Gate
 {
     /// Add this gate to the export state.
     ///
     /// Add the execution of this gate on the bits in `bits`, to the export
     /// state `state`. The default implementation returns a NotImplemented error.
     fn latex(&self, bits: &[usize], state: &mut LatexExportState)
-        -> error::Result<()>
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.add_block_gate(bits, self.description())
@@ -562,20 +557,16 @@ pub trait Latex: gates::Gate
 #[cfg(test)]
 mod tests
 {
-    use cmatrix;
-    use error;
-    use gates;
-
     use super::{LatexExportState, Latex};
 
     struct NoLatexGate;
 
-    impl gates::Gate for NoLatexGate
+    impl crate::gates::Gate for NoLatexGate
     {
         fn cost(&self) -> f64 { 0.0 }
         fn description(&self) -> &str { "NLG" }
         fn nr_affected_bits(&self) -> usize { 3 }
-        fn matrix(&self) -> cmatrix::CMatrix { unimplemented!() }
+        fn matrix(&self) -> crate::cmatrix::CMatrix { unimplemented!() }
     }
     impl Latex for NoLatexGate {}
 
@@ -866,7 +857,7 @@ r#"\Qcircuit @C=1em @R=.7em {
     {
         let mut state = LatexExportState::new(2, 0);
         assert_eq!(state.end_loop(),
-            Err(error::Error::ExportError(error::ExportError::CantCloseLoop))
+            Err(crate::error::Error::ExportError(crate::error::ExportError::CantCloseLoop))
         );
     }
 

@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// The `T` gate
 ///
@@ -39,11 +31,11 @@ impl T
     }
 }
 
-impl gates::Gate for T
+impl crate::gates::Gate for T
 {
     fn cost(&self) -> f64
     {
-        gates::U1::cost()
+        crate::gates::U1::cost()
     }
 
     fn description(&self) -> &str
@@ -56,16 +48,16 @@ impl gates::Gate for T
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
         array![[o, z], [z, x+x*i]]
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -74,7 +66,7 @@ impl gates::Gate for T
         slice *= num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -84,28 +76,28 @@ impl gates::Gate for T
     }
 }
 
-impl export::OpenQasm for T
+impl crate::export::OpenQasm for T
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("t {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for T
+impl crate::export::CQasm for T
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("t {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for T
+impl crate::export::Latex for T
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.add_block_gate(bits, "T")
@@ -129,11 +121,11 @@ impl Tdg
     }
 }
 
-impl gates::Gate for Tdg
+impl crate::gates::Gate for Tdg
 {
     fn cost(&self) -> f64
     {
-        gates::U1::cost()
+        crate::gates::U1::cost()
     }
 
     fn description(&self) -> &str
@@ -146,16 +138,16 @@ impl gates::Gate for Tdg
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
         array![[o, z], [z, x-x*i]]
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -164,7 +156,7 @@ impl gates::Gate for Tdg
         slice *= num_complex::Complex::from_polar(&1.0, &-::std::f64::consts::FRAC_PI_4);
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         assert!(state.rows() % 2 == 0, "Number of rows is not even.");
 
@@ -174,28 +166,28 @@ impl gates::Gate for Tdg
     }
 }
 
-impl export::OpenQasm for Tdg
+impl crate::export::OpenQasm for Tdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("tdg {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for Tdg
+impl crate::export::CQasm for Tdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("tdag {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for Tdg
+impl crate::export::Latex for Tdg
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.add_block_gate(bits, r"T^\dagger")
@@ -205,12 +197,9 @@ impl export::Latex for Tdg
 #[cfg(test)]
 mod tests
 {
-    extern crate num_complex;
-
     use super::{T, Tdg};
-    use gates::{gate_test, Gate};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -233,8 +222,8 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         let t = num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
 
         let gate = T::new();
@@ -247,10 +236,10 @@ mod tests
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         let h = 0.5 * o;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
         let t = num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
         let td = t.conj();
 
@@ -286,10 +275,10 @@ mod tests
     #[test]
     fn test_apply_mat()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         let h = 0.5 * o;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
         let t = num_complex::Complex::from_polar(&1.0, &::std::f64::consts::FRAC_PI_4);
         let td = t.conj();
 

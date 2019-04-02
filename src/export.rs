@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use gates::Gate;
+use crate::gates::Gate;
 
 mod cqasm;
 mod latex;

@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// Phase gate.
 ///
@@ -54,7 +46,7 @@ impl U1
     }
 }
 
-impl gates::Gate for U1
+impl crate::gates::Gate for U1
 {
     fn cost(&self) -> f64
     {
@@ -71,15 +63,15 @@ impl gates::Gate for U1
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
         let p = num_complex::Complex::from_polar(&1.0, &self.lambda);
         array![[o, z], [z, p]]
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
@@ -89,29 +81,29 @@ impl gates::Gate for U1
     }
 }
 
-impl export::OpenQasm for U1
+impl crate::export::OpenQasm for U1
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("u1({}) {}", self.lambda, bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for U1
+impl crate::export::CQasm for U1
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         // U1 is R_Z up to a phase
         Ok(format!("rz {}, {}", bit_names[bits[0]], self.lambda))
     }
 }
 
-impl export::Latex for U1
+impl crate::export::Latex for U1
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         let contents = format!("U_1({:.4})", self.lambda);
@@ -122,9 +114,8 @@ impl export::Latex for U1
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, U1};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate, U1};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -144,19 +135,19 @@ mod tests
     fn test_matrix()
     {
         let gate = U1::new(::std::f64::consts::FRAC_PI_2);
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let i = crate::cmatrix::COMPLEX_I;
         assert_complex_matrix_eq!(gate.matrix(), array![[o, z], [z, i]]);
     }
 
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
         let mut state = array![[o, z, x, x], [z, o, x, -x]];
         let result = array![[o, z, x, x], [z, x*(o+i), 0.5*(o+i), -0.5*(o+i)]];
         let gate = U1::new(::std::f64::consts::FRAC_PI_4);

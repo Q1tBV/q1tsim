@@ -12,11 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use error;
-use gates;
-
 /// Trait for gates that can be represented in c-Qasm.
-pub trait CQasm: gates::Gate
+pub trait CQasm: crate::gates::Gate
 {
     /// cQasm representation
     ///
@@ -24,10 +21,10 @@ pub trait CQasm: gates::Gate
     /// `bits`. The array `bit_names` contains the names of all qubits. The
     /// default implementation returns a NotImplemented error.
     fn c_qasm(&self, _bit_names: &[String], _bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
-        Err(error::Error::from(
-            error::ExportError::NotImplemented("c-Qasm", String::from(self.description()))
+        Err(crate::error::Error::from(
+            crate::error::ExportError::NotImplemented("c-Qasm", String::from(self.description()))
         ))
     }
 
@@ -40,15 +37,15 @@ pub trait CQasm: gates::Gate
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         let unc_qasm = self.c_qasm(bit_names, bits)?;
         let parts: Vec<&str> = unc_qasm.splitn(2, " ").collect();
         if parts.len() != 2
         {
             // This shouldn't happen, really.
-            Err(error::Error::from(
-                error::ExportError::InvalidConditionalOp(unc_qasm.clone())
+            Err(crate::error::Error::from(
+                crate::error::ExportError::InvalidConditionalOp(unc_qasm.clone())
             ))
         }
         else
@@ -61,8 +58,6 @@ pub trait CQasm: gates::Gate
 #[cfg(test)]
 mod tests
 {
-    use gates::H;
-
     use super::CQasm;
 
     #[test]
@@ -70,7 +65,7 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
 
-        let res = H::new().conditional_c_qasm("b[0]", &bit_names, &[1]);
+        let res = crate::gates::H::new().conditional_c_qasm("b[0]", &bit_names, &[1]);
         assert_eq!(res, Ok(String::from("c-h b[0], qb1")));
     }
 }

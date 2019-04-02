@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// Rotation around `x` axis.
 ///
@@ -48,11 +40,11 @@ impl RX
     }
 }
 
-impl gates::Gate for RX
+impl crate::gates::Gate for RX
 {
     fn cost(&self) -> f64
     {
-        gates::U3::cost()
+        crate::gates::U3::cost()
     }
 
     fn description(&self) -> &str
@@ -65,14 +57,14 @@ impl gates::Gate for RX
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
         let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
         array![[c, -si], [-si, c]]
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
@@ -92,7 +84,7 @@ impl gates::Gate for RX
         }
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         let cos_t   = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
         let sin_t_i = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
@@ -113,28 +105,28 @@ impl gates::Gate for RX
     }
 }
 
-impl export::OpenQasm for RX
+impl crate::export::OpenQasm for RX
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("rx({}) {}", self.theta, bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for RX
+impl crate::export::CQasm for RX
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("rx {}, {}", bit_names[bits[0]], self.theta))
     }
 }
 
-impl export::Latex for RX
+impl crate::export::Latex for RX
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         let contents = format!("R_x({:.4})", self.theta);
@@ -145,9 +137,8 @@ impl export::Latex for RX
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, RX};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate, RX};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -166,9 +157,9 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
 
         let gate = RX::new(::std::f64::consts::FRAC_PI_2);
         assert_complex_matrix_eq!(gate.matrix(), array![[x, -x*i], [-x*i, x]]);
@@ -180,10 +171,10 @@ mod tests
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
         let mut state = array![
             [o, z, x,  x],
             [z, o, x, -x]

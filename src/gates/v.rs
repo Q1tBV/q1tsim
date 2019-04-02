@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// The `V` gate
 ///
@@ -44,11 +36,11 @@ impl V
     }
 }
 
-impl gates::Gate for V
+impl crate::gates::Gate for V
 {
     fn cost(&self) -> f64
     {
-        gates::U3::cost()
+        crate::gates::U3::cost()
     }
 
     fn description(&self) -> &str
@@ -61,36 +53,36 @@ impl gates::Gate for V
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let h = 0.5 * cmatrix::COMPLEX_ONE;
-        let hi = 0.5 * cmatrix::COMPLEX_I;
+        let h = 0.5 * crate::cmatrix::COMPLEX_ONE;
+        let hi = 0.5 * crate::cmatrix::COMPLEX_I;
         array![[h+hi, h-hi], [h-hi, h+hi]]
     }
 }
 
-impl export::OpenQasm for V
+impl crate::export::OpenQasm for V
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("u3(pi/2, -pi/2, pi/2) {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for V
+impl crate::export::CQasm for V
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("x90 {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for V
+impl crate::export::Latex for V
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.add_block_gate(bits, "V")
@@ -113,11 +105,11 @@ impl Vdg
     }
 }
 
-impl gates::Gate for Vdg
+impl crate::gates::Gate for Vdg
 {
     fn cost(&self) -> f64
     {
-        gates::U3::cost()
+        crate::gates::U3::cost()
     }
 
     fn description(&self) -> &str
@@ -130,36 +122,36 @@ impl gates::Gate for Vdg
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let h = 0.5 * cmatrix::COMPLEX_ONE;
-        let hi = 0.5 * cmatrix::COMPLEX_I;
+        let h = 0.5 * crate::cmatrix::COMPLEX_ONE;
+        let hi = 0.5 * crate::cmatrix::COMPLEX_I;
         array![[h-hi, h+hi], [h+hi, h-hi]]
     }
 }
 
-impl export::OpenQasm for Vdg
+impl crate::export::OpenQasm for Vdg
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("u3(pi/2, pi/2, -pi/2) {}", bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for Vdg
+impl crate::export::CQasm for Vdg
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("mx90 {}", bit_names[bits[0]]))
     }
 }
 
-impl export::Latex for Vdg
+impl crate::export::Latex for Vdg
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         state.add_block_gate(bits, r"V^\dagger")
@@ -169,9 +161,8 @@ impl export::Latex for Vdg
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, Gate, V, Vdg};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, Gate, V, Vdg};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_description()
@@ -194,8 +185,8 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let h = 0.5*cmatrix::COMPLEX_ONE;
-        let hi = 0.5*cmatrix::COMPLEX_I;
+        let h = 0.5*crate::cmatrix::COMPLEX_ONE;
+        let hi = 0.5*crate::cmatrix::COMPLEX_I;
 
         let gate = V::new();
         assert_complex_matrix_eq!(gate.matrix(), array![[h+hi, h-hi], [h-hi, h+hi]]);
@@ -207,10 +198,10 @@ mod tests
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let i = cmatrix::COMPLEX_I;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let i = crate::cmatrix::COMPLEX_I;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
         let h = 0.5 * o;
         let hi = 0.5 * i;
 

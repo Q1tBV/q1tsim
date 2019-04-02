@@ -12,16 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate ndarray;
-extern crate regex;
-
-use cmatrix;
-use error;
-use gates;
-use export;
-
-use export::CircuitGate;
+use crate::export::CircuitGate;
 use super::*;
 
 /// Structure for a description of a subgate.
@@ -109,7 +100,7 @@ impl Composite
     /// Try to retrieve the name of the subgate from `desc`. On success,
     /// return the name, and the remainder of the subgate description to be
     /// parsed. On failure, return ParseError::NoGateName.
-    fn parse_gate_name(desc: &str) -> error::ParseResult<(&str, &str)>
+    fn parse_gate_name(desc: &str) -> crate::error::ParseResult<(&str, &str)>
     {
         let re = regex::Regex::new(r"(?i)^\s*([a-z][a-z0-9]*)").unwrap();
         if let Some(captures) = re.captures(desc)
@@ -120,7 +111,7 @@ impl Composite
         }
         else
         {
-            Err(error::ParseError::NoGateName(String::from(desc)))
+            Err(crate::error::ParseError::NoGateName(String::from(desc)))
         }
     }
 
@@ -131,7 +122,7 @@ impl Composite
     /// "pi", which obviously indicates the number π. On success, the parsed
     /// number is returned, together with the remainder of the string to be
     /// parsed. On failure, a ParseError::InvalidArgument error is returned.
-    fn parse_real_literal(expr: &str) -> error::ParseResult<(f64, &str)>
+    fn parse_real_literal(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let real = regex::Regex::new(
             r"^\s*((?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?)"
@@ -150,7 +141,7 @@ impl Composite
             {
                 // It's probably impossible to get here with the above regular
                 // expression. Too large numbers are mapped to Inf.
-                Err(error::ParseError::InvalidArgument(String::from(expr)))
+                Err(crate::error::ParseError::InvalidArgument(String::from(expr)))
             }
         }
         else if let Some(captures) = integer.captures(expr)
@@ -162,7 +153,7 @@ impl Composite
             }
             else
             {
-                Err(error::ParseError::InvalidArgument(String::from(expr)))
+                Err(crate::error::ParseError::InvalidArgument(String::from(expr)))
             }
         }
         else if let Some(m) = pi.find(expr)
@@ -171,7 +162,7 @@ impl Composite
         }
         else
         {
-            Err(error::ParseError::InvalidArgument(String::from(expr)))
+            Err(crate::error::ParseError::InvalidArgument(String::from(expr)))
         }
     }
 
@@ -181,7 +172,7 @@ impl Composite
     /// in parentheses, or a literal real number. On success, the parsed
     /// number is returned, together with the remainder of the string to be
     /// parsed. On failure, a ParseError is returned.
-    fn parse_parenthesized_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    fn parse_parenthesized_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let fun_open = regex::Regex::new(r"^\s*\(").unwrap();
         let fun_close = regex::Regex::new(r"^\s*\)").unwrap();
@@ -194,7 +185,7 @@ impl Composite
             }
             else
             {
-                Err(error::ParseError::UnclosedParentheses(String::from(expr)))
+                Err(crate::error::ParseError::UnclosedParentheses(String::from(expr)))
             }
         }
         else
@@ -211,7 +202,7 @@ impl Composite
     /// are `sin`, `cos`, `tan`, `exp`, `ln`, and `sqrt`. On success, the parsed
     /// number is returned, together with the remainder of the string to be
     /// parsed. On failure, a ParseError is returned.
-    fn parse_function_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    fn parse_function_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let fun_open = regex::Regex::new(r"^\s*(sin|cos|tan|exp|ln|sqrt)\s*\(").unwrap();
         let fun_close = regex::Regex::new(r"^\s*\)").unwrap();
@@ -237,7 +228,7 @@ impl Composite
             }
             else
             {
-                Err(error::ParseError::UnclosedParentheses(String::from(expr)))
+                Err(crate::error::ParseError::UnclosedParentheses(String::from(expr)))
             }
         }
         else
@@ -252,7 +243,7 @@ impl Composite
     /// to another number.  On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_power_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    fn parse_power_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*\^").unwrap();
         let (left, rest) = Self::parse_function_expression(expr)?;
@@ -273,7 +264,7 @@ impl Composite
     /// more times negated.  On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_negative_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    fn parse_negative_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*\-").unwrap();
         let mut rest = expr;
@@ -299,7 +290,7 @@ impl Composite
     /// or more expressions. On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    fn parse_product_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    fn parse_product_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*([*/])").unwrap();
         let (mut left, mut rest) = Self::parse_negative_expression(expr)?;
@@ -327,7 +318,7 @@ impl Composite
     /// or more expressions. On success, the parsed number is returned, together
     /// with the remainder of the string to be parsed. On failure, a ParseError
     /// is returned.
-    pub fn parse_sum_expression(expr: &str) -> error::ParseResult<(f64, &str)>
+    pub fn parse_sum_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
     {
         let op = regex::Regex::new(r"^\s*([-+])").unwrap();
         let (mut left, mut rest) = Self::parse_product_expression(expr)?;
@@ -357,7 +348,7 @@ impl Composite
     /// successfully, the arguments are returned,¸together with the rest of the
     /// description string that needs to be parsed for bit numbers. On failure,
     /// ParseError::InvalidArgument is returned.
-    fn parse_gate_args(desc: &str) -> error::ParseResult<(Vec<f64>, &str)>
+    fn parse_gate_args(desc: &str) -> crate::error::ParseResult<(Vec<f64>, &str)>
     {
         let open_args = regex::Regex::new(r"^\s*\(").unwrap();
         let sep_args = regex::Regex::new(r"^\s*,").unwrap();
@@ -379,7 +370,7 @@ impl Composite
             }
             else
             {
-                Err(error::ParseError::UnclosedParentheses(String::from(desc)))
+                Err(crate::error::ParseError::UnclosedParentheses(String::from(desc)))
             }
         }
         else
@@ -394,7 +385,7 @@ impl Composite
     /// string `desc`. Return the bits and the unparsed remainder of the
     /// description string on success, or a ParseError on failure.
     fn parse_gate_bits<'a>(desc: &'a str, name: &str)
-        -> error::ParseResult<(Vec<usize>, &'a str)>
+        -> crate::error::ParseResult<(Vec<usize>, &'a str)>
     {
         let re = regex::Regex::new(r"^\s*(\d+)").unwrap();
         let mut rest = desc;
@@ -411,13 +402,13 @@ impl Composite
             }
             else
             {
-                return Err(error::ParseError::InvalidBit(String::from(bit_txt)));
+                return Err(crate::error::ParseError::InvalidBit(String::from(bit_txt)));
             }
         }
 
         if bits.is_empty()
         {
-            Err(error::ParseError::NoBits(String::from(name)))
+            Err(crate::error::ParseError::NoBits(String::from(name)))
         }
         else
         {
@@ -429,7 +420,7 @@ impl Composite
     ///
     /// Parse the subgate description string `desc`. Returns the subgate
     /// description on success, or a ParseError on failure.
-    fn parse_gate_desc(desc: &str) -> error::ParseResult<SubGateDesc>
+    fn parse_gate_desc(desc: &str) -> crate::error::ParseResult<SubGateDesc>
     {
         let (name, rest) = Self::parse_gate_name(desc)?;
         let (args, rest) = Self::parse_gate_args(rest)?;
@@ -438,7 +429,7 @@ impl Composite
         let rest = rest.trim();
         if !rest.is_empty()
         {
-            Err(error::ParseError::TrailingText(String::from(rest)))
+            Err(crate::error::ParseError::TrailingText(String::from(rest)))
         }
         else
         {
@@ -452,15 +443,15 @@ impl Composite
     /// matches `nr_args`, and that the number of bits in `desc` is equal to
     //// `nr_bits`. Return a ParseError on failure.
     fn assert_nr_args_bits(nr_args: usize, nr_bits: usize, desc: &SubGateDesc)
-        -> error::ParseResult<()>
+        -> crate::error::ParseResult<()>
     {
         if nr_args != desc.args.len()
         {
-            Err(error::ParseError::InvalidNrArguments(desc.args.len(), nr_args, desc.name.clone()))
+            Err(crate::error::ParseError::InvalidNrArguments(desc.args.len(), nr_args, desc.name.clone()))
         }
         else if nr_bits != desc.bits.len()
         {
-            Err(error::ParseError::InvalidNrBits(desc.bits.len(), nr_bits, desc.name.clone()))
+            Err(crate::error::ParseError::InvalidNrBits(desc.bits.len(), nr_bits, desc.name.clone()))
         }
         else
         {
@@ -483,7 +474,7 @@ impl Composite
     /// H 1; CX 0 1; H 1
     /// RY(4.7124) 1; CX 1 0; RY(1.5708) 1; X1
     /// ```
-    pub fn from_string(name: &str, desc: &str) -> error::ParseResult<Self>
+    pub fn from_string(name: &str, desc: &str) -> crate::error::ParseResult<Self>
     {
         let mut gates = vec![];
         let mut max_bit = 0;
@@ -655,7 +646,7 @@ impl Composite
                     Self::assert_nr_args_bits(0, 1, &gate)?;
                     composite.add_gate(Z::new(), &gate.bits);
                 },
-                _ => { return Err(error::ParseError::UnknownGate(gate.name)); }
+                _ => { return Err(crate::error::ParseError::UnknownGate(gate.name)); }
             }
         }
 
@@ -673,7 +664,7 @@ impl Composite
     }
 }
 
-impl gates::Gate for Composite
+impl crate::gates::Gate for Composite
 {
     fn cost(&self) -> f64
     {
@@ -690,14 +681,14 @@ impl gates::Gate for Composite
         self.nr_bits
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let mut res = cmatrix::CMatrix::eye(1 << self.nr_bits);
+        let mut res = crate::cmatrix::CMatrix::eye(1 << self.nr_bits);
         self.apply_mat_slice(res.view_mut());
         res
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         for op in self.ops.iter()
         {
@@ -705,7 +696,7 @@ impl gates::Gate for Composite
         }
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         for op in self.ops.iter()
         {
@@ -714,10 +705,10 @@ impl gates::Gate for Composite
     }
 }
 
-impl export::OpenQasm for Composite
+impl crate::export::OpenQasm for Composite
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -735,7 +726,7 @@ impl export::OpenQasm for Composite
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -756,10 +747,10 @@ impl export::OpenQasm for Composite
     }
 }
 
-impl export::CQasm for Composite
+impl crate::export::CQasm for Composite
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -778,7 +769,7 @@ impl export::CQasm for Composite
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         let mut res = String::new();
         if self.ops.len() > 0
@@ -799,10 +790,10 @@ impl export::CQasm for Composite
     }
 }
 
-impl export::Latex for Composite
+impl crate::export::Latex for Composite
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
 
@@ -825,14 +816,10 @@ impl export::Latex for Composite
 #[cfg(test)]
 mod tests
 {
-    extern crate num_complex;
-
     use super::Composite;
-    use cmatrix;
-    use error;
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use gates::{Gate, CCX, CX, H, X};
-    use self::num_complex::Complex;
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::gates::{Gate, CCX, CX, H, X};
+    use num_complex::Complex;
 
     #[test]
     fn test_description()
@@ -859,8 +846,8 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
 
         let mut gate = Composite::new("CZ", 2);
         gate.add_gate(H::new(), &[1]);
@@ -914,9 +901,9 @@ mod tests
     #[test]
     fn test_from_string()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let i = crate::cmatrix::COMPLEX_I;
 
         // Test composition
         match Composite::from_string("Inc3", "CCX 2 1 0; CX 2 1; X 2")
@@ -955,10 +942,10 @@ mod tests
     #[test]
     fn test_from_string_gates()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
 
         match Composite::from_string("G", "CCRX(3.141592653589793) 0 1 2")
         {
@@ -1535,8 +1522,8 @@ mod tests
     #[test]
     fn test_from_string_arguments()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
 
         match Composite::from_string("G", "U1(0.23) 0")
         {
@@ -1767,48 +1754,48 @@ mod tests
     {
         // Invalid gate name
         let res = Composite::from_string("XXX", "XYZ 0");
-        assert!(matches!(res, Err(error::ParseError::UnknownGate(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::UnknownGate(_))));
 
         // Missing gate name
         let res = Composite::from_string("XXX", "X 1; 0");
-        assert!(matches!(res, Err(error::ParseError::NoGateName(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::NoGateName(_))));
 
         // Invalid nr of arguments
         let res = Composite::from_string("XXX", "RX(1.2, 3.4) 1");
-        assert!(matches!(res, Err(error::ParseError::InvalidNrArguments(2, 1, _))));
+        assert!(matches!(res, Err(crate::error::ParseError::InvalidNrArguments(2, 1, _))));
 
         // Invalid nr of bits to operate on
         let res = Composite::from_string("XXX", "H 0 1");
-        assert!(matches!(res, Err(error::ParseError::InvalidNrBits(2, 1, _))));
+        assert!(matches!(res, Err(crate::error::ParseError::InvalidNrBits(2, 1, _))));
 
         // Invalid arguments
         let res = Composite::from_string("XXX", "RX(abc) 1");
-        assert!(matches!(res, Err(error::ParseError::InvalidArgument(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::InvalidArgument(_))));
 
         let res = Composite::from_string("G", "U1(12897231928172918729136192817936) 0");
-        assert!(matches!(res, Err(error::ParseError::InvalidArgument(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::InvalidArgument(_))));
 
         // Missing bit number
         let res = Composite::from_string("XXX", "H 0; X");
-        assert!(matches!(res, Err(error::ParseError::NoBits(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::NoBits(_))));
 
         // Invalid bit number
         let res = Composite::from_string("XXX", "H 117356715625188271521875");
-        assert!(matches!(res, Err(error::ParseError::InvalidBit(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::InvalidBit(_))));
 
         // Trailing junk
         let res = Composite::from_string("XXX", "H 0 and something");
-        assert!(matches!(res, Err(error::ParseError::TrailingText(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::TrailingText(_))));
 
         // Unclosed arguments
         let res = Composite::from_string("XXX", "RX(1.2a) 1");
-        assert!(matches!(res, Err(error::ParseError::UnclosedParentheses(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::UnclosedParentheses(_))));
 
         let res = Composite::from_string("XXX", "RX(1.2*(1+2 1");
-        assert!(matches!(res, Err(error::ParseError::UnclosedParentheses(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::UnclosedParentheses(_))));
 
         let res = Composite::from_string("XXX", "RX(sin(1.2 1");
-        assert!(matches!(res, Err(error::ParseError::UnclosedParentheses(_))));
+        assert!(matches!(res, Err(crate::error::ParseError::UnclosedParentheses(_))));
     }
 
     #[test]

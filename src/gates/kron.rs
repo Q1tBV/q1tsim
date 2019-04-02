@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use error;
-use gates;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
@@ -32,7 +24,7 @@ pub struct Kron<G0, G1>
 }
 
 impl<G0, G1> Kron<G0, G1>
-where G0: gates::Gate, G1: gates::Gate
+where G0: crate::gates::Gate, G1: crate::gates::Gate
 {
     /// Create a new Kronecker product gate `g1` ⊗ `g2`.
     pub fn new(g0: G0, g1: G1) -> Self
@@ -42,8 +34,8 @@ where G0: gates::Gate, G1: gates::Gate
     }
 }
 
-impl<G0, G1> gates::Gate for Kron<G0, G1>
-where G0: gates::Gate, G1: gates::Gate
+impl<G0, G1> crate::gates::Gate for Kron<G0, G1>
+where G0: crate::gates::Gate, G1: crate::gates::Gate
 {
     fn cost(&self) -> f64
     {
@@ -60,12 +52,12 @@ where G0: gates::Gate, G1: gates::Gate
         self.g0.nr_affected_bits() + self.g1.nr_affected_bits()
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        cmatrix::kron_mat(&self.g0.matrix(), &self.g1.matrix())
+        crate::cmatrix::kron_mat(&self.g0.matrix(), &self.g1.matrix())
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         assert!(state.len() % 4 == 0, "Number of rows is not a multiple of four.");
 
@@ -77,11 +69,11 @@ where G0: gates::Gate, G1: gates::Gate
     }
 }
 
-impl<G0, G1> export::OpenQasm for Kron<G0, G1>
-where G0: export::OpenQasm, G1: export::OpenQasm
+impl<G0, G1> crate::export::OpenQasm for Kron<G0, G1>
+where G0: crate::export::OpenQasm, G1: crate::export::OpenQasm
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.open_qasm(bit_names, &bits[..n0])?;
@@ -90,7 +82,7 @@ where G0: export::OpenQasm, G1: export::OpenQasm
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.conditional_open_qasm(condition, bit_names, &bits[..n0])?;
@@ -99,11 +91,11 @@ where G0: export::OpenQasm, G1: export::OpenQasm
     }
 }
 
-impl<G0, G1> export::CQasm for Kron<G0, G1>
-where G0: export::CQasm, G1: export::CQasm
+impl<G0, G1> crate::export::CQasm for Kron<G0, G1>
+where G0: crate::export::CQasm, G1: crate::export::CQasm
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.c_qasm(bit_names, &bits[..n0])?;
@@ -112,7 +104,7 @@ where G0: export::CQasm, G1: export::CQasm
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         let n0 = self.g0.nr_affected_bits();
         let op0 = self.g0.conditional_c_qasm(condition, bit_names, &bits[..n0])?;
@@ -121,11 +113,11 @@ where G0: export::CQasm, G1: export::CQasm
     }
 }
 
-impl<G0, G1> export::Latex for Kron<G0, G1>
-where G0: export::Latex, G1: export::Latex
+impl<G0, G1> crate::export::Latex for Kron<G0, G1>
+where G0: crate::export::Latex, G1: crate::export::Latex
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
 
@@ -138,9 +130,8 @@ where G0: export::Latex, G1: export::Latex
 #[cfg(test)]
 mod tests
 {
-    use gates::{gate_test, CX, Gate, H, I, Kron, X};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
+    use crate::gates::{gate_test, CX, Gate, H, I, Kron, X};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
     fn test_cost()
@@ -166,9 +157,9 @@ mod tests
     #[test]
     fn test_matrix()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let s = cmatrix::COMPLEX_HSQRT2;
-        let h = 0.5 * cmatrix::COMPLEX_ONE;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let s = crate::cmatrix::COMPLEX_HSQRT2;
+        let h = 0.5 * crate::cmatrix::COMPLEX_ONE;
 
         let ih = Kron::new(I::new(), H::new());
         assert_complex_matrix_eq!(ih.matrix(), array![
@@ -202,9 +193,9 @@ mod tests
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
         let h = o * 0.5;
 
         let mut state = array![

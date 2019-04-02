@@ -12,11 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use error;
-use gates;
-
 /// Trait for gates that can be represented in OpenQasm.
-pub trait OpenQasm: gates::Gate
+pub trait OpenQasm: crate::gates::Gate
 {
     /// OpenQasm representation
     ///
@@ -24,10 +21,10 @@ pub trait OpenQasm: gates::Gate
     /// `bits`. The array `bit_names` contains the names of all qubits. The
     /// default implementation returns a NotImplemented error.
     fn open_qasm(&self, _bit_names: &[String], _bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
-        Err(error::Error::from(
-            error::ExportError::NotImplemented("OpenQasm", String::from(self.description()))
+        Err(crate::error::Error::from(
+            crate::error::ExportError::NotImplemented("OpenQasm", String::from(self.description()))
         ))
     }
 
@@ -40,7 +37,7 @@ pub trait OpenQasm: gates::Gate
     /// default. On success, returns `Ok` with the instruction string. On error,
     /// returns `Err` with an error message.
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         let uncond_qasm = self.open_qasm(bit_names, bits)?;
         Ok(format!("if ({}) {}", condition, uncond_qasm))
@@ -50,8 +47,6 @@ pub trait OpenQasm: gates::Gate
 #[cfg(test)]
 mod tests
 {
-    use gates::H;
-
     use super::OpenQasm;
 
     #[test]
@@ -59,7 +54,7 @@ mod tests
     {
         let bit_names = [String::from("qb0"), String::from("qb1")];
 
-        let res = H::new().conditional_open_qasm("b == 0", &bit_names, &[1]);
+        let res = crate::gates::H::new().conditional_open_qasm("b == 0", &bit_names, &[1]);
         assert_eq!(res, Ok(String::from("if (b == 0) h qb1")));
     }
 }

@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-extern crate num_complex;
-
-use cmatrix;
-use gates;
-use error;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// U<sub>3</sub> gate.
 ///
@@ -62,7 +54,7 @@ impl U3
     }
 }
 
-impl gates::Gate for U3
+impl crate::gates::Gate for U3
 {
     fn cost(&self) -> f64
     {
@@ -79,7 +71,7 @@ impl gates::Gate for U3
         1
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
         let (c, s) = ((0.5 * self.theta).cos(), (0.5 * self.theta).sin());
         array![[ num_complex::Complex::new(c, 0.0),
@@ -89,20 +81,20 @@ impl gates::Gate for U3
     }
 }
 
-impl export::OpenQasm for U3
+impl crate::export::OpenQasm for U3
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         Ok(format!("u3({}, {}, {}) {}",
             self.theta, self.phi, self.lambda, bit_names[bits[0]]))
     }
 }
 
-impl export::CQasm for U3
+impl crate::export::CQasm for U3
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         let name = &bit_names[bits[0]];
         Ok(format!("rz {}, {}\nry {}, {}\n; rz {} {}", name, self.lambda,
@@ -110,10 +102,10 @@ impl export::CQasm for U3
     }
 }
 
-impl export::Latex for U3
+impl crate::export::Latex for U3
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
         let contents = format!("U_3({:.4}, {:.4}, {:.4})", self.theta, self.phi, self.lambda);
@@ -124,12 +116,9 @@ impl export::Latex for U3
 #[cfg(test)]
 mod tests
 {
-    extern crate num_complex;
-
-    use gates::{gate_test, Gate, U3};
-    use export::{Latex, LatexExportState, OpenQasm, CQasm};
-    use cmatrix;
-    use self::num_complex::Complex;
+    use crate::gates::{gate_test, Gate, U3};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use num_complex::Complex;
 
     #[test]
     fn test_description()
@@ -158,10 +147,10 @@ mod tests
     #[test]
     fn test_apply()
     {
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
+        let i = crate::cmatrix::COMPLEX_I;
         let mut state = array![[x, x], [z, -x], [x, z], [z, z]];
         let result = array![
             [  -o-i,       -o],

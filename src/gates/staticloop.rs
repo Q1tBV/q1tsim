@@ -12,13 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-use cmatrix;
-use error;
-use gates;
-use export;
-
-use gates::Gate;
+use crate::gates::Gate;
 
 /// Static loop gate
 ///
@@ -31,7 +25,7 @@ pub struct Loop
     /// The number of times to execute the loop body
     nr_iterations: usize,
     /// The instructions to loop
-    body: gates::Composite,
+    body: crate::gates::Composite,
     /// A descriptions string, describing the loop
     desc: String
 }
@@ -42,7 +36,7 @@ impl Loop
     ///
     /// Initialize a new static loop executing the instructions in `body`,
     /// `nr_iterations` times.
-    pub fn new(label: &str, nr_iterations: usize, body: gates::Composite) -> Self
+    pub fn new(label: &str, nr_iterations: usize, body: crate::gates::Composite) -> Self
     {
         let desc = format!("{}({})", nr_iterations, body.description());
         Loop
@@ -55,7 +49,7 @@ impl Loop
     }
 }
 
-impl gates::Gate for Loop
+impl crate::gates::Gate for Loop
 {
     fn cost(&self) -> f64
     {
@@ -72,14 +66,14 @@ impl gates::Gate for Loop
         self.body.nr_affected_bits()
     }
 
-    fn matrix(&self) -> cmatrix::CMatrix
+    fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let mut res = cmatrix::CMatrix::eye(1 << self.nr_affected_bits());
+        let mut res = crate::cmatrix::CMatrix::eye(1 << self.nr_affected_bits());
         self.apply_mat_slice(res.view_mut());
         res
     }
 
-    fn apply_slice(&self, mut state: cmatrix::CVecSliceMut)
+    fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
         for _ in 0..self.nr_iterations
         {
@@ -87,7 +81,7 @@ impl gates::Gate for Loop
         }
     }
 
-    fn apply_mat_slice(&self, mut state: cmatrix::CMatSliceMut)
+    fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         for _ in 0..self.nr_iterations
         {
@@ -96,10 +90,10 @@ impl gates::Gate for Loop
     }
 }
 
-impl export::OpenQasm for Loop
+impl crate::export::OpenQasm for Loop
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         if self.nr_iterations == 0
         {
@@ -119,7 +113,7 @@ impl export::OpenQasm for Loop
     }
 
     fn conditional_open_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         if self.nr_iterations == 0
         {
@@ -140,10 +134,10 @@ impl export::OpenQasm for Loop
     }
 }
 
-impl export::CQasm for Loop
+impl crate::export::CQasm for Loop
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
-        -> error::Result<String>
+        -> crate::error::Result<String>
     {
         let body_qasm = self.body.c_qasm(bit_names, bits)?;
         Ok(format!(".{}({})\n{}\n.end", self.label, self.nr_iterations,
@@ -151,7 +145,7 @@ impl export::CQasm for Loop
     }
 
     fn conditional_c_qasm(&self, condition: &str, bit_names: &[String],
-        bits: &[usize]) -> error::Result<String>
+        bits: &[usize]) -> crate::error::Result<String>
     {
         if self.nr_iterations == 0
         {
@@ -174,10 +168,10 @@ impl export::CQasm for Loop
     }
 }
 
-impl export::Latex for Loop
+impl crate::export::Latex for Loop
 {
-    fn latex(&self, bits: &[usize], state: &mut export::LatexExportState)
-        -> error::Result<()>
+    fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
+        -> crate::error::Result<()>
     {
         self.check_nr_bits(bits)?;
 
@@ -212,9 +206,8 @@ impl export::Latex for Loop
 mod tests
 {
     use super::Loop;
-    use gates::{gate_test, Composite, Gate};
-    use export::{CQasm, OpenQasm, Latex, LatexExportState};
-    use cmatrix;
+    use crate::gates::{gate_test, Composite, Gate};
+    use crate::export::{CQasm, OpenQasm, Latex, LatexExportState};
 
     #[test]
     fn test_description()
@@ -243,8 +236,8 @@ mod tests
     {
         let body = Composite::from_string("body", "RX(1.0471975511965976) 0").unwrap();
         let gate = Loop::new("myloop", 3, body);
-        let z = cmatrix::COMPLEX_ZERO;
-        let i = cmatrix::COMPLEX_I;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let i = crate::cmatrix::COMPLEX_I;
         assert_complex_matrix_eq!(gate.matrix(), array![[z, -i], [-i, z]]);
     }
 
@@ -253,9 +246,9 @@ mod tests
     {
         let body = Composite::from_string("body", "RX(1.0471975511965976) 0; RX(-1.0471975511965976) 1").unwrap();
         let gate = Loop::new("myloop", 3, body);
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
 
         let mut state = array![
             [o, z, x, x],
@@ -277,10 +270,10 @@ mod tests
     {
         let body = Composite::from_string("body", "Sdg 0; I 1").unwrap();
         let gate = Loop::new("myloop", 3, body);
-        let z = cmatrix::COMPLEX_ZERO;
-        let o = cmatrix::COMPLEX_ONE;
-        let i = cmatrix::COMPLEX_I;
-        let x = cmatrix::COMPLEX_HSQRT2;
+        let z = crate::cmatrix::COMPLEX_ZERO;
+        let o = crate::cmatrix::COMPLEX_ONE;
+        let i = crate::cmatrix::COMPLEX_I;
+        let x = crate::cmatrix::COMPLEX_HSQRT2;
 
         let mut state = array![
             [o, z, x, z],
