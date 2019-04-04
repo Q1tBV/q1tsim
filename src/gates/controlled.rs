@@ -297,6 +297,10 @@ macro_rules! declare_controlled_impl_gate
             {
                 self.cgate.apply_slice(state);
             }
+            fn apply_mat_slice(&self, state: $crate::cmatrix::CMatSliceMut)
+            {
+                self.cgate.apply_mat_slice(state);
+            }
         }
     };
 }
