@@ -75,7 +75,7 @@ where G: crate::gates::Gate
 
     fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
-        let n = state.len() / 2;
+        let n = state.rows() / 2;
         self.gate.apply_mat_slice(state.slice_mut(s![n.., ..]));
     }
 }
