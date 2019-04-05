@@ -46,6 +46,21 @@ impl H
         s0 *= crate::cmatrix::COMPLEX_HSQRT2;
     }
 
+    pub fn transform_mat(mut state: crate::cmatrix::CMatSliceMut)
+    {
+        assert!(state.rows() % 2 == 0, "Number of rows is not even.");
+
+        let n = state.rows() / 2;
+        let s1_copy = state.slice(s![n.., ..]).to_owned();
+
+        let (mut s0, mut s1) = state.view_mut().split_at(ndarray::Axis(0), n);
+
+        s1 -= &s0;
+        s1 *= -crate::cmatrix::COMPLEX_HSQRT2;
+        s0 += &s1_copy;
+        s0 *= crate::cmatrix::COMPLEX_HSQRT2;
+    }
+
     pub fn cost() -> f64
     {
         crate::gates::U2::cost()
@@ -79,6 +94,11 @@ impl crate::gates::Gate for H
     fn apply_slice(&self, state: crate::cmatrix::CVecSliceMut)
     {
         Self::transform(state);
+    }
+
+    fn apply_mat_slice(&self, state: crate::cmatrix::CMatSliceMut)
+    {
+        Self::transform_mat(state);
     }
 }
 

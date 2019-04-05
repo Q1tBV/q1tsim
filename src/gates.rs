@@ -106,7 +106,7 @@ where G: Gate + ?Sized
 ///
 /// Apply gate `gate` operating on the bits in `bits` to a matrix `matrix`. The
 /// number of rows in `matrix` must be 2^`nr_bits`.
-fn apply_gate_mat_slice<G>(mut matrix: crate::cmatrix::CMatSliceMut, gate: &G,
+pub fn apply_gate_mat_slice<G>(mut matrix: crate::cmatrix::CMatSliceMut, gate: &G,
     bits: &[usize], nr_bits: usize)
 where G: Gate + ?Sized
 {
@@ -130,12 +130,12 @@ where G: Gate + ?Sized
     else
     {
         let perm = bit_permutation(nr_bits, bits);
-        let inv_perm = perm.inverse();
-
-        // FIXME: see if we can find a cleaner way to do this
-        let mut work = matrix.select(ndarray::Axis(0), inv_perm.indices());
+        let mut work = crate::cmatrix::CMatrix::zeros((matrix.rows(), matrix.cols()));
+        ndarray::Zip::from(matrix.gencolumns()).and(work.gencolumns_mut())
+            .apply(|s, d| perm.apply_inverse_vec_into(s, d));
         gate.apply_mat_slice(work.view_mut());
-        matrix.assign(&work.select(ndarray::Axis(0), perm.indices()));
+        ndarray::Zip::from(matrix.gencolumns_mut()).and(work.gencolumns())
+            .apply(|d, s| perm.apply_vec_into(s, d));
     }
 }
 
