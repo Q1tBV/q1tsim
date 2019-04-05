@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use rand::distributions::Distribution;
-use rand::Rng;
 
 /// Quantum state.
 ///
@@ -33,8 +32,6 @@ pub struct QuState
     counts: Vec<usize>,
     /// The quantum states themselves
     states: crate::cmatrix::CMatrix,
-    /// Random number generator, for measurements
-    rng: rand::rngs::ThreadRng
 }
 
 impl QuState
@@ -51,8 +48,7 @@ impl QuState
             nr_bits: nr_bits,
             nr_shots: nr_shots,
             counts: vec![nr_shots],
-            states: states,
-            rng: rand::thread_rng()
+            states: states
         }
     }
 
@@ -82,8 +78,7 @@ impl QuState
             nr_bits: nr_bits,
             nr_shots: nr_shots,
             counts: vec![nr_shots],
-            states: states,
-            rng: rand::thread_rng()
+            states: states
         }
     }
 
@@ -187,12 +182,13 @@ impl QuState
     /// Measure a qubit.
     ///
     /// Perform a measurement on qubit `qbit` in the state. Measurement is done
-    /// in the `z`-basis. The result is returned as an array containing the
-    /// measurement result for each run.
-    pub fn measure(&mut self, qbit: usize) -> ndarray::Array1<u64>
+    /// in the `z`-basis. The random number generator `rng` is used for sampling.
+    /// The result is returned as an array containing the measurement result for
+    /// each run.
+    pub fn measure<R: rand::Rng>(&mut self, qbit: usize, rng: &mut R) -> ndarray::Array1<u64>
     {
         let mut res = ndarray::Array1::zeros(self.nr_shots);
-        self.measure_into(qbit, 0, &mut res);
+        self.measure_into(qbit, 0, &mut res, rng);
         res
     }
 
@@ -201,9 +197,9 @@ impl QuState
     /// Perform a measurement on qubit `qbit` in the state to classical bit
     /// `cbit` in `res`, which should be an array of sufficient length to store
     /// results for the total number of runs in the state. Measurement is done
-    /// in the `z`-basis.
-    pub fn measure_into(&mut self, qbit: usize, cbit: usize,
-        res: &mut ndarray::Array1<u64>)
+    /// in the `z`-basis. The random number generator `rng` is used for sampling.
+    pub fn measure_into<R: rand::Rng>(&mut self, qbit: usize, cbit: usize,
+        res: &mut ndarray::Array1<u64>, rng: &mut R)
     {
         assert!(qbit < self.nr_bits, "Invalid bit index");
         assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
@@ -231,7 +227,7 @@ impl QuState
             // numerical inaccuracies. This causes the Binomial distribution to
             // panic, so cap w0.
             let distribution = rand::distributions::Binomial::new(c as u64, w0.min(1.0));
-            let n0 = self.rng.sample(distribution) as usize;
+            let n0 = rng.sample(distribution) as usize;
             n0s.push(n0);
             new_nr_states += if n0 == 0 || n0 == c { 1 } else { 2 };
         }
@@ -294,11 +290,11 @@ impl QuState
     /// without affecting the quantum state, i.e. the wave function is not
     /// collapsed. The output array `res` should be of sufficient length to store
     /// results for the total number of runs in the state. Measurement is done
-    /// in the `z`-basis.
+    /// in the `z`-basis. The random number generator `rng` is used for sampling.
     /// NOTE: this is not a physical process, and impossible to reproduce on
     /// a real quantum computer.
-    pub fn peek_into(&mut self, qbit: usize, cbit: usize,
-        res: &mut ndarray::Array1<u64>)
+    pub fn peek_into<R: rand::Rng>(&mut self, qbit: usize, cbit: usize,
+        res: &mut ndarray::Array1<u64>, rng: &mut R)
     {
         assert!(qbit < self.nr_bits, "Invalid bit index");
         assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
@@ -325,7 +321,7 @@ impl QuState
         {
             // Compute how many times we measure 0
             let distribution = rand::distributions::Binomial::new(c as u64, w0.min(1.0));
-            let n0 = self.rng.sample(distribution) as usize;
+            let n0 = rng.sample(distribution) as usize;
 
             // Store the result.
             res.slice_mut(s![res_start..res_start+n0]).map_inplace(
@@ -340,17 +336,18 @@ impl QuState
 
     /// Measure all qubits
     ///
-    /// Measure all qubits in this state, and return the results.
-    pub fn measure_all(&mut self) -> ndarray::Array1<u64>
+    /// Measure all qubits in this state, and return the results. The random
+    /// number generator `rng` is used for sampling.
+    pub fn measure_all<R: rand::Rng>(&mut self, rng: &mut R) -> ndarray::Array1<u64>
     {
         let mut res = ndarray::Array1::zeros(self.nr_shots);
         let cbits: Vec<usize> = (0..self.nr_bits).collect();
-        self.measure_all_into(&cbits, &mut res);
+        self.measure_all_into(&cbits, &mut res, rng);
         res
     }
 
-    fn measure_all_into_helper(&mut self, cbits: &[usize], res: &mut ndarray::Array1<u64>,
-        collapse: bool)
+    fn measure_all_into_helper<R: rand::Rng>(&mut self, cbits: &[usize],
+        res: &mut ndarray::Array1<u64>, collapse: bool, rng: &mut R)
     {
         assert!(res.len() >= self.nr_shots, "Not enough space to store the results");
         assert!(cbits.len() == self.nr_bits,
@@ -363,7 +360,7 @@ impl QuState
             let distr = rand::distributions::WeightedIndex::new(
                 self.states.column(col_idx).iter().map(|c| c.norm_sqr())
             ).unwrap();
-            for idx in distr.sample_iter(&mut self.rng).take(self.counts[col_idx])
+            for idx in distr.sample_iter(rng).take(self.counts[col_idx])
             {
                 let entry = count_map.entry(idx).or_insert(0);
                 *entry += 1;
@@ -403,10 +400,12 @@ impl QuState
     /// Measure all qubits in this state, and store the results in `res`,
     /// which should be of sufficient length to hold results for the number of
     /// runs in this state.  The first qubit measured is stored at the bit
-    /// position indicated by the first element of `cbits`, and so on.
-    pub fn measure_all_into(&mut self, cbits: &[usize], res: &mut ndarray::Array1<u64>)
+    /// position indicated by the first element of `cbits`, and so on. The random
+    /// number generator `rng` is used for sampling.
+    pub fn measure_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
+        res: &mut ndarray::Array1<u64>, rng: &mut R)
     {
-        self.measure_all_into_helper(cbits, res, true);
+        self.measure_all_into_helper(cbits, res, true, rng);
     }
 
     /// Measure all qubits
@@ -416,21 +415,23 @@ impl QuState
     /// are stored in `res`, which must be of sufficient length to hold results
     /// for the total number of runs in the state. The first qubit measured
     /// is stored at the bit position indicated by the first element of `cbits`,
-    /// and so on.
+    /// and so on. The random number generator `rng` is used for sampling.
     /// NOTE: this is not a physical process, and impossible to reproduce on
     /// a real quantum computer.
-    pub fn peek_all_into(&mut self, cbits: &[usize], res: &mut ndarray::Array1<u64>)
+    pub fn peek_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
+        res: &mut ndarray::Array1<u64>, rng: &mut R)
     {
-        self.measure_all_into_helper(cbits, res, false);
+        self.measure_all_into_helper(cbits, res, false, rng);
     }
 
     /// Reset a qubit
     ///
     /// Reset the qubit with index `bit` to zero. This is done by measuring the
-    /// bit, and rotating it back to zero if the result is 1.
-    pub fn reset(&mut self, bit: usize)
+    /// bit, and rotating it back to zero if the result is 1. The random
+    /// number generator `rng` is used for sampling in the measurement.
+    pub fn reset<R: rand::Rng>(&mut self, bit: usize, rng: &mut R)
     {
-        let measurement = self.measure(bit);
+        let measurement = self.measure(bit, rng);
         let control: Vec<bool> = measurement.iter().map(|&b| b != 0).collect();
         self.apply_conditional_gate(&control, &crate::gates::X::new(), &[bit]);
     }
@@ -546,24 +547,26 @@ mod tests
         let o = crate::cmatrix::COMPLEX_ONE;
         let x = crate::cmatrix::COMPLEX_HSQRT2;
 
+        let mut rng = rand::thread_rng();
+
         // |0〉
         let mut s = QuState::new(1, 3);
-        let m = s.measure(0);
+        let m = s.measure(0, &mut rng);
         assert_eq!(m, array![0, 0, 0]);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         // |0〉⊗|0〉
         let mut s = QuState::from_qubit_coefs(&[o, z, o, z], 3);
-        let m = s.measure(1);
+        let m = s.measure(1, &mut rng);
         assert_eq!(m, ndarray::Array1::zeros(3));
         assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z]]);
-        let m = s.measure(0);
+        let m = s.measure(0, &mut rng);
         assert_eq!(m, ndarray::Array1::zeros(3));
         assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z]]);
 
         // (H|0〉)⊗(H|0〉), unnormalized
         let mut s = QuState::from_qubit_coefs(&[o, o, o, o], 1024);
-        let m0 = s.measure(0);
+        let m0 = s.measure(0, &mut rng);
         let mut prev_b = m0[0];
         let mut sc_idx = 0;
         for &b in m0.iter()
@@ -586,11 +589,11 @@ mod tests
         }
 
         // After collapse, a new measurement should yield the same result
-        let m0b = s.measure(0);
+        let m0b = s.measure(0, &mut rng);
         assert_eq!(m0b, m0);
 
         // Measure second bit
-        let m1 = s.measure(1);
+        let m1 = s.measure(1, &mut rng);
         let mut prev_b0 = m0[0];
         let mut prev_b1 = m1[0];
         let mut sc_idx = 0;
@@ -629,37 +632,39 @@ mod tests
         let x = crate::cmatrix::COMPLEX_HSQRT2;
         let h = 0.5 * o;
 
+        let mut rng = rand::thread_rng();
+
         // |0〉
         let mut s = QuState::new(1, nr_shots);
-        s.peek_into(0, 0, &mut measurements);
+        s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(measurements.iter().all(|&bits| bits == 0));
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         // H|0〉
         let mut s = QuState::from_qubit_coefs(&[o, o], nr_shots);
-        s.peek_into(0, 0, &mut measurements);
+        s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
         assert_complex_matrix_eq!(&s.states, &array![[x], [x]]);
 
         // H|0〉⊗ H|0〉
         let mut s = QuState::from_qubit_coefs(&[o, o, o, o], nr_shots);
-        s.peek_into(0, 0, &mut measurements);
+        s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
         measurements.fill(0);
-        s.peek_into(1, 0, &mut measurements);
+        s.peek_into(1, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
         assert_complex_matrix_eq!(&s.states, &array![[h], [h], [h], [h]]);
 
         // H|0〉⊗ |1〉
         let mut s = QuState::from_qubit_coefs(&[x, x, z, o], nr_shots);
-        s.peek_into(0, 0, &mut measurements);
+        s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
         measurements.fill(0);
-        s.peek_into(1, 0, &mut measurements);
+        s.peek_into(1, 0, &mut measurements, &mut rng);
         assert_eq!(measurements.sum() as usize, nr_shots);
         assert_complex_matrix_eq!(&s.states, &array![[z], [x], [z], [x]]);
     }
@@ -742,19 +747,21 @@ mod tests
         let nr_bits = 3;
         let nr_shots = 5;
 
+        let mut rng = rand::thread_rng();
+
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
-        let result = s.measure_all();
+        let result = s.measure_all(&mut rng);
         assert_eq!(result.shape(), [nr_shots]);
         assert!(result.iter().all(|&b| b == 0b111));
 
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o, o, z], nr_shots);
-        let result = s.measure_all();
+        let result = s.measure_all(&mut rng);
         assert_eq!(result.shape(), [nr_shots]);
         assert!(result.iter().all(|&b| b == 0b011));
 
         let mut s = QuState::new(nr_bits, nr_shots);
         s.apply_gate(&H::new(), &[2]);
-        let result = s.measure_all();
+        let result = s.measure_all(&mut rng);
         assert_eq!(result.shape(), [nr_shots]);
         assert!(result.iter().all(|&b| (b & 0b011) == 0));
     }
@@ -770,11 +777,13 @@ mod tests
         let nr_bits = 3;
         let nr_shots = 1024;
 
+        let mut rng = rand::thread_rng();
+
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
         s.apply_gate(&H::new(), &[0]);
         s.apply_gate(&H::new(), &[2]);
         let mut result = ndarray::Array1::zeros(nr_shots);
-        s.peek_all_into(&[0, 1, 2], &mut result);
+        s.peek_all_into(&[0, 1, 2], &mut result, &mut rng);
         // Ensure quantum state is preserved
         assert_eq!(s.counts, vec![nr_shots]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [h], [-h], [z], [z], [-h], [h]]);
@@ -797,29 +806,30 @@ mod tests
     fn test_reset()
     {
         let nr_runs = 10;
-
         let z = crate::cmatrix::COMPLEX_ZERO;
         let o = crate::cmatrix::COMPLEX_ONE;
         let x = crate::cmatrix::COMPLEX_HSQRT2;
 
+        let mut rng = rand::thread_rng();
+
         let mut s = QuState::from_qubit_coefs(&[o, z], nr_runs);
-        s.reset(0);
+        s.reset(0, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o], nr_runs);
-        s.reset(0);
+        s.reset(0, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
-        s.reset(0);
+        s.reset(0, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[z], [o], [z], [z]]);
 
         let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
-        s.reset(1);
+        s.reset(1, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [o], [z]]);
 
         let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
-        s.reset(0);
+        s.reset(0, &mut rng);
         match s.counts.len()
         {
             1 => { assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z]]); },
@@ -828,7 +838,7 @@ mod tests
         }
 
         let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
-        s.reset(1);
+        s.reset(1, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[x], [z], [-x], [z]]);
     }
 

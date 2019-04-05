@@ -427,11 +427,22 @@ impl Circuit
     /// function clears any previous states of the system (quantum or classical).
     pub fn execute(&mut self, nr_shots: usize)
     {
+        self.execute_with_rng(nr_shots, &mut rand::thread_rng());
+    }
+
+    /// Execute this circuit
+    ///
+    /// Execute this circuit, performing its operations and measurements.
+    /// Measurements are made over `nr_shots` executions of the circuit, using
+    /// random number generator `rng` for sampling. This function clears any
+    /// previous states of the system (quantum or classical).
+    pub fn execute_with_rng<R: rand::RngCore>(&mut self, nr_shots: usize, rng: &mut R)
+    {
         self.q_state = Some(crate::qustate::QuState::new(self.nr_qbits, nr_shots));
         self.c_state = Some(ndarray::Array::zeros(nr_shots));
         // It shpuld not be possible to get an error from reexecute, so
         // ignore it for now.
-        self.reexecute().unwrap();
+        self.reexecute_with_rng(rng).unwrap();
     }
 
     /// Execute a circuit again.
@@ -440,6 +451,17 @@ impl Circuit
     /// execution. If this circuit has not been run before, a `NotExecuted`
     /// error is returned.
     pub fn reexecute(&mut self) -> crate::error::Result<()>
+    {
+        self.reexecute_with_rng(&mut rand::thread_rng())
+    }
+
+    /// Execute a circuit again.
+    ///
+    /// Run this circuit again, starting with the state from the previous
+    /// execution, using random number generator `rng` for sampling. If this
+    /// circuit has not been run before, a `NotExecuted` error is returned.
+    pub fn reexecute_with_rng<R: rand::Rng>(&mut self, rng: &mut R)
+        -> crate::error::Result<()>
     {
         if self.q_state.is_none() || self.c_state.is_none()
         {
@@ -485,7 +507,7 @@ impl Circuit
                             /* do nothing */
                         }
                     }
-                    q_state.measure_into(qbit, cbit, c_state);
+                    q_state.measure_into(qbit, cbit, c_state, rng);
                 }
                 CircuitOp::MeasureAll(ref cbits, basis) => {
                     match basis
@@ -501,16 +523,16 @@ impl Circuit
                             /* do nothing */
                         }
                     }
-                    q_state.measure_all_into(cbits, c_state);
+                    q_state.measure_all_into(cbits, c_state, rng);
                 },
                 CircuitOp::Peek(qbit, cbit) => {
-                    q_state.peek_into(qbit, cbit, c_state);
+                    q_state.peek_into(qbit, cbit, c_state, rng);
                 },
                 CircuitOp::PeekAll(ref cbits) => {
-                    q_state.peek_all_into(cbits, c_state);
+                    q_state.peek_all_into(cbits, c_state, rng);
                 },
                 CircuitOp::Reset(bit) => {
-                    q_state.reset(bit);
+                    q_state.reset(bit, rng);
                 },
                 CircuitOp::ResetAll => {
                     q_state.reset_all();

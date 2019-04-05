@@ -5,6 +5,8 @@ use q1tsim::{declare_controlled, declare_controlled_cost, declare_controlled_typ
 use q1tsim::circuit::Circuit;
 use q1tsim::gates::{CCX};
 
+use rand_core::SeedableRng;
+
 declare_controlled!(C3X, CCX);
 declare_controlled!(C4X, C3X);
 declare_controlled!(C5X, C4X);
@@ -62,9 +64,11 @@ fn build_randomwalk_circuit(nr_pos_bits: usize, measure: bool) -> q1tsim::error:
 
 fn quantum_random_walk(nr_pos_bits: usize, nr_shots: usize, measure: bool)
 {
+    let mut rng = rand_hc::Hc128Rng::seed_from_u64(0x1f67a51423cd2615);
+
     match build_randomwalk_circuit(nr_pos_bits, measure)
     {
-        Ok(mut circuit) => { circuit.execute(nr_shots); }
+        Ok(mut circuit) => { circuit.execute_with_rng(nr_shots, &mut rng); }
         Err(err) => { panic!("Failed to build circuit: {}", err); }
     }
 }
