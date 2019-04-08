@@ -1168,14 +1168,14 @@ macro_rules! circuit
     ($nr_qbits:expr, $nr_cbits:expr, { $( $method_name:ident ( $( $arg:expr ),* ) );* ; } ) => {
         {
             let generator = || {
-                let mut circuit = Circuit::new($nr_qbits, $nr_cbits);
+                let mut circuit = $crate::circuit::Circuit::new($nr_qbits, $nr_cbits);
                 $(
                     circuit_method_check!(
                         $method_name
                         circuit.$method_name($($arg),*)
                     );
                 );*
-                Ok(circuit) as Result<Circuit, crate::error::Error>
+                Ok(circuit) as $crate::error::Result<$crate::circuit::Circuit>
             };
             generator()
         }
