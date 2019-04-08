@@ -141,8 +141,13 @@ where G: Gate + ?Sized
 
 pub trait Gate
 {
-    /// An estimate of the cost of using this gate
-    fn cost(&self) -> f64;
+    /// Cost of this gate.
+    ///
+    /// An estimate of the cost of using this gate. This can be used e.g. in
+    /// optimizing circuits, or when trying to decompose a transformation
+    /// in an optimal gate sequence. The default implementation returns
+    /// `std::f64::INFINITY`.
+    fn cost(&self) -> f64 { ::std::f64::INFINITY }
 
     /// Return a short description of the gate. This may be the name of the
     /// gate (e.g. `"H"`, `"CX"`), or the way the gate was constructed (like
