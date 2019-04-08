@@ -174,6 +174,14 @@ pub trait Gate
         self.apply_slice(state.view_mut());
     }
 
+    /// Apply a gate.
+    ///
+    /// Apply a gate to quantum state `state`. The number of rows `r` in `state`
+    /// must be a multiple of 2<sup>`n`</sup>, where `n` is the number of qubits
+    /// this gate acts upon. The rows must be ordered, such that the first block
+    /// of `r`/2<sup>`n`</sup> rows corresponds to qustates with basis states
+    /// |00...0〉 for the affected qubits, the second block to |00...1〉, etc.,
+    /// up until |11...1〉.
     fn apply_mat(&self, state: &mut crate::cmatrix::CMatrix)
     {
         self.apply_mat_slice(state.view_mut());
@@ -242,6 +250,14 @@ pub trait Gate
         }
     }
 
+    /// Apply a gate.
+    ///
+    /// Apply a gate to quantum state `state`. The number of rows `r` in `state`
+    /// must be a multiple of 2<sup>`n`</sup>, where `n` is the number of qubits
+    /// this gate acts upon. The rows must be ordered, such that the first block
+    /// of `r`/2<sup>`n`</sup> rows corresponds to qustates with basis states
+    /// |00...0〉 for the affected qubits, the second block to |00...1〉, etc.,
+    /// up until |11...1〉.
     fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
         let nr_bits = self.nr_affected_bits();
