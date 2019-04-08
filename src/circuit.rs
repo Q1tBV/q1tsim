@@ -345,6 +345,22 @@ impl Circuit
         self.add_gate(crate::gates::Z::new(), &[bit])
     }
 
+    /// Add a phase gate
+    ///
+    /// Add an `S` phase gate operating on qubit `bit`, to this circuit.
+    pub fn s(&mut self, bit: usize) -> crate::error::Result<()>
+    {
+        self.add_gate(crate::gates::S::new(), &[bit])
+    }
+
+    /// Add a phase gate
+    ///
+    /// Add an `S`<sup>`\dagger`</sup> phase gate operating on qubit `bit`, to this circuit.
+    pub fn sdg(&mut self, bit: usize) -> crate::error::Result<()>
+    {
+        self.add_gate(crate::gates::Sdg::new(), &[bit])
+    }
+
     /// Add a R<sub>X</sub> gate.
     ///
     /// Add a `R`<sub>`X`</sub>`(θ)` gate operating on qubit `bit`, to this circuit.
@@ -1028,6 +1044,8 @@ macro_rules! circuit_method_check
     ( peek $res:expr ) => { $res? };
     ( peek_all $res:expr ) => { $res? };
     ( reset $res:expr ) => { $res? };
+    ( s $res:expr ) => { $res? };
+    ( sdg $res:expr ) => { $res? };
     ( x $res:expr ) => { $res? };
     ( y $res:expr ) => { $res? };
     ( z $res:expr ) => { $res? };
