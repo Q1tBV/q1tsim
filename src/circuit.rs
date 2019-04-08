@@ -41,10 +41,10 @@ enum CircuitOp
     Measure(usize, usize, Basis),
     /// Measure all qubits
     MeasureAll(Vec<usize>, Basis),
-    /// Measure a single qubit in the `Z` basis without affecting state
-    Peek(usize, usize),
-    /// Measure all qubits in the `Z` basis without affecting state
-    PeekAll(Vec<usize>),
+    /// Measure a single qubit in a certain basis without affecting state
+    Peek(usize, usize, Basis),
+    /// Measure all qubits in a certain basis without affecting state
+    PeekAll(Vec<usize>, Basis),
     /// Prevent gate reordering on the associated bits across the barrier
     Barrier(Vec<usize>)
 }
@@ -245,11 +245,12 @@ impl Circuit
     /// Add a measurement.
     ///
     /// Add the measurement of qubit `qbit` in the quantum state into the
-    /// classical bit `cbit`. Measurement is done in the Pauli `Z` basis, without
+    /// classical bit `cbit`. Measurement is done in basis `basis`, without
     /// collapsing the quantum state.
     /// NOTE: this is not a physical process, and cannot be reproduced on a real
     /// quantum computer.
-    pub fn peek(&mut self, qbit: usize, cbit: usize) -> crate::error::Result<()>
+    pub fn peek_basis(&mut self, qbit: usize, cbit: usize, basis: Basis)
+        -> crate::error::Result<()>
     {
         if qbit >= self.nr_qbits
         {
@@ -261,10 +262,80 @@ impl Circuit
         }
         else
         {
-            self.ops.push(CircuitOp::Peek(qbit, cbit));
+            self.ops.push(CircuitOp::Peek(qbit, cbit, basis));
             Ok(())
         }
     }
+
+    /// Add a measurement.
+    ///
+    /// Add measurement of qubit `qbit` in the Pauli `X` basis, into classical
+    /// bit `cbit` to this circuit, without collapsing the quantum state.
+    /// NOTE: this is not a physical process, and cannot be reproduced on a real
+    /// quantum computer.
+    #[inline(always)]
+    pub fn peek_x(&mut self, qbit: usize, cbit: usize) -> crate::error::Result<()>
+    {
+        self.peek_basis(qbit, cbit, Basis::X)
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add measurement of qubit `qbit` in the Pauli `Y` basis, into classical
+    /// bit `cbit` to this circuit, without collapsing the quantum state.
+    /// NOTE: this is not a physical process, and cannot be reproduced on a real
+    /// quantum computer.
+    #[inline(always)]
+    pub fn peek_y(&mut self, qbit: usize, cbit: usize) -> crate::error::Result<()>
+    {
+        self.peek_basis(qbit, cbit, Basis::Y)
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add measurement of qubit `qbit` in the Pauli `Z` basis, into classical
+    /// bit `cbit` to this circuit, without collapsing the quantum state.
+    /// NOTE: this is not a physical process, and cannot be reproduced on a real
+    /// quantum computer.
+    #[inline(always)]
+    pub fn peek_z(&mut self, qbit: usize, cbit: usize) -> crate::error::Result<()>
+    {
+        self.peek_basis(qbit, cbit, Basis::Z)
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add measurement of qubit `qbit` in the Pauli `Z` basis, into classical
+    /// bit `cbit` to this circuit, without collapsing the quantum state.
+    /// NOTE: this is not a physical process, and cannot be reproduced on a real
+    /// quantum computer.
+    #[inline(always)]
+    pub fn peek(&mut self, qbit: usize, cbit: usize) -> crate::error::Result<()>
+    {
+        self.peek_basis(qbit, cbit, Basis::Z)
+    }
+
+    /// Add a measurement.
+    ///
+    /// Add the measurement of all qubits in the quantum state into the classical
+    /// bits `cbits`. Measurement is done in basis `basis`, without
+    /// collapsing the quantum state.
+    /// NOTE: this is not a physical process, and cannot be reproduced on a real
+    /// quantum computer.
+    pub fn peek_all_basis(&mut self, cbits: &[usize], basis: Basis)
+        -> crate::error::Result<()>
+    {
+        if let Some(&bit) = cbits.iter().find(|&&b| b >= self.nr_cbits)
+        {
+            Err(crate::error::Error::InvalidCBit(bit))
+        }
+        else
+        {
+            self.ops.push(CircuitOp::PeekAll(cbits.to_owned(), basis));
+            Ok(())
+        }
+    }
+
 
     /// Add a measurement.
     ///
@@ -273,17 +344,10 @@ impl Circuit
     /// collapsing the quantum state.
     /// NOTE: this is not a physical process, and cannot be reproduced on a real
     /// quantum computer.
+    #[inline(always)]
     pub fn peek_all(&mut self, cbits: &[usize]) -> crate::error::Result<()>
     {
-        if let Some(&bit) = cbits.iter().find(|&&b| b >= self.nr_cbits)
-        {
-            Err(crate::error::Error::InvalidCBit(bit))
-        }
-        else
-        {
-            self.ops.push(CircuitOp::PeekAll(cbits.to_owned()));
-            Ok(())
-        }
+        self.peek_all_basis(cbits, Basis::Z)
     }
 
     /// Reset a qubit
@@ -514,38 +578,80 @@ impl Circuit
                     {
                         Basis::X => {
                             q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.measure_into(qbit, cbit, c_state, rng);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
                         },
                         Basis::Y => {
                             q_state.apply_gate(&crate::gates::Sdg::new(), &[qbit]);
                             q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.measure_into(qbit, cbit, c_state, rng);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::S::new(), &[qbit]);
                         },
-                        _ => {
-                            /* do nothing */
+                        Basis::Z => {
+                            q_state.measure_into(qbit, cbit, c_state, rng);
                         }
                     }
-                    q_state.measure_into(qbit, cbit, c_state, rng);
                 }
                 CircuitOp::MeasureAll(ref cbits, basis) => {
                     match basis
                     {
                         Basis::X => {
                             q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.measure_all_into(cbits, c_state, rng);
+                            q_state.apply_unary_gate_all(&crate::gates::H::new());
                         },
                         Basis::Y => {
                             q_state.apply_unary_gate_all(&crate::gates::Sdg::new());
                             q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.measure_all_into(cbits, c_state, rng);
+                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.apply_unary_gate_all(&crate::gates::S::new());
                         },
-                        _ => {
-                            /* do nothing */
+                        Basis::Z => {
+                            q_state.measure_all_into(cbits, c_state, rng);
                         }
                     }
-                    q_state.measure_all_into(cbits, c_state, rng);
                 },
-                CircuitOp::Peek(qbit, cbit) => {
-                    q_state.peek_into(qbit, cbit, c_state, rng);
+                CircuitOp::Peek(qbit, cbit, basis) => {
+                    match basis
+                    {
+                        Basis::X => {
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.peek_into(qbit, cbit, c_state, rng);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                        },
+                        Basis::Y => {
+                            q_state.apply_gate(&crate::gates::Sdg::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.peek_into(qbit, cbit, c_state, rng);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::S::new(), &[qbit]);
+                        },
+                        Basis::Z => {
+                            q_state.peek_into(qbit, cbit, c_state, rng);
+                        }
+                    }
                 },
-                CircuitOp::PeekAll(ref cbits) => {
-                    q_state.peek_all_into(cbits, c_state, rng);
+                CircuitOp::PeekAll(ref cbits, basis) => {
+                    match basis
+                    {
+                        Basis::X => {
+                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.peek_all_into(cbits, c_state, rng);
+                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                        },
+                        Basis::Y => {
+                            q_state.apply_unary_gate_all(&crate::gates::Sdg::new());
+                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.peek_all_into(cbits, c_state, rng);
+                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.apply_unary_gate_all(&crate::gates::S::new());
+                        },
+                        Basis::Z => {
+                            q_state.peek_all_into(cbits, c_state, rng);
+                        }
+                    }
                 },
                 CircuitOp::Reset(bit) => {
                     q_state.reset(bit, rng);
@@ -780,12 +886,12 @@ impl Circuit
                         }
                     }
                 },
-                CircuitOp::Peek(_, _) => {
+                CircuitOp::Peek(_, _, _) => {
                     return Err(crate::error::Error::from(
                         crate::error::ExportError::ExportPeekInvalid("OpenQasm")
                     ));
                 },
-                CircuitOp::PeekAll(_) => {
+                CircuitOp::PeekAll(_, _) => {
                     return Err(crate::error::Error::from(
                         crate::error::ExportError::ExportPeekInvalid("OpenQasm")
                     ));
@@ -925,12 +1031,12 @@ impl Circuit
                     }
                     res += &format!("measure_all\n");
                 },
-                CircuitOp::Peek(_, _) => {
+                CircuitOp::Peek(_, _, _) => {
                     return Err(crate::error::Error::from(
                         crate::error::ExportError::ExportPeekInvalid("c-Qasm")
                     ));
                 },
-                CircuitOp::PeekAll(_) => {
+                CircuitOp::PeekAll(_, _) => {
                     return Err(crate::error::Error::from(
                         crate::error::ExportError::ExportPeekInvalid("c-Qasm")
                     ));
@@ -992,14 +1098,14 @@ impl Circuit
                         state.set_measurement(qbit, cbit, basis_lbl)?;
                     }
                 },
-                CircuitOp::Peek(_, _) => {
+                CircuitOp::Peek(_, _, _) => {
                     return Err(crate::error::Error::from(
                         crate::error::ExportError::NotImplemented("LaTeX",
                             String::from("peek")
                         )
                     ));
                 },
-                CircuitOp::PeekAll(_) => {
+                CircuitOp::PeekAll(_, _) => {
                     return Err(crate::error::Error::from(
                         crate::error::ExportError::NotImplemented("LaTeX",
                             String::from("peek all")
@@ -1042,7 +1148,11 @@ macro_rules! circuit_method_check
     ( measure_y $res:expr ) => { $res? };
     ( measure_z $res:expr ) => { $res? };
     ( peek $res:expr ) => { $res? };
+    ( peek_x $res:expr ) => { $res? };
+    ( peek_y $res:expr ) => { $res? };
+    ( peek_z $res:expr ) => { $res? };
     ( peek_all $res:expr ) => { $res? };
+    ( peek_all_basis $res:expr ) => { $res? };
     ( reset $res:expr ) => { $res? };
     ( s $res:expr ) => { $res? };
     ( sdg $res:expr ) => { $res? };
@@ -1365,6 +1475,49 @@ mod tests
     }
 
     #[test]
+    fn test_peek_basis()
+    {
+        let nr_shots = 1024;
+        let tol = 1.0e-5;
+
+        let mut circuit = circuit!(1, 3, {
+            peek_x(0, 0);
+            h(0);
+            peek_x(0, 1);
+            h(0);
+            peek_x(0, 2);
+        }).unwrap();
+        circuit.execute(1024);
+        let hist = circuit.histogram_vec().unwrap();
+        // Results of first and third measurement should be approximately equally
+        // distributed over 0 and 1, second should be pure 0.
+        let n00 = hist[0] + hist[2] + hist[4] + hist[6];
+        assert!(crate::stats::measurement_ok(n00, nr_shots, 0.5, tol));
+        let n10 = hist[0] + hist[1] + hist[4] + hist[5];
+        assert_eq!(n10, nr_shots);
+        let n20 = hist[0] + hist[1] + hist[2] + hist[3];
+        assert!(crate::stats::measurement_ok(n20, nr_shots, 0.5, tol));
+
+        let mut circuit = circuit!(2, 6, {
+            peek_y(0, 0);
+            h(0);
+            peek_y(0, 1);
+            sdg(0);
+            peek_y(0, 2);
+        }).unwrap();
+        circuit.execute(1024);
+        let hist = circuit.histogram_vec().unwrap();
+        // Results of first and second measurement should be approximately equally
+        // distributed over 0 and 1, second should be pure 1.
+        let n00 = hist[0] + hist[2] + hist[4] + hist[6];
+        assert!(crate::stats::measurement_ok(n00, nr_shots, 0.5, tol));
+        let n10 = hist[0] + hist[1] + hist[4] + hist[5];
+        assert!(crate::stats::measurement_ok(n10, nr_shots, 0.5, tol));
+        let n20 = hist[0] + hist[1] + hist[2] + hist[3];
+        assert_eq!(n20, 0);
+    }
+
+    #[test]
     fn test_conditional()
     {
         let mut circuit = circuit!(2, 2, {
@@ -1537,6 +1690,63 @@ mod tests
         assert!(n2.iter().all(
             |&count| crate::stats::measurement_ok(count, nr_shots, 0.25, tol)
         ));
+    }
+
+    #[test]
+    fn test_peek_all_basis()
+    {
+        let nr_shots = 1024;
+        let tol = 1.0e-5;
+
+        let mut circuit = circuit!(1, 3, {
+            peek_all_basis(&[0], Basis::X);
+            h(0);
+            peek_all_basis(&[1], Basis::X);
+            h(0);
+            peek_all_basis(&[2], Basis::X);
+        }).unwrap();
+        circuit.execute(1024);
+        let hist = circuit.histogram_vec().unwrap();
+        // Results of first and third measurement should be approximately equally
+        // distributed over 0 and 1, second should be pure 0.
+        let n00 = hist[0] + hist[2] + hist[4] + hist[6];
+        assert!(crate::stats::measurement_ok(n00, nr_shots, 0.5, tol));
+        let n10 = hist[0] + hist[1] + hist[4] + hist[5];
+        assert!(n10 == nr_shots);
+        let n20 = hist[0] + hist[1] + hist[2] + hist[3];
+        assert!(crate::stats::measurement_ok(n20, nr_shots, 0.5, tol));
+
+        let mut circuit = circuit!(2, 6, {
+            h(0);
+            h(1);
+            peek_all_basis(&[0, 1], Basis::Y);
+            s(1);
+            peek_all_basis(&[2, 3], Basis::Y);
+            s(0);
+            peek_all_basis(&[4, 5], Basis::Y);
+        }).unwrap();
+        circuit.execute(1024);
+        let hist = circuit.histogram().unwrap();
+        // Results of first measurement should be approximately equally
+        // distributed over 0 and 1 for both qubits, second should be pure 0
+        // for second qubit, third pure |00〉.
+        let mut n0 = [0; 4];
+        let mut n1 = [0; 4];
+        let mut n2 = [0; 4];
+        for (key, count) in hist
+        {
+            n0[key as usize & 0x03] += count;
+            n1[(key as usize >> 2) & 0x03] += count;
+            n2[(key as usize >> 4) & 0x03] += count;
+        }
+        assert!(n0.iter().all(
+            |&count| crate::stats::measurement_ok(count, nr_shots, 0.25, tol)
+        ));
+        assert_eq!(n1[2], 0);
+        assert_eq!(n1[3], 0);
+        assert!(crate::stats::measurement_ok(n1[0], nr_shots, 0.5, tol));
+        assert!(crate::stats::measurement_ok(n1[1], nr_shots, 0.5, tol));
+        assert_eq!(n2, [nr_shots, 0, 0, 0]);
     }
 
     #[test]
