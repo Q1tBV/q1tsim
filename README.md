@@ -35,7 +35,7 @@ To use q1tsim in your Rust application, add the following to your `Cargo.toml` f
 q1tsim = "0.3"
 ```
 
-As an example, here is a 3-qubit quantum Fourier transform of the |000〉quantum
+As an example, here is a 3-qubit quantum Fourier transform of the |000⟩ quantum
 state:
 ```
 extern crate q1tsim;
@@ -48,9 +48,9 @@ fn main()
     let nr_runs = 8192;
 
     // Create a quantum circuit with 3 quantum bits and 3 classical (measurement)
-    // bits, that is evaluated `nr_runs` times. The circuit starts by default
-    // with all quantum bits in the |0〉state, so in this case |000〉.
-    let mut circuit = circuit::Circuit::new(3, 3, nr_runs);
+    // bits. The circuit starts by default with all quantum bits in the |0⟩ state,
+    // so in this case |000⟩.
+    let mut circuit = circuit::Circuit::new(3, 3);
 
     // Set up a 3-qubit quantum Fourier transform
     // There is no predefined method on Circuit that implements a controlled
@@ -66,11 +66,12 @@ fn main()
     // Measure all quantum bits in the Pauli `Z` basis
     circuit.measure_all(&[0, 1, 2]);
 
-    // Actually calculate the resulting quantum state and perform the measurements
-    circuit.execute();
+    // Actually calculate the resulting quantum state and perform the measurements,
+    // averaging over `nr_runs` runs.
+    circuit.execute(nr_runs);
 
     // And print the results.
-    let hist = circuit.histogram_string();
+    let hist = circuit.histogram_string().unwrap();
     for (bits, count) in hist
     {
         println!("{}: {}", bits, count);

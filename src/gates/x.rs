@@ -17,7 +17,7 @@ use crate::gates::Gate;
 /// The Pauli X gate.
 ///
 /// The X, or NOT, gate rotates the state over π radians around the `x` axis of
-/// the Bloch sphere, i.e. it swaps the |0〉 and |1〉 components of the qubit.
+/// the Bloch sphere, i.e. it swaps the |0⟩ and |1⟩ components of the qubit.
 pub struct X
 {
 }

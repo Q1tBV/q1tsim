@@ -33,9 +33,9 @@ enum CircuitOp
     Gate(Box<CircuitGate>, Vec<usize>),
     /// Conditionally apply a gate, depending on classical bits
     ConditionalGate(Vec<usize>, u64, Box<CircuitGate>, Vec<usize>),
-    /// Reset a qubit to |0〉
+    /// Reset a qubit to |0⟩
     Reset(usize),
-    /// Reset the quantum state to |00...0〉
+    /// Reset the quantum state to |00...0⟩
     ResetAll,
     /// Measure a qubit in a certain basis
     Measure(usize, usize, Basis),
@@ -352,7 +352,7 @@ impl Circuit
 
     /// Reset a qubit
     ///
-    /// Reset the qubit `qbit` to |0〉. This is done by measuring the bit, and
+    /// Reset the qubit `qbit` to |0⟩. This is done by measuring the bit, and
     /// flipping it if the result is `1`, so this is potentially an expensive
     /// operation.
     pub fn reset(&mut self, qbit: usize) -> crate::error::Result<()>
@@ -370,7 +370,7 @@ impl Circuit
 
     /// Reset all qubits
     ///
-    /// Reset the entire quantum state of the circuit to |00...0〉. The classical
+    /// Reset the entire quantum state of the circuit to |00...0⟩. The classical
     /// register is not affected.
     pub fn reset_all(&mut self)
     {
@@ -1729,7 +1729,7 @@ mod tests
         let hist = circuit.histogram().unwrap();
         // Results of first measurement should be approximately equally
         // distributed over 0 and 1 for both qubits, second should be pure 0
-        // for second qubit, third pure |00〉.
+        // for second qubit, third pure |00⟩.
         let mut n0 = [0; 4];
         let mut n1 = [0; 4];
         let mut n2 = [0; 4];

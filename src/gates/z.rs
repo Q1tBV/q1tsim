@@ -17,7 +17,7 @@ use crate::gates::Gate;
 /// The Pauli Z gate.
 ///
 /// The Z gate rotates the state over π radians around the `z` axis of
-/// the Bloch sphere, i.e. it flips the sign of the |1〉 components of the qubit.
+/// the Bloch sphere, i.e. it flips the sign of the |1⟩ components of the qubit.
 pub struct Z
 {
 }

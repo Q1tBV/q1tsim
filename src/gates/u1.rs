@@ -16,7 +16,7 @@ use crate::gates::Gate;
 
 /// Phase gate.
 ///
-/// The `U`<sub>`1`</sub>`(λ)` gate shifts the phase of the |1〉 component of a
+/// The `U`<sub>`1`</sub>`(λ)` gate shifts the phase of the |1⟩ component of a
 /// qubit over an angle `λ`. The associated matrix is
 /// ```text
 /// ┌              ┐
