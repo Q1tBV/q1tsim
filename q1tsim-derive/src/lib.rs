@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This crate provides derive macros for the qt1sim quantum computer simulator.
+//! See the [crate documentation](https://docs.rs/q1tsim/0.3.0/q1tsim/) for
+//! more details.
+
 extern crate proc_macro;
 
 use quote::quote;
