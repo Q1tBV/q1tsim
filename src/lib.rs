@@ -210,3 +210,5 @@ pub mod qustate;
 mod idhash;
 mod support;
 #[cfg(test)] mod stats;
+
+pub use q1tsim_derive::*;
