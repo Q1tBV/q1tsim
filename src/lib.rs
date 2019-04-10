@@ -42,7 +42,7 @@
 //! q1tsim = "0.3"
 //! ```
 //!
-//! As an example, here is a 3-qubit quantum Fourier transform of the |000⟩quantum
+//! As an example, here is a 3-qubit quantum Fourier transform of the |000⟩ quantum
 //! state:
 //! ```
 //! use q1tsim::circuit::Circuit;
@@ -162,7 +162,9 @@
 //! a pair of qubits, is given below:
 //! ```
 //! use ndarray::array;
+//! use q1tsim::ExportGate;
 //!
+//! #[derive(ExportGate)]
 //! struct Mix
 //! {
 //!    alpha: f64
@@ -186,15 +188,51 @@
 //!         ]
 //!     }
 //! }
-//!
-//! impl q1tsim::export::OpenQasm for Mix {}
-//! impl q1tsim::export::CQasm for Mix {}
-//! impl q1tsim::export::Latex for Mix {}
 //! ```
 //! Types implementing the `Gate` trait may optionally also implement the
 //! [apply()](gates/trait.Gate.html#method.apply) family of methods if a more
 //! optimal implementation than simply multiplying by its associated matrix can
 //! be found.
+//!
+//! Exporting gates and circuits
+//! ============================
+//! The discerning reader may have notices the `#[derive(ExportGate)]` statement
+//! on the custom gate in the listing above. This makes the type use the default
+//! implementations of the export functions for a gate. Currently, there are
+//! three traits for exporting a gate:
+//! - [OpenQasm](export/trait.OpenQasm.html) for exporting a gate to OpenQasm code.
+//! - [CQasm](export/trait.CQasm.html) for exporting a gate to c-Qasm code.
+//! - [Latex](export/trait.Latex.html) for exporting a gate to LaTeX.
+//!
+//! You can use the default implementation for each of these traits by deriving
+//! them, e.g.
+//! ```
+//! use q1tsim::OpenQasm;
+//! use q1tsim::gates::Gate;
+//!
+//! #[derive(OpenQasm)]
+//! struct MySpecialGate {}
+//!
+//! impl Gate for MySpecialGate {
+//!     /* ... */
+//!     # fn description(&self) -> &str { "" }
+//!     # fn nr_affected_bits(&self) -> usize { 0 }
+//!     # fn matrix(&self) -> q1tsim::cmatrix::CMatrix { q1tsim::cmatrix::CMatrix::zeros((0,0)) }
+//! }
+//! ```
+//! The default implementations for OpenQasm and CQasm simply return an error,
+//! since there is no way [^no_qasm] to know how to encode a custom gate
+//! in these formats. The default implementation for the LaTeX export simply draws
+//! a rectangular box with the gate description inside. As seen before, if you
+//! want to use default definitions for all export traits, derive from `ExportGate`.
+//!
+//! Note that to use a gate type in a circuit, it must be exportable, so an
+//! implementation for the export traits must be defined for your custom type,
+//! either through deriving or by providing your own implementation.
+//!
+//! [^no_qasm]: No reasonable way at least. Technically, we could take the matrix
+//! for the gate, decompose it into primitive gates, and export the corresponding
+//! code.
 
 #[macro_use] extern crate ndarray;
 #[cfg(test)] #[macro_use] extern crate matches;
