@@ -356,7 +356,7 @@ impl QuState
         let mut state_counts = vec![];
         for col_idx in 0..self.states.cols()
         {
-            let mut count_map = ::std::collections::HashMap::new();
+            let mut count_map = crate::idhash::new_usize_hash_map();
             let distr = rand::distributions::WeightedIndex::new(
                 self.states.column(col_idx).iter().map(|c| c.norm_sqr())
             ).unwrap();
