@@ -117,7 +117,7 @@ impl QuState
         bits: &[usize])
     where G: crate::gates::Gate + ?Sized
     {
-        assert!(control.len() == self.nr_shots
+        assert!(control.len() == self.nr_shots,
             "The number of control bits does not match the number of runs");
 
         let gate_bits = gate.nr_affected_bits();
