@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// The Pauli Z gate.
 ///
@@ -70,6 +71,12 @@ impl crate::gates::Gate for Z
         let n = state.rows() / 2;
         state.slice_mut(s![n.., ..]).mapv_inplace(|c| -c);
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        Ok(ops[0] == PauliOp::X || ops[0] == PauliOp::Y)
+    }
 }
 
 impl crate::export::OpenQasm for Z
@@ -95,7 +102,7 @@ impl crate::export::Latex for Z
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
 
         let symbol = if state.is_controlled() { r"\control \qw" } else { r"\gate{Z}" };
         state.set_field(bits[0], String::from(symbol))
@@ -105,8 +112,10 @@ impl crate::export::Latex for Z
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, Z};
+    use super::Z;
+    use crate::gates::{gate_test, Gate};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -169,5 +178,25 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{Z} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let mut op = [PauliOp::I];
+        assert_eq!(Z::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::I]);
+
+        let mut op = [PauliOp::Z];
+        assert_eq!(Z::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::Z]);
+
+        let mut op = [PauliOp::X];
+        assert_eq!(Z::new().conjugate(&mut op), Ok(true));
+        assert_eq!(op, [PauliOp::X]);
+
+        let mut op = [PauliOp::Y];
+        assert_eq!(Z::new().conjugate(&mut op), Ok(true));
+        assert_eq!(op, [PauliOp::Y]);
     }
 }

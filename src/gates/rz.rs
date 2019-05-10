@@ -119,7 +119,7 @@ impl crate::export::Latex for RZ
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         let contents = format!("R_z({:.4})", self.lambda);
         state.add_block_gate(bits, &contents)
     }

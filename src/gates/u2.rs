@@ -97,7 +97,7 @@ impl crate::export::Latex for U2
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         let contents = format!("U_2({:.4}, {:.4})", self.phi, self.lambda);
         state.add_block_gate(bits, &contents)
     }

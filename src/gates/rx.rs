@@ -128,7 +128,7 @@ impl crate::export::Latex for RX
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         let contents = format!("R_x({:.4})", self.theta);
         state.add_block_gate(bits, &contents)
     }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// The Hadamard gate.
 ///
@@ -65,7 +66,6 @@ impl H
     {
         crate::gates::U2::cost()
     }
-
 }
 
 impl crate::gates::Gate for H
@@ -100,6 +100,20 @@ impl crate::gates::Gate for H
     {
         Self::transform_mat(state);
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        let (op, phase) = match ops[0]
+            {
+                PauliOp::I => (PauliOp::I, false),
+                PauliOp::Z => (PauliOp::X, false),
+                PauliOp::X => (PauliOp::Z, false),
+                PauliOp::Y => (PauliOp::Y, true)
+            };
+        ops[0] = op;
+        Ok(phase)
+    }
 }
 
 impl crate::export::OpenQasm for H
@@ -125,7 +139,7 @@ impl crate::export::Latex for H
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, "H")
     }
 }
@@ -135,6 +149,7 @@ mod tests
 {
     use crate::gates::{gate_test, Gate, H};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -196,5 +211,27 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{H} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let gate = H::new();
+
+        let mut ops = [PauliOp::I];
+        assert_eq!(gate.conjugate(&mut ops), Ok(false));
+        assert_eq!(ops, [PauliOp::I]);
+
+        let mut ops = [PauliOp::Z];
+        assert_eq!(gate.conjugate(&mut ops), Ok(false));
+        assert_eq!(ops, [PauliOp::X]);
+
+        let mut ops = [PauliOp::X];
+        assert_eq!(gate.conjugate(&mut ops), Ok(false));
+        assert_eq!(ops, [PauliOp::Z]);
+
+        let mut ops = [PauliOp::Y];
+        assert_eq!(gate.conjugate(&mut ops), Ok(true));
+        assert_eq!(ops, [PauliOp::Y]);
     }
 }

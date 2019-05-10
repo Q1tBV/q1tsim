@@ -99,7 +99,7 @@ impl crate::export::Latex for T
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, "T")
     }
 }
@@ -189,7 +189,7 @@ impl crate::export::Latex for Tdg
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, r"T^\dagger")
     }
 }

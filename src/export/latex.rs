@@ -549,7 +549,7 @@ pub trait Latex: crate::gates::Gate
     fn latex(&self, bits: &[usize], state: &mut LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, self.description())
     }
 }

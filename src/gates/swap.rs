@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// The `Swap` gate
 ///
@@ -94,6 +95,13 @@ impl crate::gates::Gate for Swap
     {
         Self::transform_mat(state);
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        ops.swap(0, 1);
+        Ok(false)
+    }
 }
 
 impl crate::export::OpenQasm for Swap
@@ -121,7 +129,7 @@ impl crate::export::Latex for Swap
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
 
         let (mut b0, mut b1) = (bits[0], bits[1]);
         if b1 < b0
@@ -142,8 +150,10 @@ impl crate::export::Latex for Swap
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, Swap};
+    use super::Swap;
     use crate::export::{LatexExportState, Latex, OpenQasm, CQasm};
+    use crate::gates::{gate_test, Gate};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -256,5 +266,13 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qswap & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let mut ops = [PauliOp::I, PauliOp::X];
+        assert_eq!(Swap::new().conjugate(&mut ops), Ok(false));
+        assert_eq!(ops, [PauliOp::X, PauliOp::I]);
     }
 }

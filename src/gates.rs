@@ -14,6 +14,9 @@
 
 mod controlled;
 mod composite;
+mod cx;
+mod cy;
+mod cz;
 mod hadamard;
 mod identity;
 mod kron;
@@ -315,19 +318,33 @@ pub trait Gate
 
     /// Check the number of bits
     ///
-    /// Check if the number of bit indices in `bits` is equal to the number
+    /// Check if the number of bit indices `n` is equal to the number
     /// of bits this gate operates on. If not, return an InvalidNrBits error.
-    fn check_nr_bits(&self, bits: &[usize]) -> crate::error::Result<()>
+    fn check_nr_bits(&self, n: usize) -> crate::error::Result<()>
     {
-        if bits.len() != self.nr_affected_bits()
+        if self.nr_affected_bits() != n
         {
-            Err(crate::error::Error::InvalidNrBits(bits.len(), self.nr_affected_bits(),
+            Err(crate::error::Error::InvalidNrBits(n, self.nr_affected_bits(),
                 String::from(self.description())))
         }
         else
         {
             Ok(())
         }
+    }
+
+    /// Conjugate Pauli operators
+    ///
+    /// Conjugate the (tensor product of) Pauli operator `ops` with this gate,
+    /// and return the sign of the resulting operator. I.e., if this gate is
+    /// called `G`, replace the operator `O` described by ops with
+    /// `GOG`<sup>`†`</sup>. This of course only works if the result can be
+    /// expressed in Pauli operators, so only if this gate can be written
+    /// in terms of `H`, `S` and `CX` gates. The default implementation of
+    /// this function returns a `NotAStabilizer` error.
+    fn conjugate(&self, _ops: &mut [crate::stabilizer::PauliOp]) -> crate::error::Result<bool>
+    {
+        Err(crate::error::Error::NotAStabilizer(String::from(self.description())))
     }
 }
 
@@ -342,8 +359,11 @@ where G: Gate
     assert_complex_matrix_eq!(&*state, result);
 }
 
-pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CX, CY, CZ, CCRX, CCRY, CCRZ, CCX, CCZ};
+pub use self::controlled::{C, CH, CRX, CRY, CRZ, CS, CSdg, CT, CTdg, CU1, CU2, CU3, CV, CVdg, CCRX, CCRY, CCRZ, CCX, CCZ};
 pub use self::composite::Composite;
+pub use self::cx::CX;
+pub use self::cy::CY;
+pub use self::cz::CZ;
 pub use self::hadamard::H;
 pub use self::identity::I;
 pub use self::kron::Kron;

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// Static loop gate
 ///
@@ -87,6 +88,17 @@ impl crate::gates::Gate for Loop
         {
             self.body.apply_mat_slice(state.view_mut());
         }
+    }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        let mut flip_sign = false;
+        for _ in 0..self.nr_iterations
+        {
+            flip_sign ^= self.body.conjugate(ops)?;
+        }
+        Ok(flip_sign)
     }
 }
 
@@ -173,7 +185,7 @@ impl crate::export::Latex for Loop
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
 
         if self.nr_iterations == 0
         {
@@ -206,8 +218,9 @@ impl crate::export::Latex for Loop
 mod tests
 {
     use super::Loop;
-    use crate::gates::{gate_test, Composite, Gate};
     use crate::export::{CQasm, OpenQasm, Latex, LatexExportState};
+    use crate::gates::{gate_test, Composite, Gate};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -404,5 +417,20 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qw & \targ & \qw & \qw & \targ & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let body = Composite::from_string("body", "S 0").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let mut ops = [PauliOp::X];
+        assert_eq!(gate.conjugate(&mut ops), Ok(true));
+        assert_eq!(ops, [PauliOp::Y]);
+
+        let body = Composite::from_string("body", "CRX(0.1) 0 1").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let mut ops = [PauliOp::X, PauliOp::Y];
+        assert!(matches!(gate.conjugate(&mut ops), Err(crate::error::Error::NotAStabilizer(_))));
     }
 }

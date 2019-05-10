@@ -142,6 +142,8 @@ pub enum Error
     InvalidCBit(usize),
     /// Results asked for circuit that has not been run yet
     NotExecuted,
+    /// Acting with a non-stabilizer gate on a stabilizer circuit
+    NotAStabilizer(String),
     /// Other errors that should not occur
     InternalError(String),
     /// Error reating to the export of a circuit
@@ -183,6 +185,9 @@ impl ::std::fmt::Display for Error
             },
             Error::NotExecuted => {
                 write!(f, "The circuit has not been executed yet")
+            },
+            Error::NotAStabilizer(ref desc) => {
+                write!(f, "{} is no a stabilizer gate", desc)
             },
             Error::InternalError(ref err) => {
                 write!(f, "Internal error: {}", err)

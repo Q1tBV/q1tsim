@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// The identity gate
 ///
@@ -56,6 +57,11 @@ impl crate::gates::Gate for I
     {
         // Identity, leave state unchanged, so do nothing
     }
+
+    fn conjugate(&self, _ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        Ok(false)
+    }
 }
 
 impl crate::export::OpenQasm for I
@@ -81,7 +87,7 @@ impl crate::export::Latex for I
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.set_field(bits[0], String::from(r"\qw"))
     }
 }
@@ -89,8 +95,10 @@ impl crate::export::Latex for I
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, I};
+    use super::I;
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::gates::{gate_test, Gate};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -161,5 +169,13 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \qw & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let mut ops = [PauliOp::X];
+        assert_eq!(I::new().conjugate(&mut ops), Ok(false));
+        assert_eq!(ops, [PauliOp::X]);
     }
 }

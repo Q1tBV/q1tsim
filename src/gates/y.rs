@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// The Pauli Y gate.
 ///
@@ -82,6 +83,12 @@ impl crate::gates::Gate for Y
             slice *=  crate::cmatrix::COMPLEX_I;
         }
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        Ok(ops[0] == PauliOp::Z || ops[0] == PauliOp::X)
+    }
 }
 
 impl crate::export::OpenQasm for Y
@@ -107,7 +114,7 @@ impl crate::export::Latex for Y
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, "Y")
     }
 }
@@ -115,8 +122,9 @@ impl crate::export::Latex for Y
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, Y};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::gates::{gate_test, Gate, Y};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -180,5 +188,25 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{Y} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let mut op = [PauliOp::I];
+        assert_eq!(Y::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::I]);
+
+        let mut op = [PauliOp::Z];
+        assert_eq!(Y::new().conjugate(&mut op), Ok(true));
+        assert_eq!(op, [PauliOp::Z]);
+
+        let mut op = [PauliOp::X];
+        assert_eq!(Y::new().conjugate(&mut op), Ok(true));
+        assert_eq!(op, [PauliOp::X]);
+
+        let mut op = [PauliOp::Y];
+        assert_eq!(Y::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::Y]);
     }
 }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::export::CircuitGate;
+use crate::stabilizer::PauliOp;
 use super::*;
 
 /// Structure for a description of a subgate.
@@ -703,6 +704,22 @@ impl crate::gates::Gate for Composite
             apply_gate_mat_slice(state.view_mut(), &*op.gate, &op.bits, self.nr_bits);
         }
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        let mut flip_sign = false;
+        for op in self.ops.iter()
+        {
+            let mut gate_ops: Vec<PauliOp> = op.bits.iter().map(|&b| ops[b]).collect();
+            flip_sign ^= op.gate.conjugate(&mut gate_ops)?;
+            for (&i, gop) in op.bits.iter().zip(gate_ops)
+            {
+                ops[i] = gop;
+            }
+        }
+        Ok(flip_sign)
+    }
 }
 
 impl crate::export::OpenQasm for Composite
@@ -795,7 +812,7 @@ impl crate::export::Latex for Composite
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
 
         if state.expand_composite()
         {
@@ -819,6 +836,7 @@ mod tests
     use super::Composite;
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{Gate, CCX, CX, H, X};
+    use crate::stabilizer::PauliOp;
     use num_complex::Complex;
 
     #[test]
@@ -1908,5 +1926,18 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{G} \qwx[-2] & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let gate = Composite::from_string("G", "CX 0 1; X 0").unwrap();
+        let mut ops = [PauliOp::X, PauliOp::Y];
+        assert_eq!(gate.conjugate(&mut ops), Ok(true));
+        assert_eq!(ops, [PauliOp::Y, PauliOp::Z]);
+
+        let gate = Composite::from_string("G", "CX 0 1; T 0").unwrap();
+        let mut ops = [PauliOp::X, PauliOp::Y];
+        assert!(matches!(gate.conjugate(&mut ops), Err(crate::error::Error::NotAStabilizer(_))));
     }
 }

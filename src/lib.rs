@@ -244,6 +244,7 @@ pub mod error;
 pub mod export;
 pub mod permutation;
 pub mod qustate;
+pub mod stabilizer;
 
 mod idhash;
 mod support;

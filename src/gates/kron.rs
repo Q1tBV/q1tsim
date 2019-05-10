@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
@@ -67,6 +68,15 @@ where G0: crate::gates::Gate, G1: crate::gates::Gate
         self.g1.apply_slice(state.slice_mut(s![..n]));
         self.g1.apply_slice(state.slice_mut(s![n..]));
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        let n0 = self.g0.nr_affected_bits();
+        let mut flip_sign = self.g0.conjugate(&mut ops[..n0])?;
+        flip_sign ^= self.g1.conjugate(&mut ops[n0..])?;
+        Ok(flip_sign)
+    }
 }
 
 impl<G0, G1> crate::export::OpenQasm for Kron<G0, G1>
@@ -119,7 +129,7 @@ where G0: crate::export::Latex, G1: crate::export::Latex
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
 
         let n0 = self.g0.nr_affected_bits();
         self.g0.latex(&bits[..n0], state)?;
@@ -130,8 +140,10 @@ where G0: crate::export::Latex, G1: crate::export::Latex
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, CX, Gate, H, I, Kron, X};
+    use super::Kron;
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::gates::{gate_test, CX, Gate, H, I, T, X};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_cost()
@@ -310,5 +322,18 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \targ & \qw & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let gate = Kron::new(X::new(), H::new());
+        let mut ops = [PauliOp::Z, PauliOp::Z];
+        assert_eq!(gate.conjugate(&mut ops), Ok(true));
+        assert_eq!(ops, [PauliOp::Z, PauliOp::X]);
+
+        let gate = Kron::new(X::new(), T::new());
+        let mut ops = [PauliOp::Z, PauliOp::Z];
+        assert!(matches!(gate.conjugate(&mut ops), Err(crate::error::Error::NotAStabilizer(_))));
     }
 }

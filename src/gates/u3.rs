@@ -107,7 +107,7 @@ impl crate::export::Latex for U3
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         let contents = format!("U_3({:.4}, {:.4}, {:.4})", self.theta, self.phi, self.lambda);
         state.add_block_gate(bits, &contents)
     }

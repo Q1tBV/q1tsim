@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gates::Gate;
+use crate::gates::{Gate, CX};
 
 /// Controlled gates.
 ///
@@ -86,7 +86,7 @@ where G: crate::gates::Gate + crate::export::Latex
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
 
         state.start_range_op(bits, None)?;
 
@@ -413,17 +413,6 @@ declare_controlled!(
     cost=2.0*CX::cost() + crate::gates::U1::cost() + 2.0*crate::gates::U3::cost());
 
 declare_controlled!(
-    /// Controlled `X` gate.
-    CX, crate::gates::X, cost=1001.0,
-    c_qasm="cnot {0}, {1}");
-declare_controlled!(
-    /// Controlled `Y` gate.
-    CY, crate::gates::Y, cost=CX::cost() + 2.0*crate::gates::U1::cost());
-declare_controlled!(
-    /// Controlled `Z` gate.
-    CZ, crate::gates::Z, cost=CX::cost() + 2.0*crate::gates::U2::cost());
-
-declare_controlled!(
     /// Doubly controlled `R`<sub>`X`</sub> gate.
     CCRX, crate::gates::CRX,
     cost=2.0*CX::cost() + 3.0*CRX::cost(),
@@ -495,7 +484,7 @@ mod tests
     use crate::gates::{gate_test, Gate, H, X};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use super::{C, CCRX, CCRY, CCRZ, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CTdg,
-        CU1, CU3, CV, CX, CY, CZ};
+        CU1, CU3, CV};
     use crate::cmatrix;
 
     #[test]
@@ -564,7 +553,7 @@ mod tests
             [z, z, -h, -x],
             [z, o,  h,  x]
         ];
-        gate_test(CX::new(), &mut state, &result);
+        gate_test(C::new(X::new()), &mut state, &result);
 
         let mut state = array![
             [o, z,  h,  z],
@@ -614,9 +603,6 @@ mod tests
     #[test]
     fn test_cost()
     {
-        assert_eq!(CX::new().cost(), 1001.0);
-        assert_eq!(CY::new().cost(), 1015.0);
-        assert_eq!(CZ::new().cost(), 1209.0);
         assert_eq!(CH::new().cost(), 2550.0);
         assert_eq!(CRX::cost(), 2411.0);
         assert_eq!(CRY::cost(), 2404.0);
@@ -645,10 +631,6 @@ mod tests
         let bit_names = [String::from("qb0"), String::from("qb1")];
         let open_qasm = CRX::new(0.9).open_qasm(&bit_names, &[0, 1]);
         assert_eq!(open_qasm, Ok(String::from("s qb1; cx qb0, qb1; ry(-0.9/2) qb1; cx qb0, qb1; ry(0.9/2) qb1; sdg qb1")));
-
-        let bit_names = [String::from("qb0"), String::from("qb1")];
-        let open_qasm = CX::new().open_qasm(&bit_names, &[0, 1]);
-        assert_eq!(open_qasm, Ok(String::from("cx qb0, qb1")));
 
         let bit_names = [String::from("qb0"), String::from("qb1"), String::from("qb2")];
         let open_qasm = CCZ::new().open_qasm(&bit_names, &[0, 1, 2]);
@@ -758,10 +740,6 @@ cnot qb0, qb1
 ry qb1, 0.6172839
 rz qb1, 3.1415
 rz qb0, 1.07695"#)));
-
-        let bit_names = [String::from("qb0"), String::from("qb1")];
-        let c_qasm = CX::new().c_qasm(&bit_names, &[0, 1]);
-        assert_eq!(c_qasm, Ok(String::from("cnot qb0, qb1")));
     }
 
     #[test]

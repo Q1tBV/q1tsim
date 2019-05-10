@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::gates::Gate;
+use crate::stabilizer::PauliOp;
 
 /// The Clifford `S` gate
 ///
@@ -80,6 +81,20 @@ impl crate::gates::Gate for S
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= crate::cmatrix::COMPLEX_I;
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        let (op, phase) = match ops[0]
+        {
+            PauliOp::I => (PauliOp::I, false),
+            PauliOp::Z => (PauliOp::Z, false),
+            PauliOp::X => (PauliOp::Y, false),
+            PauliOp::Y => (PauliOp::X, true)
+        };
+        ops[0] = op;
+        Ok(phase)
+    }
 }
 
 impl crate::export::OpenQasm for S
@@ -105,7 +120,7 @@ impl crate::export::Latex for S
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, "S")
     }
 }
@@ -176,6 +191,20 @@ impl crate::gates::Gate for Sdg
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= -crate::cmatrix::COMPLEX_I;
     }
+
+    fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
+    {
+        self.check_nr_bits(ops.len())?;
+        let (op, phase) = match ops[0]
+        {
+            PauliOp::I => (PauliOp::I, false),
+            PauliOp::Z => (PauliOp::Z, false),
+            PauliOp::X => (PauliOp::Y, true),
+            PauliOp::Y => (PauliOp::X, false)
+        };
+        ops[0] = op;
+        Ok(phase)
+    }
 }
 
 impl crate::export::OpenQasm for Sdg
@@ -201,7 +230,7 @@ impl crate::export::Latex for Sdg
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
     {
-        self.check_nr_bits(bits)?;
+        self.check_nr_bits(bits.len())?;
         state.add_block_gate(bits, r"S^\dagger")
     }
 }
@@ -209,8 +238,9 @@ impl crate::export::Latex for Sdg
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, S, Sdg};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::gates::{gate_test, Gate, S, Sdg};
+    use crate::stabilizer::PauliOp;
 
     #[test]
     fn test_description()
@@ -313,5 +343,41 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{S^\dagger} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_conjugate()
+    {
+        let mut op = [PauliOp::I];
+        assert_eq!(S::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::I]);
+
+        let mut op = [PauliOp::Z];
+        assert_eq!(S::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::Z]);
+
+        let mut op = [PauliOp::X];
+        assert_eq!(S::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::Y]);
+
+        let mut op = [PauliOp::Y];
+        assert_eq!(S::new().conjugate(&mut op), Ok(true));
+        assert_eq!(op, [PauliOp::X]);
+
+        let mut op = [PauliOp::I];
+        assert_eq!(Sdg::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::I]);
+
+        let mut op = [PauliOp::Z];
+        assert_eq!(Sdg::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::Z]);
+
+        let mut op = [PauliOp::X];
+        assert_eq!(Sdg::new().conjugate(&mut op), Ok(true));
+        assert_eq!(op, [PauliOp::Y]);
+
+        let mut op = [PauliOp::Y];
+        assert_eq!(Sdg::new().conjugate(&mut op), Ok(false));
+        assert_eq!(op, [PauliOp::X]);
     }
 }
