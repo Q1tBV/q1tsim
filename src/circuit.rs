@@ -60,7 +60,7 @@ pub struct Circuit
     /// The number of classical bit in the system
     nr_cbits: usize,
     /// The quantum state of the system
-    q_state: Option<crate::qustate::QuState>,
+    q_state: Option<crate::vectorstate::VectorState>,
     /// The classial state of the system
     c_state: Option<ndarray::Array1<u64>>,
     /// The operations to perform on the state
@@ -518,7 +518,7 @@ impl Circuit
     /// previous states of the system (quantum or classical).
     pub fn execute_with_rng<R: rand::RngCore>(&mut self, nr_shots: usize, rng: &mut R)
     {
-        self.q_state = Some(crate::qustate::QuState::new(self.nr_qbits, nr_shots));
+        self.q_state = Some(crate::vectorstate::VectorState::new(self.nr_qbits, nr_shots));
         self.c_state = Some(ndarray::Array::zeros(nr_shots));
         // It shpuld not be possible to get an error from reexecute, so
         // ignore it for now.
@@ -1528,7 +1528,7 @@ mod tests
         assert_eq!(circuit.c_state, Some(array![0b00, 0b00, 0b00, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(crate::qustate::QuState::new(2, 5));
+        circuit.q_state = Some(crate::vectorstate::VectorState::new(2, 5));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 1, X::new(), &[1]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
@@ -1536,7 +1536,7 @@ mod tests
         assert_eq!(circuit.c_state, Some(array![0b10, 0b00, 0b00, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(crate::qustate::QuState::new(2, 5));
+        circuit.q_state = Some(crate::vectorstate::VectorState::new(2, 5));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 2, X::new(), &[1]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
@@ -1544,7 +1544,7 @@ mod tests
         assert_eq!(circuit.c_state, Some(array![0b00, 0b10, 0b10, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(crate::qustate::QuState::new(2, 5));
+        circuit.q_state = Some(crate::vectorstate::VectorState::new(2, 5));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[1], 1, X::new(), &[0]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();

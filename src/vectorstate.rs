@@ -16,13 +16,13 @@ use rand::distributions::Distribution;
 
 /// Quantum state.
 ///
-/// Struct Qustate represents the quantum experiment. It consists of a series of
+/// Struct Vectorstate represents the quantum experiment. It consists of a series of
 /// quantum states, combined with the number of times this state occurs in the
 /// experiment. Each quantum state is a (normalized) superposition of basis states,
 /// ∑<sub>i</sub>a<sub>i</sub>|i⟩, where each basis function |i⟩ is a Kronecker
-/// product of quantum bits.
+/// product of quantum bits, and is represented by the coefficient vector **a**.
 #[derive(Debug)]
-pub struct QuState
+pub struct VectorState
 {
     /// The number of qubits in this state
     nr_bits: usize,
@@ -34,16 +34,16 @@ pub struct QuState
     states: crate::cmatrix::CMatrix,
 }
 
-impl QuState
+impl VectorState
 {
-    /// Create a new qustate of `nr_bits` qubits, all initialized to |0⟩, which
-    /// will be measured `nr_shots` times.
+    /// Create a new quantum state of `nr_bits` qubits, all initialized to |0⟩,
+    /// which will be measured `nr_shots` times.
     pub fn new(nr_bits: usize, nr_shots: usize) -> Self
     {
         let mut states = crate::cmatrix::CMatrix::zeros((1 << nr_bits, 1));
         states[(0, 0)] = crate::cmatrix::COMPLEX_ONE;
 
-        QuState
+        VectorState
         {
             nr_bits: nr_bits,
             nr_shots: nr_shots,
@@ -52,9 +52,9 @@ impl QuState
         }
     }
 
-    /// Create a new qustate from qubit coefficients.
+    /// Create a new quantum state from qubit coefficients.
     ///
-    /// Create a new qustate as a direct product of qubits, where the
+    /// Create a new quantum state as a direct product of qubits, where the
     /// coefficients of the |0⟩ and |1⟩ states in the qubits are given in
     /// `bit_coefs`. This array must be of size `2*n`, where `n` is the number
     /// of qubits in the system. The state will be evaluated in `nr_shots`
@@ -73,7 +73,7 @@ impl QuState
             states = crate::cmatrix::kron_mat(&states, &bit);
         }
 
-        QuState
+        VectorState
         {
             nr_bits: nr_bits,
             nr_shots: nr_shots,
@@ -451,7 +451,7 @@ impl QuState
 #[cfg(test)]
 mod tests
 {
-    use super::QuState;
+    use super::VectorState;
     use crate::gates::{CCX, CX, H, Kron, X, Y};
 
     #[test]
@@ -460,13 +460,13 @@ mod tests
         let z = crate::cmatrix::COMPLEX_ZERO;
         let o = crate::cmatrix::COMPLEX_ONE;
 
-        let s = QuState::new(1, 1024);
+        let s = VectorState::new(1, 1024);
         assert_eq!(s.nr_bits, 1);
         assert_eq!(s.nr_shots, 1024);
         assert_eq!(s.counts, vec![1024]);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
-        let s = QuState::new(3, 1500);
+        let s = VectorState::new(3, 1500);
         assert_eq!(s.nr_bits, 3);
         assert_eq!(s.nr_shots, 1500);
         assert_eq!(s.counts, vec![1500]);
@@ -481,19 +481,19 @@ mod tests
         let i = crate::cmatrix::COMPLEX_I;
 
         // |0⟩⊗|1⟩
-        let s = QuState::from_qubit_coefs(&[o, z, z, o], 1);
+        let s = VectorState::from_qubit_coefs(&[o, z, z, o], 1);
         assert_eq!(s.nr_bits, 2);
         assert_eq!(s.nr_shots, 1);
         assert_eq!(s.counts, vec![1]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [o], [z], [z]]);
         // |1⟩⊗|0⟩
-        let s = QuState::from_qubit_coefs(&[z, o, o, z], 13);
+        let s = VectorState::from_qubit_coefs(&[z, o, o, z], 13);
         assert_eq!(s.nr_bits, 2);
         assert_eq!(s.nr_shots, 13);
         assert_eq!(s.counts, vec![13]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [o], [z]]);
         // (H|0⟩)⊗(Y|1⟩), unnormalized
-        let s = QuState::from_qubit_coefs(&[o, o, -i, z], 9);
+        let s = VectorState::from_qubit_coefs(&[o, o, -i, z], 9);
         let x = ::std::f64::consts::FRAC_1_SQRT_2 * i;
         assert_eq!(s.nr_bits, 2);
         assert_eq!(s.nr_shots, 9);
@@ -508,30 +508,30 @@ mod tests
         let o = crate::cmatrix::COMPLEX_ONE;
         let x = crate::cmatrix::COMPLEX_HSQRT2;
 
-        let mut s = QuState::new(2, 5);
+        let mut s = VectorState::new(2, 5);
         s.apply_conditional_gate(&[false, false, true, true, false], &X::new(), &[1]);
         assert_eq!(s.counts, vec![2, 2, 1]);
         assert_complex_matrix_eq!(&s.states,
             &array![[o, z, o], [z, o, z], [z, z, z], [z, z, z]]);
 
-        let mut s = QuState::new(2, 5);
+        let mut s = VectorState::new(2, 5);
         s.apply_conditional_gate(&[false, false, true, true, true], &X::new(), &[0]);
         assert_eq!(s.counts, vec![2, 3]);
         assert_complex_matrix_eq!(&s.states, &array![[o, z], [z, z], [z, o], [z, z]]);
 
-        let mut s = QuState::new(2, 5);
+        let mut s = VectorState::new(2, 5);
         s.apply_conditional_gate(&[true, false, true, true, false], &H::new(), &[1]);
         assert_eq!(s.counts, vec![1, 1, 2, 1]);
         assert_complex_matrix_eq!(&s.states,
             &array![[x, o, x, o], [x, z, x, z], [z, z, z, z], [z, z, z, z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[o, z, x, x], 5);
+        let mut s = VectorState::from_qubit_coefs(&[o, z, x, x], 5);
         s.apply_conditional_gate(&[true, false, true, true, false], &CX::new(), &[1, 0]);
         assert_eq!(s.counts, vec![1, 1, 2, 1]);
         assert_complex_matrix_eq!(&s.states,
             &array![[x, x, x, x], [z, x, z, x], [z, z, z, z], [x, z, x, z]]);
 
-        let mut s = QuState::new(2, 5);
+        let mut s = VectorState::new(2, 5);
         s.apply_conditional_gate(&[true, true, true, false, false], &H::new(), &[0]);
         assert_eq!(s.counts, vec![3, 2]);
         assert_complex_matrix_eq!(&s.states, &array![[x, o], [z, z], [x, z], [z, z]]);
@@ -550,13 +550,13 @@ mod tests
         let mut rng = rand::thread_rng();
 
         // |0⟩
-        let mut s = QuState::new(1, 3);
+        let mut s = VectorState::new(1, 3);
         let m = s.measure(0, &mut rng);
         assert_eq!(m, array![0, 0, 0]);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         // |0⟩⊗|0⟩
-        let mut s = QuState::from_qubit_coefs(&[o, z, o, z], 3);
+        let mut s = VectorState::from_qubit_coefs(&[o, z, o, z], 3);
         let m = s.measure(1, &mut rng);
         assert_eq!(m, ndarray::Array1::zeros(3));
         assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z]]);
@@ -565,7 +565,7 @@ mod tests
         assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z]]);
 
         // (H|0⟩)⊗(H|0⟩), unnormalized
-        let mut s = QuState::from_qubit_coefs(&[o, o, o, o], 1024);
+        let mut s = VectorState::from_qubit_coefs(&[o, o, o, o], 1024);
         let m0 = s.measure(0, &mut rng);
         let mut prev_b = m0[0];
         let mut sc_idx = 0;
@@ -635,20 +635,20 @@ mod tests
         let mut rng = rand::thread_rng();
 
         // |0⟩
-        let mut s = QuState::new(1, nr_shots);
+        let mut s = VectorState::new(1, nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(measurements.iter().all(|&bits| bits == 0));
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         // H|0⟩
-        let mut s = QuState::from_qubit_coefs(&[o, o], nr_shots);
+        let mut s = VectorState::from_qubit_coefs(&[o, o], nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
         assert_complex_matrix_eq!(&s.states, &array![[x], [x]]);
 
         // H|0⟩⊗ H|0⟩
-        let mut s = QuState::from_qubit_coefs(&[o, o, o, o], nr_shots);
+        let mut s = VectorState::from_qubit_coefs(&[o, o, o, o], nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
@@ -659,7 +659,7 @@ mod tests
         assert_complex_matrix_eq!(&s.states, &array![[h], [h], [h], [h]]);
 
         // H|0⟩⊗ |1⟩
-        let mut s = QuState::from_qubit_coefs(&[x, x, z, o], nr_shots);
+        let mut s = VectorState::from_qubit_coefs(&[x, x, z, o], nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
@@ -676,15 +676,15 @@ mod tests
         let x = crate::cmatrix::COMPLEX_HSQRT2;
         let i = crate::cmatrix::COMPLEX_I;
 
-        let mut s = QuState::new(3, 1);
+        let mut s = VectorState::new(3, 1);
         s.apply_gate(&H::new(), &[0]);
         assert_complex_matrix_eq!(&s.states, &array![[x], [z], [z], [z], [x], [z], [z], [z]]);
 
-        let mut s = QuState::new(3, 1);
+        let mut s = VectorState::new(3, 1);
         s.apply_gate(&H::new(), &[1]);
         assert_complex_matrix_eq!(&s.states, &array![[x], [z], [x], [z], [z], [z], [z], [z]]);
 
-        let mut s = QuState::new(3, 1);
+        let mut s = VectorState::new(3, 1);
         s.apply_gate(&Y::new(), &[2]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [i], [z], [z], [z], [z], [z], [z]]);
     }
@@ -696,19 +696,19 @@ mod tests
         let o = crate::cmatrix::COMPLEX_ONE;
         let h = 0.5 * o;
 
-        let mut s = QuState::new(3, 1);
+        let mut s = VectorState::new(3, 1);
         s.apply_gate(&CX::new(), &[0, 1]);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z], [z], [z], [z], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
         s.apply_gate(&CX::new(), &[0, 1]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [z], [z], [z], [z], [o], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
         s.apply_gate(&CX::new(), &[0, 2]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [z], [z], [z], [o], [z], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, o, z, o, z], 1);
         let hh = Kron::new(H::new(), H::new());
         s.apply_gate(&hh, &[1, 2]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [z], [z], [h], [h], [h], [h]]);
@@ -722,17 +722,17 @@ mod tests
         let x = crate::cmatrix::COMPLEX_HSQRT2;
         let hx = 0.5 * x;
 
-        let mut s = QuState::new(3, 1);
+        let mut s = VectorState::new(3, 1);
         s.apply_gate(&CCX::new(), &[0, 1, 2]);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z], [z], [z], [z], [z], [z], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, o, z], 1);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, z, o, o, z], 1);
         s.apply_gate(&CCX::new(), &[0, 2, 1]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [z], [z], [z], [z], [o], [z]]);
         s.apply_gate(&CCX::new(), &[0, 1, 2]);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [z], [z], [z], [z], [z], [o]]);
 
-        let mut s = QuState::from_qubit_coefs(&[x, -x, x, -x, x, -x], 1);
+        let mut s = VectorState::from_qubit_coefs(&[x, -x, x, -x, x, -x], 1);
         s.apply_gate(&CCX::new(), &[0, 2, 1]);
         assert_complex_matrix_eq!(&s.states,
             &array![[hx], [-hx], [-hx], [hx], [-hx], [-hx], [hx], [hx]]);
@@ -749,17 +749,17 @@ mod tests
 
         let mut rng = rand::thread_rng();
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
         let result = s.measure_all(&mut rng);
         assert_eq!(result.shape(), [nr_shots]);
         assert!(result.iter().all(|&b| b == 0b111));
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, o, z], nr_shots);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, z, o, o, z], nr_shots);
         let result = s.measure_all(&mut rng);
         assert_eq!(result.shape(), [nr_shots]);
         assert!(result.iter().all(|&b| b == 0b011));
 
-        let mut s = QuState::new(nr_bits, nr_shots);
+        let mut s = VectorState::new(nr_bits, nr_shots);
         s.apply_gate(&H::new(), &[2]);
         let result = s.measure_all(&mut rng);
         assert_eq!(result.shape(), [nr_shots]);
@@ -779,7 +779,7 @@ mod tests
 
         let mut rng = rand::thread_rng();
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, z, o, z, o], nr_shots);
         s.apply_gate(&H::new(), &[0]);
         s.apply_gate(&H::new(), &[2]);
         let mut result = ndarray::Array1::zeros(nr_shots);
@@ -812,23 +812,23 @@ mod tests
 
         let mut rng = rand::thread_rng();
 
-        let mut s = QuState::from_qubit_coefs(&[o, z], nr_runs);
+        let mut s = VectorState::from_qubit_coefs(&[o, z], nr_runs);
         s.reset(0, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o], nr_runs);
+        let mut s = VectorState::from_qubit_coefs(&[z, o], nr_runs);
         s.reset(0, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, z, o], nr_runs);
         s.reset(0, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[z], [o], [z], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[z, o, z, o], nr_runs);
+        let mut s = VectorState::from_qubit_coefs(&[z, o, z, o], nr_runs);
         s.reset(1, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[z], [z], [o], [z]]);
 
-        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
+        let mut s = VectorState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
         s.reset(0, &mut rng);
         match s.counts.len()
         {
@@ -837,7 +837,7 @@ mod tests
             _ => { assert!(false, "unexpected number of states ({})", s.counts.len()); }
         }
 
-        let mut s = QuState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
+        let mut s = VectorState::from_qubit_coefs(&[x, -x, o, z], nr_runs);
         s.reset(1, &mut rng);
         assert_complex_matrix_eq!(&s.states, &array![[x], [z], [-x], [z]]);
     }
@@ -848,7 +848,7 @@ mod tests
         let nr_bits = 5;
         let nr_runs = 100;
 
-        let mut s = QuState::new(nr_bits, nr_runs);
+        let mut s = VectorState::new(nr_bits, nr_runs);
         s.apply_gate(&H::new(), &[2]);
         s.apply_gate(&X::new(), &[0]);
         s.apply_gate(&H::new(), &[4]);
