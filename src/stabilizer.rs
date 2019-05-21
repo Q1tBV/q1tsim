@@ -60,7 +60,7 @@ struct StabilizerMatrix
     /// Generators of the stabilizer group for this state
     xz: Vec<u64>,
     /// Signs of the generators
-    phase: Vec<u64>
+    signs: Vec<u64>
 }
 
 impl StabilizerMatrix
@@ -68,11 +68,11 @@ impl StabilizerMatrix
     fn new(nr_bits: usize) -> Self
     {
         let xz_size = (2*nr_bits*nr_bits + 0x3f) >> 6;
-        let phase_size = (nr_bits + 0x3f) >> 6;
+        let signs_size = (nr_bits + 0x3f) >> 6;
         let mut res = StabilizerMatrix {
             nr_bits: nr_bits,
             xz: vec![0; xz_size],
-            phase: vec![0; phase_size]
+            signs: vec![0; signs_size]
         };
 
         for i in 0..nr_bits
@@ -124,24 +124,25 @@ impl StabilizerMatrix
         self.set_bits(i, j, op.to_bits());
     }
 
-    fn get_phase(&self, i: usize) -> bool
+    fn get_sign(&self, i: usize) -> bool
     {
         let (byte_idx, bit_idx) = (i >> 6, i & 0x3f);
-        (self.phase[byte_idx] & (1 << bit_idx)) != 0
+        (self.signs[byte_idx] & (1 << bit_idx)) != 0
     }
 
-    fn set_phase(&mut self, i: usize, p: bool)
+    fn set_sign(&mut self, i: usize, sign: bool)
     {
         let (byte_idx, bit_idx) = (i >> 6, i & 0x3f);
-        self.phase[byte_idx] = (self.phase[byte_idx] & !(1 << bit_idx)) | ((p as u64) << bit_idx);
+        self.signs[byte_idx] = (self.signs[byte_idx] & !(1 << bit_idx))
+            | ((sign as u64) << bit_idx);
     }
 
-    fn xor_phase(&mut self, i: usize, p: bool)
+    fn xor_sign(&mut self, i: usize, sign: bool)
     {
-        if p
+        if sign
         {
             let (byte_idx, bit_idx) = (i >> 6, i & 0x3f);
-            self.phase[byte_idx] ^= 1 << bit_idx;
+            self.signs[byte_idx] ^= 1 << bit_idx;
         }
     }
 
@@ -154,9 +155,9 @@ impl StabilizerMatrix
             self.set_bits(i1, j, b);
         }
 
-        let p = self.get_phase(i0);
-        self.set_phase(i0, self.get_phase(i1));
-        self.set_phase(i1, p);
+        let sign = self.get_sign(i0);
+        self.set_sign(i0, self.get_sign(i1));
+        self.set_sign(i1, sign);
     }
 
     fn multiply_row(&mut self, i0: usize, i1: usize)
@@ -168,7 +169,7 @@ impl StabilizerMatrix
             0, 1, 3, 0
         ];
 
-        let mut i_pow = if self.get_phase(i1) { 2 } else { 0 };
+        let mut i_pow = if self.get_sign(i1) { 2 } else { 0 };
         for j in 0..self.nr_bits
         {
             let xz0 = self.get_bits(i0, j);
@@ -180,7 +181,7 @@ impl StabilizerMatrix
         }
 
         assert!(i_pow == 0 || i_pow == 2);
-        self.xor_phase(i0, i_pow == 2);
+        self.xor_sign(i0, i_pow == 2);
     }
 
     fn normalize(&mut self)
@@ -230,12 +231,12 @@ impl StabilizerMatrix
         {
             ops.clear();
             ops.extend(bits.iter().map(|&j| self.get(i, j)));
-            let flip = gate.conjugate(&mut ops)?;
+            let flip_sign = gate.conjugate(&mut ops)?;
             for (&j, &op) in bits.iter().zip(ops.iter())
             {
                 self.set(i, j, op);
             }
-            self.xor_phase(i, flip);
+            self.xor_sign(i, flip_sign);
         }
 
         self.normalize();
@@ -259,7 +260,7 @@ impl StabilizerMatrix
         {
             self.set(i, j, if j == bit { PauliOp::Z } else { PauliOp::I });
         }
-        self.set_phase(i, res);
+        self.set_sign(i, res);
 
         self.normalize();
 
@@ -271,7 +272,7 @@ impl StabilizerMatrix
         let i = (0..self.nr_bits).rev()
             .filter(|&i| self.get(i, bit) == PauliOp::Z)
             .next().unwrap();
-        return self.get_phase(i) as u8;
+        return self.get_sign(i) as u8;
     }
 
     pub fn measure<R: rand::Rng>(&mut self, bit: usize, rng: &mut R) -> u8
@@ -295,7 +296,7 @@ impl ::std::fmt::Display for StabilizerMatrix
         let n = self.nr_bits;
         for i in 0..n
         {
-            write!(f, "{}", if self.get_phase(i) { '-' } else { '+' })?;
+            write!(f, "{}", if self.get_sign(i) { '-' } else { '+' })?;
             for j in 0..n
             {
                 write!(f, "{}", self.get(i, j))?;
@@ -323,12 +324,12 @@ mod tests
         let m = StabilizerMatrix::new(3);
         assert_eq!(m.nr_bits, 3);
         assert_eq!(m.xz, vec![0x0000000000010101]);
-        assert_eq!(m.phase, vec![0]);
+        assert_eq!(m.signs, vec![0]);
 
         let m = StabilizerMatrix::new(6);
         assert_eq!(m.nr_bits, 6);
         assert_eq!(m.xz, vec![0x0100040010004001, 0x0000000000000040]);
-        assert_eq!(m.phase, vec![0]);
+        assert_eq!(m.signs, vec![0]);
     }
 
     #[test]
