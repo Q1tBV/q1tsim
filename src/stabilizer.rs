@@ -242,6 +242,49 @@ impl StabilizerMatrix
 
         Ok(())
     }
+
+    fn measure_random<R: rand::Rng>(&mut self, i: usize, bit: usize, rng: &mut R) -> u8
+    {
+        let res: bool = rng.gen();
+
+        for k in 0..i
+        {
+            if self.get_x(k, bit)
+            {
+                self.multiply_row(k, i);
+            }
+        }
+
+        for j in 0..self.nr_bits
+        {
+            self.set(i, j, if j == bit { PauliOp::Z } else { PauliOp::I });
+        }
+        self.set_phase(i, res);
+
+        self.normalize();
+
+        res as u8
+    }
+
+    fn measure_deterministic(&mut self, bit: usize) -> u8
+    {
+        let i = (0..self.nr_bits).rev()
+            .filter(|&i| self.get(i, bit) == PauliOp::Z)
+            .next().unwrap();
+        return self.get_phase(i) as u8;
+    }
+
+    pub fn measure<R: rand::Rng>(&mut self, bit: usize, rng: &mut R) -> u8
+    {
+        if let Some(i) = (0..self.nr_bits).rev().filter(|&i| self.get_x(i, bit)).next()
+        {
+            self.measure_random(i, bit, rng)
+        }
+        else
+        {
+            self.measure_deterministic(bit)
+        }
+    }
 }
 
 
@@ -502,5 +545,81 @@ r"+IXI
 r"+IXZ
 +IZX
 +ZII"));
+    }
+
+    #[test]
+    fn test_measure_deterministic()
+    {
+        let mut rng = rand::thread_rng();
+        let mut m = StabilizerMatrix::new(3);
+        assert_eq!(m.measure(0, &mut rng), 0);
+        assert_eq!(m.measure(1, &mut rng), 0);
+        assert_eq!(m.measure(2, &mut rng), 0);
+
+        let mut m = StabilizerMatrix::new(3);
+        assert_eq!(m.apply_gate(&X::new(), &[1]), Ok(()));
+        assert_eq!(m.measure(0, &mut rng), 0);
+        assert_eq!(m.measure(1, &mut rng), 1);
+        assert_eq!(m.measure(2, &mut rng), 0);
+
+        let mut m = StabilizerMatrix::new(3);
+        assert_eq!(m.apply_gate(&H::new(), &[1]), Ok(()));
+        assert_eq!(m.apply_gate(&X::new(), &[0]), Ok(()));
+        assert_eq!(m.apply_gate(&H::new(), &[2]), Ok(()));
+        assert_eq!(m.measure(0, &mut rng), 1);
+    }
+
+    #[test]
+    fn test_measure_random()
+    {
+        let nr_runs = 1024;
+        let tol = 1.0e-5;
+        let mut rng = rand::thread_rng();
+
+        let mut n1 = 0;
+        let mut s = String::new();
+        for _ in 0..nr_runs
+        {
+            let mut m = StabilizerMatrix::new(3);
+            assert_eq!(m.apply_gate(&H::new(), &[1]), Ok(()));
+            let res = m.measure(1, &mut rng);
+            n1 += res as usize;
+
+            s.clear();
+            assert_eq!(write!(s, "{}", m), Ok(()));
+            if res == 0
+            {
+                assert_eq!(s, "+ZII\n+IZI\n+IIZ");
+            }
+            else
+            {
+                assert_eq!(s, "+ZII\n-IZI\n+IIZ");
+            }
+        }
+        assert!(crate::stats::measurement_ok(n1, nr_runs, 0.5, tol));
+
+
+        let mut n0 = 0;
+        let mut s = String::new();
+        for _ in 0..nr_runs
+        {
+            let mut m = StabilizerMatrix::new(2);
+            assert_eq!(m.apply_gate(&H::new(), &[0]), Ok(()));
+            assert_eq!(m.apply_gate(&CX::new(), &[0, 1]), Ok(()));
+            let res = m.measure(0, &mut rng);
+            n0 += res as usize;
+
+            s.clear();
+            assert_eq!(write!(s, "{}", m), Ok(()));
+            if res == 0
+            {
+                assert_eq!(s, "+ZI\n+IZ");
+            }
+            else
+            {
+                assert_eq!(s, "-ZI\n-IZ");
+            }
+        }
+        assert!(crate::stats::measurement_ok(n1, nr_runs, 0.5, tol));
     }
 }
