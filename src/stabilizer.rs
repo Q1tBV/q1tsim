@@ -168,7 +168,7 @@ impl StabilizerMatrix
             0, 1, 3, 0
         ];
 
-        let mut i_pow = 0;
+        let mut i_pow = if self.get_phase(i1) { 2 } else { 0 };
         for j in 0..self.nr_bits
         {
             let xz0 = self.get_bits(i0, j);
