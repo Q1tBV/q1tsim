@@ -395,6 +395,7 @@ impl VectorState
 
         }
     }
+
     /// Measure all qubits
     ///
     /// Measure all qubits in this state, and store the results in `res`,

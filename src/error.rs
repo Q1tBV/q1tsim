@@ -140,6 +140,10 @@ pub enum Error
     InvalidQBit(usize),
     /// Invalid index for classical bit
     InvalidCBit(usize),
+    /// Using classically controlled operation with wrong number of control bits
+    InvalidNrControlBits(usize, usize, String),
+    /// Trying to store measurements into arry that cannot hold them
+    NotEnoughSpace(usize, usize),
     /// Results asked for circuit that has not been run yet
     NotExecuted,
     /// Acting with a non-stabilizer gate on a stabilizer circuit
@@ -182,6 +186,14 @@ impl ::std::fmt::Display for Error
             },
             Error::InvalidCBit(bit) => {
                 write!(f, "Invalid index {} for a classical bit", bit)
+            },
+            Error::InvalidNrControlBits(actual, expected, ref desc) => {
+                write!(f, "The number of runs is {}, but received {} control bits for controlled {} operation",
+                    expected, actual, desc)
+            },
+            Error::NotEnoughSpace(actual, expected) => {
+                write!(f, "Not enough space to store {} measurement results in array of length {}",
+                    expected, actual)
             },
             Error::NotExecuted => {
                 write!(f, "The circuit has not been executed yet")

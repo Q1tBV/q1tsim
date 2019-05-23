@@ -1,6 +1,32 @@
+// Copyright 2019 Q1t BV
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::stabilizer::PauliOp;
 
+/// Structure describing the expected outcome of a measurement
+#[derive(Debug, PartialEq)]
+pub enum MeasurementInfo
+{
+    /// Measurement yields zero if the associated parameter is `false`, one otherwise
+    Deterministic(bool),
+    /// Measurement yields zero or one with equal probability. The associated
+    /// parameter is the index of the row that will need collapsing
+    Random(usize)
+}
+
 /// Structure describing a single stabilizer state
+#[derive(Clone)]
 pub struct StabilizerTableau
 {
     /// The number of qubits in the state
@@ -192,10 +218,16 @@ impl StabilizerTableau
         Ok(())
     }
 
-    fn measure_random<R: rand::Rng>(&mut self, i: usize, bit: usize, rng: &mut R) -> u8
+    /// Collapse a wave function after measurement.
+    ///
+    /// Collapse qbit `bit` to value `value` after a measurement hase been made.
+    /// Calling this function is only done for measurements with random outcomes,
+    /// and in this case there should be at least one row in the tableau with
+    /// an X or Y operator at the `bit` position. The number `i` is the index
+    /// of the last such row in the tableau.
+    /// Use this function only in combination with `measure()`.
+    pub fn collapse(&mut self, i: usize, bit: usize, value: bool)
     {
-        let res: bool = rng.gen();
-
         for k in 0..i
         {
             if self.get_x(k, bit)
@@ -208,30 +240,43 @@ impl StabilizerTableau
         {
             self.set(i, j, if j == bit { PauliOp::Z } else { PauliOp::I });
         }
-        self.set_sign(i, res);
+        self.set_sign(i, value);
 
         self.normalize();
-
-        res as u8
     }
 
-    fn measure_deterministic(&mut self, bit: usize) -> u8
-    {
-        let i = (0..self.nr_bits).rev()
-            .filter(|&i| self.get(i, bit) == PauliOp::Z)
-            .next().unwrap();
-        return self.get_sign(i) as u8;
-    }
-
-    pub fn measure<R: rand::Rng>(&mut self, bit: usize, rng: &mut R) -> u8
+    pub fn measure(&self, bit: usize) -> MeasurementInfo
     {
         if let Some(i) = (0..self.nr_bits).rev().filter(|&i| self.get_x(i, bit)).next()
         {
-            self.measure_random(i, bit, rng)
+            MeasurementInfo::Random(i)
         }
         else
         {
-            self.measure_deterministic(bit)
+            let i = (0..self.nr_bits).rev()
+                .filter(|&i| self.get(i, bit) == PauliOp::Z)
+                .next().unwrap();
+            MeasurementInfo::Deterministic(self.get_sign(i))
+        }
+    }
+
+    /// Reset a qubit
+    ///
+    /// Reset the qubit with index `bit` to zero.
+    pub fn reset(&mut self, bit: usize)
+    {
+        if let Some(i) = (0..self.nr_bits).rev().filter(|&i| self.get_x(i, bit)).next()
+        {
+            // Bit is in superposition. Collapse it to zero.
+            self.collapse(i, bit, false);
+        }
+        else
+        {
+            // Bit is either zero or one. Force it to zero.
+            let i = (0..self.nr_bits).rev()
+                .filter(|&i| self.get(i, bit) == PauliOp::Z)
+                .next().unwrap();
+            self.set_sign(i, false);
         }
     }
 }
@@ -261,7 +306,7 @@ impl ::std::fmt::Display for StabilizerTableau
 #[cfg(test)]
 mod tests
 {
-    use super::StabilizerTableau;
+    use super::{MeasurementInfo, StabilizerTableau};
     use crate::gates::{CX, CY, CZ, H, S, Sdg, V, Vdg, X, Y, Z};
     use crate::stabilizer::PauliOp;
 
@@ -500,76 +545,34 @@ r"+IXZ
     #[test]
     fn test_measure_deterministic()
     {
-        let mut rng = rand::thread_rng();
-        let mut m = StabilizerTableau::new(3);
-        assert_eq!(m.measure(0, &mut rng), 0);
-        assert_eq!(m.measure(1, &mut rng), 0);
-        assert_eq!(m.measure(2, &mut rng), 0);
+        let m = StabilizerTableau::new(3);
+        assert_eq!(m.measure(0), MeasurementInfo::Deterministic(false));
+        assert_eq!(m.measure(1), MeasurementInfo::Deterministic(false));
+        assert_eq!(m.measure(2), MeasurementInfo::Deterministic(false));
 
         let mut m = StabilizerTableau::new(3);
         assert_eq!(m.apply_gate(&X::new(), &[1]), Ok(()));
-        assert_eq!(m.measure(0, &mut rng), 0);
-        assert_eq!(m.measure(1, &mut rng), 1);
-        assert_eq!(m.measure(2, &mut rng), 0);
+        assert_eq!(m.measure(0), MeasurementInfo::Deterministic(false));
+        assert_eq!(m.measure(1), MeasurementInfo::Deterministic(true));
+        assert_eq!(m.measure(2), MeasurementInfo::Deterministic(false));
 
         let mut m = StabilizerTableau::new(3);
         assert_eq!(m.apply_gate(&H::new(), &[1]), Ok(()));
         assert_eq!(m.apply_gate(&X::new(), &[0]), Ok(()));
         assert_eq!(m.apply_gate(&H::new(), &[2]), Ok(()));
-        assert_eq!(m.measure(0, &mut rng), 1);
+        assert_eq!(m.measure(0), MeasurementInfo::Deterministic(true));
     }
 
     #[test]
     fn test_measure_random()
     {
-        let nr_runs = 1024;
-        let tol = 1.0e-5;
-        let mut rng = rand::thread_rng();
+        let mut m = StabilizerTableau::new(3);
+        assert_eq!(m.apply_gate(&H::new(), &[1]), Ok(()));
+        assert_eq!(m.measure(1), MeasurementInfo::Random(0));
 
-        let mut n1 = 0;
-        let mut s = String::new();
-        for _ in 0..nr_runs
-        {
-            let mut m = StabilizerTableau::new(3);
-            assert_eq!(m.apply_gate(&H::new(), &[1]), Ok(()));
-            let res = m.measure(1, &mut rng);
-            n1 += res as usize;
-
-            s.clear();
-            assert_eq!(write!(s, "{}", m), Ok(()));
-            if res == 0
-            {
-                assert_eq!(s, "+ZII\n+IZI\n+IIZ");
-            }
-            else
-            {
-                assert_eq!(s, "+ZII\n-IZI\n+IIZ");
-            }
-        }
-        assert!(crate::stats::measurement_ok(n1, nr_runs, 0.5, tol));
-
-
-        let mut n0 = 0;
-        let mut s = String::new();
-        for _ in 0..nr_runs
-        {
-            let mut m = StabilizerTableau::new(2);
-            assert_eq!(m.apply_gate(&H::new(), &[0]), Ok(()));
-            assert_eq!(m.apply_gate(&CX::new(), &[0, 1]), Ok(()));
-            let res = m.measure(0, &mut rng);
-            n0 += res as usize;
-
-            s.clear();
-            assert_eq!(write!(s, "{}", m), Ok(()));
-            if res == 0
-            {
-                assert_eq!(s, "+ZI\n+IZ");
-            }
-            else
-            {
-                assert_eq!(s, "-ZI\n-IZ");
-            }
-        }
-        assert!(crate::stats::measurement_ok(n0, nr_runs, 0.5, tol));
+        let mut m = StabilizerTableau::new(2);
+        assert_eq!(m.apply_gate(&H::new(), &[0]), Ok(()));
+        assert_eq!(m.apply_gate(&CX::new(), &[0, 1]), Ok(()));
+        assert_eq!(m.measure(0), MeasurementInfo::Random(0));
     }
 }
