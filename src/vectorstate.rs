@@ -293,7 +293,7 @@ impl VectorState
     /// in the `z`-basis. The random number generator `rng` is used for sampling.
     /// NOTE: this is not a physical process, and impossible to reproduce on
     /// a real quantum computer.
-    pub fn peek_into<R: rand::Rng>(&mut self, qbit: usize, cbit: usize,
+    pub fn peek_into<R: rand::Rng>(&self, qbit: usize, cbit: usize,
         res: &mut ndarray::Array1<u64>, rng: &mut R)
     {
         assert!(qbit < self.nr_bits, "Invalid bit index");
@@ -635,20 +635,20 @@ mod tests
         let mut rng = rand::thread_rng();
 
         // |0⟩
-        let mut s = VectorState::new(1, nr_shots);
+        let s = VectorState::new(1, nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(measurements.iter().all(|&bits| bits == 0));
         assert_complex_matrix_eq!(&s.states, &array![[o], [z]]);
 
         // H|0⟩
-        let mut s = VectorState::from_qubit_coefs(&[o, o], nr_shots);
+        let s = VectorState::from_qubit_coefs(&[o, o], nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
         assert_complex_matrix_eq!(&s.states, &array![[x], [x]]);
 
         // H|0⟩⊗ H|0⟩
-        let mut s = VectorState::from_qubit_coefs(&[o, o, o, o], nr_shots);
+        let s = VectorState::from_qubit_coefs(&[o, o, o, o], nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
@@ -659,7 +659,7 @@ mod tests
         assert_complex_matrix_eq!(&s.states, &array![[h], [h], [h], [h]]);
 
         // H|0⟩⊗ |1⟩
-        let mut s = VectorState::from_qubit_coefs(&[x, x, z, o], nr_shots);
+        let s = VectorState::from_qubit_coefs(&[x, x, z, o], nr_shots);
         s.peek_into(0, 0, &mut measurements, &mut rng);
         assert!(crate::stats::measurement_ok(measurements.sum() as usize, nr_shots,
             0.5, 1.0e-5));
