@@ -245,6 +245,12 @@ impl StabilizerTableau
         self.normalize();
     }
 
+    /// Measure a qubit
+    ///
+    /// Measure the qubit with index `bit` in this tableau. The outcome of the
+    /// measurement is either zero or one, in which case a `Deterministic`
+    /// result is returned, or an equal superposition of these states, in
+    /// which case a `Random` result is returned.
     pub fn measure(&self, bit: usize) -> MeasurementInfo
     {
         if let Some(i) = (0..self.nr_bits).rev().filter(|&i| self.get_x(i, bit)).next()

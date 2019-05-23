@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::export::{CircuitGate, CQasm, OpenQasm};
+use crate::qustate::QuState;
 
 /// Basis in which to perform measurements
 #[derive(Clone, Copy)]
@@ -556,7 +557,7 @@ impl Circuit
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    q_state.apply_gate(&**gate, bits.as_slice());
+                    q_state.apply_gate(&**gate, bits.as_slice())?;
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
                     let mut cbits = vec![0; c_state.len()];
@@ -571,25 +572,25 @@ impl Circuit
                         .map(|&b| b == target)
                         .collect();
                     q_state.apply_conditional_gate(&apply_gate, &**gate,
-                        bits.as_slice());
+                        bits.as_slice())?;
                 },
                 CircuitOp::Measure(qbit, cbit, basis) => {
                     match basis
                     {
                         Basis::X => {
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
-                            q_state.measure_into(qbit, cbit, c_state, rng);
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
+                            q_state.measure_into(qbit, cbit, c_state, rng)?;
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
                         },
                         Basis::Y => {
-                            q_state.apply_gate(&crate::gates::Sdg::new(), &[qbit]);
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
-                            q_state.measure_into(qbit, cbit, c_state, rng);
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
-                            q_state.apply_gate(&crate::gates::S::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::Sdg::new(), &[qbit])?;
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
+                            q_state.measure_into(qbit, cbit, c_state, rng)?;
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
+                            q_state.apply_gate(&crate::gates::S::new(), &[qbit])?;
                         },
                         Basis::Z => {
-                            q_state.measure_into(qbit, cbit, c_state, rng);
+                            q_state.measure_into(qbit, cbit, c_state, rng)?;
                         }
                     }
                 }
@@ -597,19 +598,19 @@ impl Circuit
                     match basis
                     {
                         Basis::X => {
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
-                            q_state.measure_all_into(cbits, c_state, rng);
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
+                            q_state.measure_all_into(cbits, c_state, rng)?;
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
                         },
                         Basis::Y => {
-                            q_state.apply_unary_gate_all(&crate::gates::Sdg::new());
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
-                            q_state.measure_all_into(cbits, c_state, rng);
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
-                            q_state.apply_unary_gate_all(&crate::gates::S::new());
+                            q_state.apply_unary_gate_all(&crate::gates::Sdg::new())?;
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
+                            q_state.measure_all_into(cbits, c_state, rng)?;
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
+                            q_state.apply_unary_gate_all(&crate::gates::S::new())?;
                         },
                         Basis::Z => {
-                            q_state.measure_all_into(cbits, c_state, rng);
+                            q_state.measure_all_into(cbits, c_state, rng)?;
                         }
                     }
                 },
@@ -617,19 +618,19 @@ impl Circuit
                     match basis
                     {
                         Basis::X => {
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
-                            q_state.peek_into(qbit, cbit, c_state, rng);
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
+                            q_state.peek_into(qbit, cbit, c_state, rng)?;
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
                         },
                         Basis::Y => {
-                            q_state.apply_gate(&crate::gates::Sdg::new(), &[qbit]);
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
-                            q_state.peek_into(qbit, cbit, c_state, rng);
-                            q_state.apply_gate(&crate::gates::H::new(), &[qbit]);
-                            q_state.apply_gate(&crate::gates::S::new(), &[qbit]);
+                            q_state.apply_gate(&crate::gates::Sdg::new(), &[qbit])?;
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
+                            q_state.peek_into(qbit, cbit, c_state, rng)?;
+                            q_state.apply_gate(&crate::gates::H::new(), &[qbit])?;
+                            q_state.apply_gate(&crate::gates::S::new(), &[qbit])?;
                         },
                         Basis::Z => {
-                            q_state.peek_into(qbit, cbit, c_state, rng);
+                            q_state.peek_into(qbit, cbit, c_state, rng)?;
                         }
                     }
                 },
@@ -637,24 +638,24 @@ impl Circuit
                     match basis
                     {
                         Basis::X => {
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
-                            q_state.peek_all_into(cbits, c_state, rng);
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
+                            q_state.peek_all_into(cbits, c_state, rng)?;
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
                         },
                         Basis::Y => {
-                            q_state.apply_unary_gate_all(&crate::gates::Sdg::new());
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
-                            q_state.peek_all_into(cbits, c_state, rng);
-                            q_state.apply_unary_gate_all(&crate::gates::H::new());
-                            q_state.apply_unary_gate_all(&crate::gates::S::new());
+                            q_state.apply_unary_gate_all(&crate::gates::Sdg::new())?;
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
+                            q_state.peek_all_into(cbits, c_state, rng)?;
+                            q_state.apply_unary_gate_all(&crate::gates::H::new())?;
+                            q_state.apply_unary_gate_all(&crate::gates::S::new())?;
                         },
                         Basis::Z => {
-                            q_state.peek_all_into(cbits, c_state, rng);
+                            q_state.peek_all_into(cbits, c_state, rng)?;
                         }
                     }
                 },
                 CircuitOp::Reset(bit) => {
-                    q_state.reset(bit, rng);
+                    q_state.reset(bit, rng)?;
                 },
                 CircuitOp::ResetAll => {
                     q_state.reset_all();

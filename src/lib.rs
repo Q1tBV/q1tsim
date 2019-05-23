@@ -243,6 +243,7 @@ pub mod circuit;
 pub mod error;
 pub mod export;
 pub mod permutation;
+pub mod qustate;
 pub mod vectorstate;
 pub mod stabilizer;
 

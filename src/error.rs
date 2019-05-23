@@ -142,6 +142,8 @@ pub enum Error
     InvalidCBit(usize),
     /// Using classically controlled operation with wrong number of control bits
     InvalidNrControlBits(usize, usize, String),
+    /// Trying to measure all qbits with incorrect number of measurement bits
+    InvalidNrMeasurementBits(usize, usize),
     /// Trying to store measurements into arry that cannot hold them
     NotEnoughSpace(usize, usize),
     /// Results asked for circuit that has not been run yet
@@ -172,6 +174,7 @@ impl From<ParseError> for Error
     }
 }
 
+
 impl ::std::fmt::Display for Error
 {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
@@ -190,6 +193,9 @@ impl ::std::fmt::Display for Error
             Error::InvalidNrControlBits(actual, expected, ref desc) => {
                 write!(f, "The number of runs is {}, but received {} control bits for controlled {} operation",
                     expected, actual, desc)
+            },
+            Error::InvalidNrMeasurementBits(actual, expected) => {
+                write!(f, "Expected {} measurement bits, but got {}", expected, actual)
             },
             Error::NotEnoughSpace(actual, expected) => {
                 write!(f, "Not enough space to store {} measurement results in array of length {}",

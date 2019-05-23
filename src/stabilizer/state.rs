@@ -40,10 +40,12 @@ impl StabilizerState
             tableaus: vec![StabilizerTableau::new(nr_bits)]
         }
     }
+}
 
-    /// Apply a n-ary quantum gate `gate` on the qubits from `bits` in this state.
-    pub fn apply_gate<G>(&mut self, gate: &G, bits: &[usize]) -> crate::error::Result<()>
-    where G: crate::gates::Gate
+impl crate::qustate::QuState for StabilizerState
+{
+    fn apply_gate<G>(&mut self, gate: &G, bits: &[usize]) -> crate::error::Result<()>
+    where G: crate::gates::Gate + ?Sized
     {
         for t in self.tableaus.iter_mut()
         {
@@ -52,10 +54,10 @@ impl StabilizerState
         Ok(())
     }
 
-    pub fn apply_unary_gate_all<G>(&mut self, gate: &G) -> crate::error::Result<()>
+    fn apply_unary_gate_all<G>(&mut self, gate: &G) -> crate::error::Result<()>
     where G: crate::gates::Gate
     {
-        // XXX FIXME: this can be done smarter
+        // XXX FIXME: this can possibly be done smarter
         for bit in 0..self.nr_bits
         {
             self.apply_gate(gate, &[bit])?;
@@ -63,11 +65,9 @@ impl StabilizerState
         Ok(())
     }
 
-    /// Apply a conditional n-ary quantum gate `gate`, controlled by classical
-    /// bit `control`, on the qubits from `bits` in this state.
-    pub fn apply_conditional_gate<G>(&mut self, control: &[bool], gate: &G,
+    fn apply_conditional_gate<G>(&mut self, control: &[bool], gate: &G,
         bits: &[usize]) -> crate::error::Result<()>
-    where G: crate::gates::Gate
+    where G: crate::gates::Gate + ?Sized
     {
         if control.len() != self.nr_shots
         {
@@ -117,13 +117,7 @@ impl StabilizerState
         Ok(())
     }
 
-    /// Measure a qubit.
-    ///
-    /// Perform a measurement on qubit `qbit` in the state. Measurement is done
-    /// in the `z`-basis. The random number generator `rng` is used for sampling.
-    /// The result is returned as an array containing the measurement result for
-    /// each run.
-    pub fn measure<R: rand::Rng>(&mut self, qbit: usize, rng: &mut R)
+    fn measure<R: rand::Rng>(&mut self, qbit: usize, rng: &mut R)
         -> crate::error::Result<ndarray::Array1<u64>>
     {
         let mut res = ndarray::Array1::zeros(self.nr_shots);
@@ -131,13 +125,7 @@ impl StabilizerState
         Ok(res)
     }
 
-    /// Measure a qubit.
-    ///
-    /// Perform a measurement on qubit `qbit` in the state to classical bit
-    /// `cbit` in `res`, which should be an array of sufficient length to store
-    /// results for the total number of runs in the state. Measurement is done
-    /// in the `z`-basis. The random number generator `rng` is used for sampling.
-    pub fn measure_into<R: rand::Rng>(&mut self, qbit: usize, cbit: usize,
+    fn measure_into<R: rand::Rng>(&mut self, qbit: usize, cbit: usize,
         res: &mut ndarray::Array1<u64>, rng: &mut R) -> crate::error::Result<()>
     {
         if qbit >= self.nr_bits
@@ -223,16 +211,29 @@ impl StabilizerState
         Ok(())
     }
 
-    /// Measure a qubit.
-    ///
-    /// Perform a measurement on qubit `qbit` in the state to bit `cbit` in res,
-    /// without affecting the quantum state, i.e. the wave function is not
-    /// collapsed. The output array `res` should be of sufficient length to store
-    /// results for the total number of runs in the state. Measurement is done
-    /// in the `z`-basis. The random number generator `rng` is used for sampling.
-    /// NOTE: this is not a physical process, and impossible to reproduce on
-    /// a real quantum computer.
-    pub fn peek_into<R: rand::Rng>(&self, qbit: usize, cbit: usize,
+    fn measure_all<R: rand::Rng>(&mut self, rng: &mut R)
+        -> crate::error::Result<ndarray::Array1<u64>>
+    {
+        let mut res = ndarray::Array1::zeros(self.nr_shots);
+        let cbits: Vec<usize> = (0..self.nr_bits).collect();
+        self.measure_all_into(&cbits, &mut res, rng)?;
+        Ok(res)
+    }
+
+    fn measure_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
+        res: &mut ndarray::Array1<u64>, rng: &mut R) -> crate::error::Result<()>
+    {
+        // There does not seem to be a simpler way to measure all qubits from
+        // a tableau, as there is for a vector state. So simply loop over all
+        // bits
+        for (qbit, &cbit) in cbits.iter().enumerate()
+        {
+            self.measure_into(qbit, cbit, res, rng)?;
+        }
+        Ok(())
+    }
+
+    fn peek_into<R: rand::Rng>(&self, qbit: usize, cbit: usize,
         res: &mut ndarray::Array1<u64>, rng: &mut R) -> crate::error::Result<()>
     {
         if qbit >= self.nr_bits
@@ -279,50 +280,7 @@ impl StabilizerState
         Ok(())
     }
 
-    /// Measure all qubits
-    ///
-    /// Measure all qubits in this state, and return the results. The random
-    /// number generator `rng` is used for sampling.
-    pub fn measure_all<R: rand::Rng>(&mut self, rng: &mut R)
-        -> crate::error::Result<ndarray::Array1<u64>>
-    {
-        let mut res = ndarray::Array1::zeros(self.nr_shots);
-        let cbits: Vec<usize> = (0..self.nr_bits).collect();
-        self.measure_all_into(&cbits, &mut res, rng)?;
-        Ok(res)
-    }
-
-    /// Measure all qubits
-    ///
-    /// Measure all qubits in this state, and store the results in `res`,
-    /// which should be of sufficient length to hold results for the number of
-    /// runs in this state.  The first qubit measured is stored at the bit
-    /// position indicated by the first element of `cbits`, and so on. The random
-    /// number generator `rng` is used for sampling.
-    pub fn measure_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
-        res: &mut ndarray::Array1<u64>, rng: &mut R) -> crate::error::Result<()>
-    {
-        // There does not seem to be a simpler way to measure all qubits from
-        // a tableau, as there is for a vector state. So simply loop over all
-        // bits
-        for (qbit, &cbit) in cbits.iter().enumerate()
-        {
-            self.measure_into(qbit, cbit, res, rng)?;
-        }
-        Ok(())
-    }
-
-    /// Measure all qubits
-    ///
-    /// Measure all qubits in this state without affecting the quantum state,
-    /// i.e. without collapsing the wave function. The measurement results
-    /// are stored in `res`, which must be of sufficient length to hold results
-    /// for the total number of runs in the state. The first qubit measured
-    /// is stored at the bit position indicated by the first element of `cbits`,
-    /// and so on. The random number generator `rng` is used for sampling.
-    /// NOTE: this is not a physical process, and impossible to reproduce on
-    /// a real quantum computer.
-    pub fn peek_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
+    fn peek_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
         res: &mut ndarray::Array1<u64>, rng: &mut R) -> crate::error::Result<()>
     {
         // There does not seem to be a simpler way to measure all qubits from
@@ -335,22 +293,16 @@ impl StabilizerState
         Ok(())
     }
 
-    /// Reset a qubit
-    ///
-    /// Reset the qubit with index `bit` to zero.
-    pub fn reset<R: rand::Rng>(&mut self, bit: usize, _rng: &mut R)
+    fn reset<R: rand::Rng>(&mut self, bit: usize, _rng: &mut R) -> crate::error::Result<()>
     {
         for tableau in self.tableaus.iter_mut()
         {
             tableau.reset(bit);
         }
+        Ok(())
     }
 
-    /// Reset all qubits
-    ///
-    /// Reset all qubits in this experiment, returning the state to |00...0⟩
-    /// for all runs.
-    pub fn reset_all(&mut self)
+    fn reset_all(&mut self)
     {
         self.tableaus = vec![StabilizerTableau::new(self.nr_bits)];
         self.counts = vec![self.nr_shots];
@@ -362,6 +314,7 @@ mod tests
 {
     use super::StabilizerState;
     use crate::gates::{CX, H, X};
+    use crate::qustate::QuState;
 
     #[test]
     fn test_new()
@@ -668,39 +621,39 @@ r#"+XI
         let mut rng = rand::thread_rng();
 
         let mut s = StabilizerState::new(1, nr_runs);
-        s.reset(0, &mut rng);
+        assert_eq!(s.reset(0, &mut rng), Ok(()));
         let ss = s.tableaus.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join("\n\n");
         assert_eq!(ss, String::from("+Z"));
 
         let mut s = StabilizerState::new(1, nr_runs);
         assert_eq!(s.apply_gate(&X::new(), &[0]), Ok(()));
-        s.reset(0, &mut rng);
+        assert_eq!(s.reset(0, &mut rng), Ok(()));
         let ss = s.tableaus.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join("\n\n");
         assert_eq!(ss, String::from("+Z"));
 
         let mut s = StabilizerState::new(2, nr_runs);
         assert_eq!(s.apply_unary_gate_all(&X::new()), Ok(()));
-        s.reset(0, &mut rng);
+        assert_eq!(s.reset(0, &mut rng), Ok(()));
         let ss = s.tableaus.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join("\n\n");
         assert_eq!(ss, String::from("+ZI\n-IZ"));
 
         let mut s = StabilizerState::new(2, nr_runs);
         assert_eq!(s.apply_unary_gate_all(&X::new()), Ok(()));
-        s.reset(1, &mut rng);
+        assert_eq!(s.reset(1, &mut rng), Ok(()));
         let ss = s.tableaus.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join("\n\n");
         assert_eq!(ss, String::from("-ZI\n+IZ"));
 
         let mut s = StabilizerState::new(2, nr_runs);
         assert_eq!(s.apply_gate(&X::new(), &[0]), Ok(()));
         assert_eq!(s.apply_gate(&H::new(), &[0]), Ok(()));
-        s.reset(0, &mut rng);
+        assert_eq!(s.reset(0, &mut rng), Ok(()));
         let ss = s.tableaus.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join("\n\n");
         assert_eq!(ss, String::from("+ZI\n+IZ"));
 
         let mut s = StabilizerState::new(2, nr_runs);
         assert_eq!(s.apply_gate(&X::new(), &[0]), Ok(()));
         assert_eq!(s.apply_gate(&H::new(), &[0]), Ok(()));
-        s.reset(1, &mut rng);
+        assert_eq!(s.reset(1, &mut rng), Ok(()));
         let ss = s.tableaus.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join("\n\n");
         assert_eq!(ss, String::from("-XI\n+IZ"));
     }
