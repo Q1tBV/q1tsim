@@ -51,6 +51,10 @@ impl crate::gates::Gate for CZ
     {
         self.cgate.apply_mat_slice(state);
     }
+    fn is_stabilizer(&self) -> bool
+    {
+        true
+    }
     fn conjugate(&self, ops: &mut [crate::stabilizer::PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;

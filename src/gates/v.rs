@@ -61,6 +61,11 @@ impl crate::gates::Gate for V
         array![[h+hi, h-hi], [h-hi, h+hi]]
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        true
+    }
+
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;
@@ -142,6 +147,11 @@ impl crate::gates::Gate for Vdg
         let h = 0.5 * crate::cmatrix::COMPLEX_ONE;
         let hi = 0.5 * crate::cmatrix::COMPLEX_I;
         array![[h-hi, h+hi], [h+hi, h-hi]]
+    }
+
+    fn is_stabilizer(&self) -> bool
+    {
+        true
     }
 
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>

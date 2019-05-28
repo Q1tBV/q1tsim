@@ -333,6 +333,18 @@ pub trait Gate
         }
     }
 
+    /// Whether this gate is a stabilizer gate
+    ///
+    /// Return `true` if this gate is a stabilizer gate, i.e. if conjugating
+    /// a Pauli operator (or tensor product thereof for multi-bit gates) with
+    /// this gate, again returns a Pauli operator. Circuits consisting of only
+    /// these types of gates can be simulated more efficiently. The default
+    //// implementation returns `false`.
+    fn is_stabilizer(&self) -> bool
+    {
+        false
+    }
+
     /// Conjugate Pauli operators
     ///
     /// Conjugate the (tensor product of) Pauli operator `ops` with this gate,

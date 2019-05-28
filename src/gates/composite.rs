@@ -705,6 +705,11 @@ impl crate::gates::Gate for Composite
         }
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        self.ops.iter().all(|op| op.gate.is_stabilizer())
+    }
+
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;

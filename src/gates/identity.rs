@@ -58,6 +58,11 @@ impl crate::gates::Gate for I
         // Identity, leave state unchanged, so do nothing
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        true
+    }
+
     fn conjugate(&self, _ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         Ok(false)

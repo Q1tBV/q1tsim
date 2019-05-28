@@ -82,6 +82,11 @@ impl crate::gates::Gate for S
         slice *= crate::cmatrix::COMPLEX_I;
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        true
+    }
+
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;
@@ -190,6 +195,11 @@ impl crate::gates::Gate for Sdg
         let n = state.rows() / 2;
         let mut slice = state.slice_mut(s![n.., ..]);
         slice *= -crate::cmatrix::COMPLEX_I;
+    }
+
+    fn is_stabilizer(&self) -> bool
+    {
+        true
     }
 
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>

@@ -69,6 +69,11 @@ where G0: crate::gates::Gate, G1: crate::gates::Gate
         self.g1.apply_slice(state.slice_mut(s![n..]));
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        self.g0.is_stabilizer() && self.g1.is_stabilizer()
+    }
+
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;

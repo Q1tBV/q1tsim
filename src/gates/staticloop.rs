@@ -90,6 +90,11 @@ impl crate::gates::Gate for Loop
         }
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        self.body.is_stabilizer()
+    }
+
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;

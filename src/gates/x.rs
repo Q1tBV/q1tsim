@@ -92,6 +92,11 @@ impl crate::gates::Gate for X
         Self::transform_mat(state);
     }
 
+    fn is_stabilizer(&self) -> bool
+    {
+        true
+    }
+
     fn conjugate(&self, ops: &mut [PauliOp]) -> crate::error::Result<bool>
     {
         self.check_nr_bits(ops.len())?;

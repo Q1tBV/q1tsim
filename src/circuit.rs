@@ -50,6 +50,20 @@ enum CircuitOp
     Barrier(Vec<usize>)
 }
 
+impl CircuitOp
+{
+    /// Return whether a circuit operation is a stabilizer operation
+    fn is_stabilizer(&self) -> bool
+    {
+        match *self
+        {
+            CircuitOp::Gate(ref gate, _) => gate.is_stabilizer(),
+            CircuitOp::ConditionalGate(_, _, ref gate, _) => gate.is_stabilizer(),
+            _ => true
+        }
+    }
+}
+
 /// Enumeration for the possible representations of the quantum state
 enum QuStateRepr
 {
@@ -105,6 +119,12 @@ impl Circuit
     pub fn nr_cbits(&self) -> usize
     {
         self.nr_cbits
+    }
+
+    /// Return whether this circuit is a stabilizer circuit
+    pub fn is_stabilizer_circuit(&self) -> bool
+    {
+        self.ops.iter().all(|op| op.is_stabilizer())
     }
 
     /// The classical register.
@@ -530,8 +550,14 @@ impl Circuit
     pub fn execute_with_rng<R: rand::RngCore>(&mut self, nr_shots: usize, rng: &mut R)
         -> crate::error::Result<()>
     {
-        self.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(self.nr_qbits, nr_shots)));
-//         self.q_state = Some(QuStateRepr::Stabilizer(crate::stabilizer::StabilizerState::new(self.nr_qbits, nr_shots)));
+        self.q_state = if self.is_stabilizer_circuit()
+            {
+                Some(QuStateRepr::Stabilizer(crate::stabilizer::StabilizerState::new(self.nr_qbits, nr_shots)))
+            }
+            else
+            {
+                Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(self.nr_qbits, nr_shots)))
+            };
         self.c_state = Some(ndarray::Array1::zeros(nr_shots));
         self.reexecute_with_rng(rng)
     }
@@ -1210,7 +1236,7 @@ macro_rules! circuit
 mod tests
 {
     use super::{Basis, Circuit, CircuitOp, QuStateRepr};
-    use crate::gates::{CX, H, S, X};
+    use crate::gates::{CX, CY, H, S, X};
 
     #[test]
     fn test_gate_methods()
@@ -2107,5 +2133,27 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{0} & \cw & \cw & \cw \cwx[-2] & \cctrl{-1} & \cw & \cw \cwx[-3] & \cw & \cw & \cw & \cw \\
 }
 "#)));
+    }
+
+    #[test]
+    fn test_is_stabilizer()
+    {
+        let mut circuit = Circuit::new(100, 1);
+        for i in 0..99
+        {
+            assert_eq!(circuit.h(i), Ok(()));
+            assert_eq!(circuit.cx(i, i+1), Ok(()));
+            assert_eq!(circuit.x(i+1), Ok(()));
+        }
+        assert!(circuit.is_stabilizer_circuit());
+
+        assert_eq!(circuit.measure(55, 0), Ok(()));
+        assert!(circuit.is_stabilizer_circuit());
+
+        assert_eq!(circuit.add_gate(CY::new(), &[99, 0]), Ok(()));
+        assert!(circuit.is_stabilizer_circuit());
+
+        assert_eq!(circuit.u1(0.99, 5), Ok(()));
+        assert!(!circuit.is_stabilizer_circuit());
     }
 }
