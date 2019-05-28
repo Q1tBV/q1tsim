@@ -283,13 +283,55 @@ impl crate::qustate::QuState for StabilizerState
     fn peek_all_into<R: rand::Rng>(&mut self, cbits: &[usize],
         res: &mut ndarray::Array1<u64>, rng: &mut R) -> crate::error::Result<()>
     {
-        // There does not seem to be a simpler way to measure all qubits from
-        // a tableau, as there is for a vector state. So simply loop over all
-        // bits
-        for (qbit, &cbit) in cbits.iter().enumerate()
+        let mut offset = 0;
+        let mut one_mask = 0;
+        for cbit in cbits
         {
-            self.peek_into(qbit, cbit, res, rng)?;
+            one_mask |= 1u64 << cbit;
         }
+        let zero_mask = !one_mask;
+
+        for (tableau, &count) in self.tableaus.iter().zip(self.counts.iter())
+        {
+            let mut counts = vec![(0, count)];
+            for (qbit, &cbit) in cbits.iter().enumerate()
+            {
+                let mut new_counts = vec![];
+                let minfo = tableau.measure(qbit);
+
+                for (idx, c) in counts
+                {
+                    let n0 = match minfo
+                    {
+                        MeasurementInfo::Deterministic(false) => c,
+                        MeasurementInfo::Deterministic(true) => 0,
+                        MeasurementInfo::Random(_) => {
+                            let distribution = rand::distributions::Binomial::new(c as u64, 0.5);
+                            rng.sample(distribution) as usize
+                        }
+                    };
+                    if n0 > 0
+                    {
+                        new_counts.push((idx, n0));
+                    }
+                    if n0 < c
+                    {
+                        new_counts.push((idx | (1 << cbit), c-n0));
+                    }
+                }
+
+                counts = new_counts;
+            }
+
+            for (idx, c) in counts
+            {
+                res.slice_mut(s![offset..offset+c]).map_inplace(
+                    |b| *b = (*b & zero_mask) | idx
+                );
+                offset += c;
+            }
+        }
+
         Ok(())
     }
 
