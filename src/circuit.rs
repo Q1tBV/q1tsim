@@ -50,6 +50,15 @@ enum CircuitOp
     Barrier(Vec<usize>)
 }
 
+/// Enumeration for the possible representations of the quantum state
+enum QuStateRepr
+{
+    /// Stabilizer tableau
+    Stabilizer(crate::stabilizer::StabilizerState),
+    /// Coefficient vector
+    Vector(crate::vectorstate::VectorState)
+}
+
 /// A quantum circuit
 ///
 /// Struct Circuit represents a quantum circuit, holding a quantum state and the
@@ -61,7 +70,7 @@ pub struct Circuit
     /// The number of classical bit in the system
     nr_cbits: usize,
     /// The quantum state of the system
-    q_state: Option<crate::vectorstate::VectorState>,
+    q_state: Option<QuStateRepr>,
     /// The classial state of the system
     c_state: Option<ndarray::Array1<u64>>,
     /// The operations to perform on the state
@@ -506,9 +515,10 @@ impl Circuit
     /// Execute this circuit, performing its operations and measurements.
     /// Measurements are made over `nr_shots` executions of the circuit. This
     /// function clears any previous states of the system (quantum or classical).
-    pub fn execute(&mut self, nr_shots: usize)
+    #[inline(always)]
+    pub fn execute(&mut self, nr_shots: usize) -> crate::error::Result<()>
     {
-        self.execute_with_rng(nr_shots, &mut rand::thread_rng());
+        self.execute_with_rng(nr_shots, &mut rand::thread_rng())
     }
 
     /// Execute this circuit
@@ -518,12 +528,12 @@ impl Circuit
     /// random number generator `rng` for sampling. This function clears any
     /// previous states of the system (quantum or classical).
     pub fn execute_with_rng<R: rand::RngCore>(&mut self, nr_shots: usize, rng: &mut R)
+        -> crate::error::Result<()>
     {
-        self.q_state = Some(crate::vectorstate::VectorState::new(self.nr_qbits, nr_shots));
-        self.c_state = Some(ndarray::Array::zeros(nr_shots));
-        // It shpuld not be possible to get an error from reexecute, so
-        // ignore it for now.
-        self.reexecute_with_rng(rng).unwrap();
+        self.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(self.nr_qbits, nr_shots)));
+//         self.q_state = Some(QuStateRepr::Stabilizer(crate::stabilizer::StabilizerState::new(self.nr_qbits, nr_shots)));
+        self.c_state = Some(ndarray::Array1::zeros(nr_shots));
+        self.reexecute_with_rng(rng)
     }
 
     /// Execute a circuit again.
@@ -531,6 +541,7 @@ impl Circuit
     /// Run this circuit again, starting with the state from the previous
     /// execution. If this circuit has not been run before, a `NotExecuted`
     /// error is returned.
+    #[inline(always)]
     pub fn reexecute(&mut self) -> crate::error::Result<()>
     {
         self.reexecute_with_rng(&mut rand::thread_rng())
@@ -544,20 +555,32 @@ impl Circuit
     pub fn reexecute_with_rng<R: rand::Rng>(&mut self, rng: &mut R)
         -> crate::error::Result<()>
     {
-        if self.q_state.is_none() || self.c_state.is_none()
-        {
-            return Err(crate::error::Error::NotExecuted);
-        }
-
-        let q_state = self.q_state.as_mut().unwrap();
         let c_state = self.c_state.as_mut().unwrap();
+        let ops = &self.ops;
+        match self.q_state
+        {
+            Some(QuStateRepr::Stabilizer(ref mut state)) => {
+                Self::reexecute_with(state, c_state, ops, rng)
+            },
+            Some(QuStateRepr::Vector(ref mut state)) => {
+                Self::reexecute_with(state, c_state, ops, rng)
+            },
+            _ => {
+                Err(crate::error::Error::NotExecuted)
+            }
+        }
+    }
 
-        for op in self.ops.iter()
+    fn reexecute_with<Q: QuState, R: rand::Rng>(q_state: &mut Q,
+        c_state: &mut ndarray::Array1<u64>, ops: &[CircuitOp], rng: &mut R)
+        -> crate::error::Result<()>
+    {
+        for op in ops
         {
             match *op
             {
                 CircuitOp::Gate(ref gate, ref bits) => {
-                    q_state.apply_gate(&**gate, bits.as_slice())?;
+                    q_state.apply_gate(gate.as_gate(), bits.as_slice())?;
                 },
                 CircuitOp::ConditionalGate(ref control, target, ref gate, ref bits) => {
                     let mut cbits = vec![0; c_state.len()];
@@ -571,7 +594,7 @@ impl Circuit
                     let apply_gate: Vec<bool> = cbits.iter()
                         .map(|&b| b == target)
                         .collect();
-                    q_state.apply_conditional_gate(&apply_gate, &**gate,
+                    q_state.apply_conditional_gate(&apply_gate, gate.as_gate(),
                         bits.as_slice())?;
                 },
                 CircuitOp::Measure(qbit, cbit, basis) => {
@@ -1186,7 +1209,7 @@ macro_rules! circuit
 #[cfg(test)]
 mod tests
 {
-    use super::{Basis, Circuit, CircuitOp};
+    use super::{Basis, Circuit, CircuitOp, QuStateRepr};
     use crate::gates::{CX, H, S, X};
 
     #[test]
@@ -1366,7 +1389,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         assert_eq!(circuit.cstate(), Some(&array![0b01, 0b01, 0b01, 0b01, 0b01]));
     }
 
@@ -1381,7 +1404,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
@@ -1390,7 +1413,7 @@ mod tests
             measure_x(0, 0);
             measure_x(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert!(hist.iter().all(
             |&count| crate::stats::measurement_ok(count, nr_shots, 0.25, tol)
@@ -1403,7 +1426,7 @@ mod tests
             measure_x(0, 0);
             measure_x(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
@@ -1412,7 +1435,7 @@ mod tests
             measure_y(0, 0);
             measure_y(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert!(hist.iter().all(
             |&count| crate::stats::measurement_ok(count, nr_shots, 0.25, tol)
@@ -1433,7 +1456,7 @@ mod tests
             h(0);
             peek(0, 2);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
@@ -1453,7 +1476,7 @@ mod tests
             h(0);
             peek(0, 2);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram().unwrap();
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
@@ -1488,7 +1511,7 @@ mod tests
             h(0);
             peek_x(0, 2);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
@@ -1506,7 +1529,7 @@ mod tests
             sdg(0);
             peek_y(0, 2);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         // Results of first and second measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 1.
@@ -1525,31 +1548,31 @@ mod tests
             add_conditional_gate(&[0, 1], 1, X::new(), &[1]);
             measure_all(&[0, 1]);
         }).unwrap();
-        circuit.execute(5);
+        assert_eq!(circuit.execute(5), Ok(()));
         assert_eq!(circuit.c_state, Some(array![0b00, 0b00, 0b00, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(crate::vectorstate::VectorState::new(2, 5));
+        circuit.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(2, 5)));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 1, X::new(), &[1]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
-        circuit.reexecute().unwrap();
+        assert_eq!(circuit.reexecute(), Ok(()));
         assert_eq!(circuit.c_state, Some(array![0b10, 0b00, 0b00, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(crate::vectorstate::VectorState::new(2, 5));
+        circuit.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(2, 5)));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 2, X::new(), &[1]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
-        circuit.reexecute().unwrap();
+        assert_eq!(circuit.reexecute(), Ok(()));
         assert_eq!(circuit.c_state, Some(array![0b00, 0b10, 0b10, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(crate::vectorstate::VectorState::new(2, 5));
+        circuit.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(2, 5)));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[1], 1, X::new(), &[0]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
-        circuit.reexecute().unwrap();
+        assert_eq!(circuit.reexecute(), Ok(()));
         assert_eq!(circuit.c_state, Some(array![0b00, 0b01, 0b01, 0b01, 0b00]));
     }
 
@@ -1563,7 +1586,7 @@ mod tests
             x(0);
             measure_all(&[0, 1]);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
@@ -1571,7 +1594,7 @@ mod tests
             x(0);
             measure_all(&[1, 0]);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
@@ -1580,7 +1603,7 @@ mod tests
             h(1);
             measure_all(&[0, 1]);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert!(hist.iter().all(
             |&count| crate::stats::measurement_ok(count, nr_shots, 0.25, tol)
@@ -1598,7 +1621,7 @@ mod tests
             h(1);
             measure_all_basis(&[0, 1], Basis::X);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![nr_shots, 0, 0, 0]);
 
@@ -1608,7 +1631,7 @@ mod tests
             h(1);
             measure_all_basis(&[0, 1], Basis::X);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
@@ -1620,14 +1643,14 @@ mod tests
             add_gate(S::new(), &[1]);
             measure_all_basis(&[0, 1], Basis::Y);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, nr_shots, 0, 0]);
 
         let mut circuit = circuit!(2, 2, {
             measure_all_basis(&[0, 1], Basis::Y);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert!(hist.iter().all(
             |&count| crate::stats::measurement_ok(count, nr_shots, 0.25, tol)
@@ -1648,7 +1671,7 @@ mod tests
             h(0);
             peek_all(&[2]);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
@@ -1668,7 +1691,7 @@ mod tests
             h(0);
             peek_all(&[4, 5]);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram().unwrap();
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
@@ -1706,7 +1729,7 @@ mod tests
             h(0);
             peek_all_basis(&[2], Basis::X);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         // Results of first and third measurement should be approximately equally
         // distributed over 0 and 1, second should be pure 0.
@@ -1726,7 +1749,7 @@ mod tests
             s(0);
             peek_all_basis(&[4, 5], Basis::Y);
         }).unwrap();
-        circuit.execute(1024);
+        assert_eq!(circuit.execute(1024), Ok(()));
         let hist = circuit.histogram().unwrap();
         // Results of first measurement should be approximately equally
         // distributed over 0 and 1 for both qubits, second should be pure 0
@@ -1762,7 +1785,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
 
         let hist = circuit.histogram().unwrap();
         // With this many shots, we expect all keys to be present
@@ -1788,7 +1811,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
 
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist.iter().sum::<usize>(), nr_shots);
@@ -1809,7 +1832,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
 
         let hist = circuit.histogram_string().unwrap();
         // With this many shots, we expect all keys to be present
@@ -1836,7 +1859,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![nr_shots, 0, 0, 0]);
 
@@ -1848,7 +1871,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist, vec![0, 0, nr_shots, 0]);
 
@@ -1860,7 +1883,7 @@ mod tests
             measure(0, 0);
             measure(1, 1);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert!(crate::stats::measurement_ok(hist[0], nr_shots, 0.5, tol));
         assert_eq!(hist[1], 0);
@@ -1881,7 +1904,7 @@ mod tests
             reset_all();
             measure_all(&[0, 1, 2, 3, 4]);
         }).unwrap();
-        circuit.execute(nr_shots);
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
         let hist = circuit.histogram_vec().unwrap();
         assert_eq!(hist[0], nr_shots);
         assert!(hist[1..].iter().all(|&c| c == 0));

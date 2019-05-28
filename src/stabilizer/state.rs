@@ -55,7 +55,7 @@ impl crate::qustate::QuState for StabilizerState
     }
 
     fn apply_unary_gate_all<G>(&mut self, gate: &G) -> crate::error::Result<()>
-    where G: crate::gates::Gate
+    where G: crate::gates::Gate + ?Sized
     {
         // XXX FIXME: this can possibly be done smarter
         for bit in 0..self.nr_bits
@@ -652,7 +652,7 @@ r#"+XI
         }
         assert!(crate::stats::measurement_ok(n[0], nr_shots, 0.5, tol));
         assert_eq!(n[1], nr_shots);
-        assert!(crate::stats::measurement_ok(n[0], nr_shots, 0.5, tol));
+        assert!(crate::stats::measurement_ok(n[2], nr_shots, 0.5, tol));
     }
 
     #[test]

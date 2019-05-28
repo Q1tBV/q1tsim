@@ -178,7 +178,7 @@ impl crate::qustate::QuState for VectorState
     }
 
     fn apply_unary_gate_all<G>(&mut self, gate: &G) -> crate::error::Result<()>
-    where G: crate::gates::Gate
+    where G: crate::gates::Gate + ?Sized
     {
         // XXX FIXME: this can probably be done smarter
         for bit in 0..self.nr_bits

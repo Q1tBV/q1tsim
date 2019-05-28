@@ -23,6 +23,15 @@ pub use self::latex::{Latex, LatexExportState};
 pub use self::openqasm::OpenQasm;
 
 /// Trait combining the traits necessary for a gate in a quantum circuit
-pub trait CircuitGate: Gate + OpenQasm + CQasm + Latex {}
+pub trait CircuitGate: Gate + OpenQasm + CQasm + Latex
+{
+    fn as_gate(&self) -> &Gate;
+}
 
-impl<G: Gate + OpenQasm + CQasm + Latex> CircuitGate for G {}
+impl<G: Gate + OpenQasm + CQasm + Latex> CircuitGate for G
+{
+    fn as_gate(&self) -> &Gate
+    {
+        self
+    }
+}

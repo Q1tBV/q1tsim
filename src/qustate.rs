@@ -11,13 +11,12 @@ pub trait QuState
     ///
     /// Apply the single-bit gate `gate` to all qubits in the quantum state.
     fn apply_unary_gate_all<G>(&mut self, gate: &G) -> crate::error::Result<()>
-    where G: crate::gates::Gate;
+    where G: crate::gates::Gate + ?Sized;
     /// Apply a conditional n-ary quantum gate `gate`, controlled by classical
     /// bit `control`, on the qubits from `bits` in this state.
     fn apply_conditional_gate<G>(&mut self, control: &[bool], gate: &G,
         bits: &[usize]) -> crate::error::Result<()>
     where G: crate::gates::Gate + ?Sized;
-
 
     /// Measure a qubit.
     ///
