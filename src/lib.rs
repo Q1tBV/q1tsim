@@ -32,6 +32,7 @@
 //! * Operations conditional on classical values
 //! * Export of circuits to Open QASM and c-QASM for running your programs on other computers or simulators
 //! * Export of circuits to LaTeX, for drawing pictures of your circuit
+//! * Efficient simulation of stabilizer circuits
 //!
 //! Usage
 //! =====
@@ -233,6 +234,50 @@
 //! [^no_qasm]: No reasonable way at least. Technically, we could take the matrix
 //! for the gate, decompose it into primitive gates, and export the corresponding
 //! code.
+//!
+//! Stabilizer circuits
+//! ===================
+//! Stabilizer circuits are circuits that can be expressed entirely in terms of
+//! the Clifford gates `H`, `S`, and `CX`, and qubit measurements. Since version
+//! 0.4.0, `q1tsim` can simulate these circuits much more efficiently than
+//! general circuits. If you have a custom gate type that can be represented
+//! in terms of Clifford gates, and wish to use it with the stabilizer backend,
+//! you should override the default implementations of the
+//! [is_stabilizer()](gates/trait.Gate.html#method.is_stabilizer) and
+//! [conjugate()](gates/trait.Gate.html#method.conjugate) methods. As an example,
+//! the implementation for a hypothetical `HX` gate that first performs a Hadamard
+//! transform, followed by an `X` gate, could look like
+//! ```
+//! use q1tsim::stabilizer::PauliOp;
+//! use q1tsim::gates::Gate;
+//!
+//! struct HX {}
+//!
+//! impl Gate for HX {
+//!     # fn description(&self) -> &str { "" }
+//!     # fn nr_affected_bits(&self) -> usize { 0 }
+//!     # fn matrix(&self) -> q1tsim::cmatrix::CMatrix { q1tsim::cmatrix::CMatrix::zeros((0,0)) }
+//!     fn is_stabilizer(&self) -> bool
+//!     {
+//!         true
+//!     }
+//!
+//!     fn conjugate(&self, ops: &mut [PauliOp]) -> q1tsim::error::Result<bool>
+//!     {
+//!         let (op, sign) = match ops[0]
+//!             {
+//!                 PauliOp::I => (PauliOp::I, false),
+//!                 PauliOp::Z => (PauliOp::X, true),
+//!                 PauliOp::X => (PauliOp::Z, false),
+//!                 PauliOp::Y => (PauliOp::Y, false)
+//!             };
+//!         ops[0] = op;
+//!         Ok(sign)
+//!     }
+//!
+//!     /* ... */
+//! }
+//! ```
 
 #[macro_use] extern crate ndarray;
 #[cfg(test)] #[macro_use] extern crate matches;

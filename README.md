@@ -25,6 +25,7 @@ Features
 * Operations conditional on classical values
 * Export of circuits to Open QASM and c-QASM for running your programs on other computers or simulators
 * Export of circuits to LaTeX, for drawing pictures of your circuit
+* Efficient simulation of stabilizer circuits
 
 Usage
 =====

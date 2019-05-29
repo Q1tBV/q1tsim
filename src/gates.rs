@@ -339,7 +339,7 @@ pub trait Gate
     /// a Pauli operator (or tensor product thereof for multi-bit gates) with
     /// this gate, again returns a Pauli operator. Circuits consisting of only
     /// these types of gates can be simulated more efficiently. The default
-    //// implementation returns `false`.
+    /// implementation returns `false`.
     fn is_stabilizer(&self) -> bool
     {
         false

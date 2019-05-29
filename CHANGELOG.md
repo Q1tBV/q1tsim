@@ -1,3 +1,20 @@
+# [0.4.0] 2019-05-29
+
+Much more efficient simulation of stabilizer circuits. Stabilizer circuits consist
+of Clifford gates only: gates that can be described entirely in terms of `H`, `S`
+and `CX` gates. These circuits can be represented more efficiently, scaling
+quadratically in the number of qubits instead of exponentially as when using the
+standard coefficient vector representation (see [ArXiv:9807006](https://arxiv.org/abs/quant-ph/9807006)
+for details). The gates included with `q1tsim` that can be simulated in this
+representation are `H`, `X`, `Y`, `Z`, `S` and `S`<sup>`†`</sup>,
+`V` and `V`<sup>`†`</sup>, `CX`, `CY`, `CZ`, and `Swap`,
+as well as `Composite` gates containing only these gates.  With the new backend,
+simulation of stabilizer circuits with thousands of qubits is possible.
+
+By default, `q1tsim` will now use the stabilizer representation if possible. If
+you wish to use the coefficient vector representation instead when simulating a
+stabilizer circuit, use the `Circuit::execute_with()` method.
+
 # [0.3.0] 2019-04-09
 
 - Update code to use Rust 2018 edition.
