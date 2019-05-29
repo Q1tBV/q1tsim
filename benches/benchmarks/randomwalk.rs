@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, Criterion};
 use q1tsim::{declare_controlled, declare_controlled_cost, declare_controlled_type,
     declare_controlled_impl, declare_controlled_impl_gate, declare_controlled_latex,
     declare_controlled_qasm};
@@ -66,14 +66,11 @@ fn quantum_random_walk(nr_pos_bits: usize, nr_shots: usize, measure: bool)
 {
     let mut rng = rand_hc::Hc128Rng::seed_from_u64(0x1f67a51423cd2615);
 
-    match build_randomwalk_circuit(nr_pos_bits, measure)
-    {
-        Ok(mut circuit) => { circuit.execute_with_rng(nr_shots, &mut rng); }
-        Err(err) => { panic!("Failed to build circuit: {}", err); }
-    }
+    let mut circuit = build_randomwalk_circuit(nr_pos_bits, measure).expect("Failed to build circuit");
+    circuit.execute_with_rng(nr_shots, &mut rng).expect("Failed to execute circuit");
 }
 
-fn criterion_benchmark(c: &mut Criterion)
+fn bench_randomwalk(c: &mut Criterion)
 {
     c.bench_function("qrw 6 1,000", |b| b.iter(|| quantum_random_walk(6, 1_000, false)));
     c.bench_function("qrw 6 1,000,000", |b| b.iter(|| quantum_random_walk(6, 1_000_000, false)));
@@ -81,5 +78,4 @@ fn criterion_benchmark(c: &mut Criterion)
     c.bench_function("crw 4 100", |b| b.iter(|| quantum_random_walk(4, 100, true)));
 }
 
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+criterion_group!(benches, bench_randomwalk);

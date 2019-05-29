@@ -77,14 +77,14 @@ impl QuStateRepr
 {
     /// Create a new coefficient vector backend for `nr_qbits` qbits, averaging
     /// measurements over `nr_shots` runs.
-    fn vector(nr_qbits: usize, nr_shots: usize) -> Self
+    pub fn vector(nr_qbits: usize, nr_shots: usize) -> Self
     {
         QuStateRepr::Vector(crate::vectorstate::VectorState::new(nr_qbits, nr_shots))
     }
 
     /// Create a new stabilizer tableau backend for `nr_qbits` qbits, averaging
     /// measurements over `nr_shots` runs.
-    fn stabilizer(nr_qbits: usize, nr_shots: usize) -> Self
+    pub fn stabilizer(nr_qbits: usize, nr_shots: usize) -> Self
     {
         QuStateRepr::Stabilizer(crate::stabilizer::StabilizerState::new(nr_qbits, nr_shots))
     }
