@@ -65,12 +65,29 @@ impl CircuitOp
 }
 
 /// Enumeration for the possible representations of the quantum state
-enum QuStateRepr
+pub enum QuStateRepr
 {
     /// Stabilizer tableau
     Stabilizer(crate::stabilizer::StabilizerState),
     /// Coefficient vector
     Vector(crate::vectorstate::VectorState)
+}
+
+impl QuStateRepr
+{
+    /// Create a new coefficient vector backend for `nr_qbits` qbits, averaging
+    /// measurements over `nr_shots` runs.
+    fn vector(nr_qbits: usize, nr_shots: usize) -> Self
+    {
+        QuStateRepr::Vector(crate::vectorstate::VectorState::new(nr_qbits, nr_shots))
+    }
+
+    /// Create a new stabilizer tableau backend for `nr_qbits` qbits, averaging
+    /// measurements over `nr_shots` runs.
+    fn stabilizer(nr_qbits: usize, nr_shots: usize) -> Self
+    {
+        QuStateRepr::Stabilizer(crate::stabilizer::StabilizerState::new(nr_qbits, nr_shots))
+    }
 }
 
 /// A quantum circuit
@@ -550,14 +567,28 @@ impl Circuit
     pub fn execute_with_rng<R: rand::RngCore>(&mut self, nr_shots: usize, rng: &mut R)
         -> crate::error::Result<()>
     {
-        self.q_state = if self.is_stabilizer_circuit()
+        let q_state = if self.is_stabilizer_circuit()
             {
-                Some(QuStateRepr::Stabilizer(crate::stabilizer::StabilizerState::new(self.nr_qbits, nr_shots)))
+                QuStateRepr::stabilizer(self.nr_qbits, nr_shots)
             }
             else
             {
-                Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(self.nr_qbits, nr_shots)))
+                QuStateRepr::vector(self.nr_qbits, nr_shots)
             };
+        self.execute_with(nr_shots, rng, q_state)
+    }
+
+    /// Execute this circuit
+    ///
+    /// Execute this circuit, performing its operations and measurements.
+    /// Measurements are made over `nr_shots` executions of the circuit, using
+    /// random number generator `rng` for sampling. The initial quantum state of
+    /// the system is set to `q_state`. The classical state is cleared before
+    /// execution.
+    pub fn execute_with<R: rand::RngCore>(&mut self, nr_shots: usize, rng: &mut R,
+        q_state: QuStateRepr) -> crate::error::Result<()>
+    {
+        self.q_state = Some(q_state);
         self.c_state = Some(ndarray::Array1::zeros(nr_shots));
         self.reexecute_with_rng(rng)
     }
@@ -586,10 +617,10 @@ impl Circuit
         match self.q_state
         {
             Some(QuStateRepr::Stabilizer(ref mut state)) => {
-                Self::reexecute_with(state, c_state, ops, rng)
+                Self::do_execute_with(state, c_state, ops, rng)
             },
             Some(QuStateRepr::Vector(ref mut state)) => {
-                Self::reexecute_with(state, c_state, ops, rng)
+                Self::do_execute_with(state, c_state, ops, rng)
             },
             _ => {
                 Err(crate::error::Error::NotExecuted)
@@ -597,7 +628,7 @@ impl Circuit
         }
     }
 
-    fn reexecute_with<Q: QuState, R: rand::Rng>(q_state: &mut Q,
+    fn do_execute_with<Q: QuState, R: rand::Rng>(q_state: &mut Q,
         c_state: &mut ndarray::Array1<u64>, ops: &[CircuitOp], rng: &mut R)
         -> crate::error::Result<()>
     {
@@ -1578,7 +1609,7 @@ mod tests
         assert_eq!(circuit.c_state, Some(array![0b00, 0b00, 0b00, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(2, 5)));
+        circuit.q_state = Some(QuStateRepr::vector(2, 5));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 1, X::new(), &[1]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
@@ -1586,7 +1617,7 @@ mod tests
         assert_eq!(circuit.c_state, Some(array![0b10, 0b00, 0b00, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(2, 5)));
+        circuit.q_state = Some(QuStateRepr::vector(2, 5));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[0, 1], 2, X::new(), &[1]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
@@ -1594,7 +1625,7 @@ mod tests
         assert_eq!(circuit.c_state, Some(array![0b00, 0b10, 0b10, 0b00, 0b00]));
 
         let mut circuit = Circuit::new(2, 2);
-        circuit.q_state = Some(QuStateRepr::Vector(crate::vectorstate::VectorState::new(2, 5)));
+        circuit.q_state = Some(QuStateRepr::vector(2, 5));
         circuit.c_state = Some(array![0b01, 0b10, 0b10, 0b11, 0b00]);
         circuit.add_conditional_gate(&[1], 1, X::new(), &[0]).unwrap();
         circuit.measure_all(&[0, 1]).unwrap();
@@ -2155,5 +2186,65 @@ r#"\Qcircuit @C=1em @R=.7em {
 
         assert_eq!(circuit.u1(0.99, 5), Ok(()));
         assert!(!circuit.is_stabilizer_circuit());
+    }
+
+    #[test]
+    fn test_qustate_backend()
+    {
+        let nr_shots = 1024;
+        let nr_qbits = 2;
+        let nr_cbits = 2;
+        let tol = 1.0e-5;
+
+        let mut circuit = circuit!(nr_qbits, nr_cbits, {
+            h(0);
+            cx(0, 1);
+            measure_all(&[0, 1]);
+        }).expect("Failed to create circuit");
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
+        assert!(matches!(circuit.q_state, Some(QuStateRepr::Stabilizer(_))));
+        let hist = circuit.histogram_vec().expect("Failed to get histogram");
+        assert!(crate::stats::measurement_ok(hist[0], nr_shots, 0.5, tol));
+        assert_eq!(hist[1], 0);
+        assert_eq!(hist[2], 0);
+        assert!(crate::stats::measurement_ok(hist[3], nr_shots, 0.5, tol));
+
+        let mut circuit = circuit!(nr_qbits, nr_cbits, {
+            h(0);
+            cx(0, 1);
+            measure_all(&[0, 1]);
+        }).expect("Failed to create circuit");
+        let q_state = QuStateRepr::vector(nr_qbits, nr_shots);
+        assert_eq!(circuit.execute_with(nr_shots, &mut rand::thread_rng(), q_state), Ok(()));
+        assert!(matches!(circuit.q_state, Some(QuStateRepr::Vector(_))));
+        let hist = circuit.histogram_vec().expect("Failed to get histogram");
+        assert!(crate::stats::measurement_ok(hist[0], nr_shots, 0.5, tol));
+        assert_eq!(hist[1], 0);
+        assert_eq!(hist[2], 0);
+        assert!(crate::stats::measurement_ok(hist[3], nr_shots, 0.5, tol));
+    }
+
+    #[test]
+    fn test_stabilizer_circuit()
+    {
+        // This test is more to check if a circuit with many qbits will actually
+        // run, rather than to check the actual measurement result.
+        let nr_shots = 1024;
+        let nr_qbits = 100;
+        let nr_cbits = 1;
+        let tol = 1.0e-5;
+
+        let mut circuit = Circuit::new(nr_qbits, nr_cbits);
+        for i in 0..nr_qbits-1
+        {
+            assert_eq!(circuit.h(i), Ok(()));
+            assert_eq!(circuit.cx(i, i+1), Ok(()));
+            assert_eq!(circuit.x(i+1), Ok(()));
+        }
+        assert_eq!(circuit.measure(55, 0), Ok(()));
+        assert_eq!(circuit.execute(nr_shots), Ok(()));
+
+        let hist = circuit.histogram_vec().unwrap();
+        assert!(crate::stats::measurement_ok(hist[0], nr_shots, 0.5, tol));
     }
 }
