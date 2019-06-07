@@ -426,7 +426,7 @@ impl Circuit
 
     /// Add a Hadamard gate.
     ///
-    /// Add a Hadamard operating on qubit `qbit`, to this circuit.
+    /// Add a Hadamard gate operating on qubit `qbit`, to this circuit.
     pub fn h(&mut self, qbit: usize) -> crate::error::Result<()>
     {
         self.add_gate(crate::gates::H::new(), &[qbit])
@@ -1020,7 +1020,7 @@ impl Circuit
     ///
     /// Export this circuit to a program in c-Qasm format. On a successful
     /// conversion, the result is `Ok` with the program text. When the conversion
-    /// to OpenQasm fails, `Err` with an error message is returned.
+    /// to c-Qasm fails, `Err` with an error message is returned.
     pub fn c_qasm(&self) -> crate::error::Result<String>
     {
         let mut res = String::from("version 1.0\n");
@@ -1140,6 +1140,11 @@ impl Circuit
         Ok(res)
     }
 
+    /// Export to LaTeX
+    ///
+    /// Export this circuit to LaTeX using the qcircuit package. On a successful
+    /// conversion, the result is `Ok` with the LaTeX code. When the conversion
+    /// to LaTeX fails, `Err` with an error message is returned.
     pub fn latex(&self) -> crate::error::Result<String>
     {
         let mut state = crate::export::LatexExportState::new(self.nr_qbits, self.nr_cbits);
