@@ -286,6 +286,7 @@
 #[macro_use] pub mod gates;
 pub mod circuit;
 pub mod error;
+pub mod ffi;
 pub mod export;
 pub mod permutation;
 pub mod qustate;
