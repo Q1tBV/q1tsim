@@ -362,6 +362,25 @@ class Circuit(object):
         """
         return self.peek_all_basis(cbits, 'Z')
 
+    def reset(self, qbit):
+        """Reset a qubit
+
+        Reset the qubit qbit to |0⟩. This is done by measuring the bit, and
+        flipping it if the result is 1, so this is potentially an expensive
+        operation.
+        """
+        res = q1tsimffi.unpack_result(self.__sim.circuit_reset(self.__ptr, qbit))
+        return res
+
+    def reset_all(self):
+        """Reset all qubits.
+
+        Reset the entire quantum state of the circuit to |00...0⟩. The classical
+        register is not affected.
+        """
+        res = q1tsimffi.unpack_result(self.__sim.circuit_reset_all(self.__ptr))
+        return res
+
     def execute(self, nr_shots):
         """Execute this circuit
 
@@ -370,6 +389,15 @@ class Circuit(object):
         function clears any previous states of the system (quantum or classical).
         """
         res = q1tsimffi.unpack_result(self.__sim.circuit_execute(self.__ptr, nr_shots))
+        return res
+
+    def reexecute(self):
+        """Execute a circuit again.
+
+        Run this circuit again, starting with the state from the previous
+        execution.
+        """
+        res = q1tsimffi.unpack_result(self.__sim.circuit_reexecute(self.__ptr))
         return res
 
     def histogram(self):

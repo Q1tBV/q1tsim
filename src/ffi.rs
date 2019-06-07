@@ -266,6 +266,39 @@ pub extern "C" fn circuit_add_gate(ptr: *mut Circuit, gate: *const c_char,
 }
 
 #[no_mangle]
+pub extern "C" fn circuit_reset(ptr: *mut Circuit, qbit: usize) -> CResult
+{
+    if ptr.is_null()
+    {
+        CResult::error("Pointer to circuit is NULL")
+    }
+    else
+    {
+        let circuit = unsafe { &mut *ptr };
+        match circuit.reset(qbit)
+        {
+            Ok(_) => CResult::new(),
+            Err(err) => CResult::error(&err.to_string())
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn circuit_reset_all(ptr: *mut Circuit) -> CResult
+{
+    if ptr.is_null()
+    {
+        CResult::error("Pointer to circuit is NULL")
+    }
+    else
+    {
+        let circuit = unsafe { &mut *ptr };
+        circuit.reset_all();
+        CResult::new()
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn circuit_measure(ptr: *mut Circuit, qbit: usize, cbit: usize,
     dir: c_char, collapse: u8) -> CResult
 {
@@ -341,6 +374,24 @@ pub extern "C" fn circuit_execute(ptr: *mut Circuit, nr_shots: usize) -> CResult
     {
         let circuit = unsafe { &mut *ptr };
         match circuit.execute(nr_shots)
+        {
+            Ok(_) => CResult::new(),
+            Err(err) => CResult::error(&err.to_string())
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn circuit_reexecute(ptr: *mut Circuit) -> CResult
+{
+    if ptr.is_null()
+    {
+        CResult::error("Pointer to circuit is NULL")
+    }
+    else
+    {
+        let circuit = unsafe { &mut *ptr };
+        match circuit.reexecute()
         {
             Ok(_) => CResult::new(),
             Err(err) => CResult::error(&err.to_string())
