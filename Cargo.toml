@@ -9,6 +9,10 @@ license="Apache-2.0"
 readme="README.md"
 edition="2018"
 
+[lib]
+name = "q1tsim"
+crate-type = ["dylib"]
+
 [dependencies]
 q1tsim-derive = { path = "q1tsim-derive", version = "0.1.0" }
 num-complex="0.2"
