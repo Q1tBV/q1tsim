@@ -163,6 +163,21 @@ macro_rules! add_parametrized_gate
             $circuit.add_gate(<$gate_type>::new($params[0]), $qbits)
         }
     };
+    (1, $circuit:ident, $control:expr, $target:expr, $gate_type:ty, $qbits:expr, $params:ident) => {
+        if $params.len() != 1
+        {
+            Err(crate::error::Error::from(
+                crate::error::ParseError::InvalidNrArguments($params.len(), 1,
+                    String::from(stringify!($gate_type))
+                )
+            ))
+        }
+        else
+        {
+            $circuit.add_conditional_gate($control, $target,
+                <$gate_type>::new($params[0]), $qbits)
+        }
+    };
     (2, $circuit:ident, $gate_type:ty, $qbits:expr, $params:ident) => {
         if $params.len() != 2
         {
@@ -175,6 +190,21 @@ macro_rules! add_parametrized_gate
         else
         {
             $circuit.add_gate(<$gate_type>::new($params[0], $params[1]), $qbits)
+        }
+    };
+    (2, $circuit:ident, $control:expr, $target:expr, $gate_type:ty, $qbits:expr, $params:ident) => {
+        if $params.len() != 2
+        {
+            Err(crate::error::Error::from(
+                crate::error::ParseError::InvalidNrArguments($params.len(), 1,
+                    String::from(stringify!($gate_type))
+                )
+            ))
+        }
+        else
+        {
+            $circuit.add_conditional_gate($control, $target,
+                <$gate_type>::new($params[0], $params[1]), $qbits)
         }
     };
     (3, $circuit:ident, $gate_type:ty, $qbits:expr, $params:ident) => {
@@ -190,7 +220,22 @@ macro_rules! add_parametrized_gate
         {
             $circuit.add_gate(<$gate_type>::new($params[0], $params[1], $params[2]), $qbits)
         }
-    }
+    };
+    (3, $circuit:ident, $control:expr, $target:expr, $gate_type:ty, $qbits:expr, $params:ident) => {
+        if $params.len() != 3
+        {
+            Err(crate::error::Error::from(
+                crate::error::ParseError::InvalidNrArguments($params.len(), 1,
+                    String::from(stringify!($gate_type))
+                )
+            ))
+        }
+        else
+        {
+            $circuit.add_conditional_gate($control, $target,
+                <$gate_type>::new($params[0], $params[1], $params[2]), $qbits)
+        }
+    };
 }
 
 #[no_mangle]
@@ -245,6 +290,85 @@ pub extern "C" fn circuit_add_gate(ptr: *mut Circuit, gate: *const c_char,
                 "x"    => { circuit.add_gate(X::new(), qbits) },
                 "y"    => { circuit.add_gate(Y::new(), qbits) },
                 "z"    => { circuit.add_gate(Z::new(), qbits) },
+                _ => {
+                    Err(crate::error::Error::from(
+                        crate::error::ParseError::UnknownGate(String::from(gate_name))
+                    ))
+                }
+            };
+
+            match res
+            {
+                Ok(_) => CResult::new(),
+                Err(err) => CResult::error(&err.to_string())
+            }
+        }
+        else
+        {
+            CResult::error("Invalid gate name")
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn circuit_add_conditional_gate(ptr: *mut Circuit,
+    control_ptr: *const usize, nr_control: usize, target: u64,
+    gate: *const c_char,
+    qbits_ptr: *const usize, nr_qbits: usize,
+    param_ptr: *const f64, nr_params: usize) -> CResult
+{
+    if ptr.is_null()
+    {
+        CResult::error("Pointer to circuit is NULL")
+    }
+    else if control_ptr.is_null()
+    {
+        CResult::error("Pointer to control bit indices is NULL")
+    }
+    else if qbits_ptr.is_null()
+    {
+        CResult::error("Pointer to bit indices is NULL")
+    }
+    else
+    {
+        let circuit = unsafe { &mut *ptr };
+        let control = unsafe { ::std::slice::from_raw_parts(control_ptr, nr_control) };
+        let qbits = unsafe { ::std::slice::from_raw_parts(qbits_ptr, nr_qbits) };
+        let params = if param_ptr.is_null()
+            {
+                &[]
+            }
+            else
+            {
+                unsafe { ::std::slice::from_raw_parts(param_ptr, nr_params) }
+            };
+
+        if let Ok(gate_name) = unsafe { ::std::ffi::CStr::from_ptr(gate).to_str() }
+        {
+            let res = match gate_name.to_lowercase().as_str()
+            {
+                "ch"   => { circuit.add_conditional_gate(control, target, CH::new(), qbits) },
+                "cx"   => { circuit.add_conditional_gate(control, target, CX::new(), qbits) },
+                "cy"   => { circuit.add_conditional_gate(control, target, CY::new(), qbits) },
+                "cz"   => { circuit.add_conditional_gate(control, target, CZ::new(), qbits) },
+                "h"    => { circuit.add_conditional_gate(control, target, H::new(), qbits) },
+                "i"    => { circuit.add_conditional_gate(control, target, I::new(), qbits) },
+                "rx"   => { add_parametrized_gate!(1, circuit, control, target, RX, qbits, params) },
+                "ry"   => { add_parametrized_gate!(1, circuit, control, target, RY, qbits, params) },
+                "rz"   => { add_parametrized_gate!(1, circuit, control, target, RZ, qbits, params) },
+                "s"    => { circuit.add_conditional_gate(control, target, S::new(), qbits) },
+                "sdg"  => { circuit.add_conditional_gate(control, target, Sdg::new(), qbits) },
+                "swap" => { circuit.add_conditional_gate(control, target, Swap::new(), qbits) },
+                "t"    => { circuit.add_conditional_gate(control, target, T::new(), qbits) },
+                "tdg"  => { circuit.add_conditional_gate(control, target, Tdg::new(), qbits) },
+                "u1"   => { add_parametrized_gate!(1, circuit, control, target, U1, qbits, params) },
+                "u2"   => { add_parametrized_gate!(2, circuit, control, target, U2, qbits, params) },
+                "u3"   => { add_parametrized_gate!(3, circuit, control, target, U3, qbits, params) },
+                "v"    => { circuit.add_conditional_gate(control, target, V::new(), qbits) },
+                "vdg"  => { circuit.add_conditional_gate(control, target, Vdg::new(), qbits) },
+                "x"    => { circuit.add_conditional_gate(control, target, X::new(), qbits) },
+                "y"    => { circuit.add_conditional_gate(control, target, Y::new(), qbits) },
+                "z"    => { circuit.add_conditional_gate(control, target, Z::new(), qbits) },
                 _ => {
                     Err(crate::error::Error::from(
                         crate::error::ParseError::UnknownGate(String::from(gate_name))
