@@ -30,6 +30,11 @@ ffi.cdef("""
     result_t circuit_add_gate(circuit_t *ptr, const char* gate,
         const size_t* qbits, size_t nr_qubits,
         const double* param_ptr, size_t nr_params);
+    result_t circuit_add_conditional_gate(circuit_t *ptr,
+        const size_t* control_ptr, size_t nr_control, uint64_t target,
+        const char* gate,
+        const size_t* qbits_ptr, size_t nr_qbits,
+        const double* param_ptr, size_t nr_params);
     result_t circuit_measure(circuit_t *ptr, size_t qbit, size_t cbit, char dir,
         uint8_t collapse);
     result_t circuit_measure_all(circuit_t *ptr, const size_t* cbits, size_t nr_cbits,

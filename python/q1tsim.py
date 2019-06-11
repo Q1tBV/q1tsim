@@ -50,6 +50,32 @@ class Circuit(object):
             )
         return res
 
+    def add_conditional_gate(self, control, target, name, qbits, params=None):
+        """Add a conditional gate.
+
+        Append a n-ary gate gate, that will operate on the n qubits in
+        bits to this circuit. The gate will only be applied only when the
+        classical bits with indices from control form the target word target.
+        The bit at the position of the first index in control is interpreted
+        as the least significant bit to check.
+        """
+        cname = bytes(name, 'utf-8')
+        if params is None:
+            res = q1tsimffi.unpack_result(
+                self.__sim.circuit_add_conditional_gate(self.__ptr,
+                    control, len(control), target, cname, qbits, len(qbits),
+                    cffi.FFI.NULL, 0
+                )
+            )
+        else:
+            res = q1tsimffi.unpack_result(
+                self.__sim.circuit_add_conditional_gate(self.__ptr,
+                    control, len(control), target, cname, qbits, len(qbits),
+                    params, len(params)
+                )
+            )
+        return res
+
     def ch(self, control, target):
         """Add a controlled Hadamard gate.
 
