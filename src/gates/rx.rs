@@ -27,16 +27,19 @@ use crate::gates::Gate;
 /// ```
 pub struct RX
 {
-    theta: f64,
+    theta: crate::gates::Parameter,
     desc: String
 }
 
 impl RX
 {
     /// Create a new `R`<sub>`X`</sub> gate.
-    pub fn new(theta: f64) -> Self
+    pub fn new<T>(theta: T) -> Self
+    where crate::gates::Parameter: From<T>
     {
-        RX { theta: theta, desc: format!("RX({:.4})", theta) }
+        let param = crate::gates::Parameter::from(theta);
+        let desc = format!("RX({:.4})", param);
+        RX { theta: param, desc: desc }
     }
 }
 
@@ -59,15 +62,17 @@ impl crate::gates::Gate for RX
 
     fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
-        let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
+        let htheta = 0.5 * self.theta.value();
+        let c  = num_complex::Complex::new((htheta).cos(), 0.0);
+        let si = num_complex::Complex::new(0.0, (htheta).sin());
         array![[c, -si], [-si, c]]
     }
 
     fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
-        let c  = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
-        let si = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
+        let htheta = 0.5 * self.theta.value();
+        let c  = num_complex::Complex::new((htheta).cos(), 0.0);
+        let si = num_complex::Complex::new(0.0, (htheta).sin());
 
         let mut s = state.to_owned();
         s *= si;
@@ -86,8 +91,9 @@ impl crate::gates::Gate for RX
 
     fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
-        let cos_t   = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
-        let sin_t_i = num_complex::Complex::new(0.0, (0.5 * self.theta).sin());
+        let htheta = 0.5 * self.theta.value();
+        let cos_t   = num_complex::Complex::new((htheta).cos(), 0.0);
+        let sin_t_i = num_complex::Complex::new(0.0, (htheta).sin());
 
         let mut s = state.to_owned();
         s *= sin_t_i;

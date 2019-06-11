@@ -28,16 +28,19 @@ use crate::gates::Gate;
 
 pub struct U1
 {
-    lambda: f64,
+    lambda: crate::gates::Parameter,
     desc: String
 }
 
 impl U1
 {
     /// Create a new `U`<sub>`1`</sub> gate.
-    pub fn new(lambda: f64) -> Self
+    pub fn new<T>(lambda: T) -> Self
+    where crate::gates::Parameter: From<T>
     {
-        U1 { lambda: lambda, desc: format!("U1({:.4})", lambda) }
+        let param = crate::gates::Parameter::from(lambda);
+        let desc = format!("U1({:.4})", param);
+        U1 { lambda: param, desc: desc }
     }
 
     pub fn cost() -> f64
@@ -67,7 +70,7 @@ impl crate::gates::Gate for U1
     {
         let z = crate::cmatrix::COMPLEX_ZERO;
         let o = crate::cmatrix::COMPLEX_ONE;
-        let p = num_complex::Complex::from_polar(&1.0, &self.lambda);
+        let p = num_complex::Complex::from_polar(&1.0, &self.lambda.value());
         array![[o, z], [z, p]]
     }
 
@@ -77,7 +80,7 @@ impl crate::gates::Gate for U1
 
         let n = state.len() / 2;
         let mut slice = state.slice_mut(s![n..]);
-        slice *= num_complex::Complex::from_polar(&1.0, &self.lambda);
+        slice *= num_complex::Complex::from_polar(&1.0, &self.lambda.value());
     }
 }
 

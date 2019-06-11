@@ -28,24 +28,23 @@ use crate::gates::Gate;
 /// ```
 pub struct U3
 {
-    theta: f64,
-    phi: f64,
-    lambda: f64,
+    theta: crate::gates::Parameter,
+    phi: crate::gates::Parameter,
+    lambda: crate::gates::Parameter,
     desc: String
 }
 
 impl U3
 {
     /// Create a new `U`<sub>`3`</sub> gate.
-    pub fn new(theta: f64, phi: f64, lambda: f64) -> Self
+    pub fn new<Tt, Tp, Tl>(theta: Tt, phi: Tp, lambda: Tl) -> Self
+    where crate::gates::Parameter: From<Tt> + From<Tp> + From<Tl>
     {
-        U3
-        {
-            theta: theta,
-            phi: phi,
-            lambda: lambda,
-            desc: format!("U3({:.4}, {:.4}, {:.4})", theta, phi, lambda)
-        }
+        let ptheta = crate::gates::Parameter::from(theta);
+        let pphi = crate::gates::Parameter::from(phi);
+        let plambda = crate::gates::Parameter::from(lambda);
+        let desc = format!("U3({:.4}, {:.4}, {:.4})", ptheta, pphi, plambda);
+        U3 { theta: ptheta, phi: pphi, lambda: plambda, desc: desc }
     }
 
     pub fn cost() -> f64
@@ -73,11 +72,14 @@ impl crate::gates::Gate for U3
 
     fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let (c, s) = ((0.5 * self.theta).cos(), (0.5 * self.theta).sin());
+        let htheta = 0.5 * self.theta.value();
+        let phi = self.phi.value();
+        let lambda = self.lambda.value();
+        let (c, s) = (htheta.cos(), htheta.sin());
         array![[ num_complex::Complex::new(c, 0.0),
-                -num_complex::Complex::from_polar(&s, &self.lambda)],
-               [ num_complex::Complex::from_polar(&s, &self.phi),
-                 num_complex::Complex::from_polar(&c, &(self.phi+self.lambda))]]
+                -num_complex::Complex::from_polar(&s, &lambda)],
+               [ num_complex::Complex::from_polar(&s, &phi),
+                 num_complex::Complex::from_polar(&c, &(phi+lambda))]]
     }
 }
 

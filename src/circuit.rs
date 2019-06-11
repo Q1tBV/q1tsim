@@ -475,7 +475,8 @@ impl Circuit
     /// Add a R<sub>X</sub> gate.
     ///
     /// Add a `R`<sub>`X`</sub>`(θ)` gate operating on qubit `bit`, to this circuit.
-    pub fn rx(&mut self, theta: f64, bit: usize) -> crate::error::Result<()>
+    pub fn rx<T>(&mut self, theta: T, bit: usize) -> crate::error::Result<()>
+    where crate::gates::Parameter: From<T>
     {
         self.add_gate(crate::gates::RX::new(theta), &[bit])
     }
@@ -483,7 +484,8 @@ impl Circuit
     /// Add a R<sub>Y</sub> gate.
     ///
     /// Add a `R`<sub>`Y`</sub>`(θ)` gate operating on qubit `bit`, to this circuit.
-    pub fn ry(&mut self, theta: f64, bit: usize) -> crate::error::Result<()>
+    pub fn ry<T>(&mut self, theta: T, bit: usize) -> crate::error::Result<()>
+    where crate::gates::Parameter: From<T>
     {
         self.add_gate(crate::gates::RY::new(theta), &[bit])
     }
@@ -491,7 +493,8 @@ impl Circuit
     /// Add a R<sub>Z</sub> gate.
     ///
     /// Add a `R`<sub>`Z`</sub>`(λ)` gate operating on qubit `bit`, to this circuit.
-    pub fn rz(&mut self, lambda: f64, bit: usize) -> crate::error::Result<()>
+    pub fn rz<T>(&mut self, lambda: T, bit: usize) -> crate::error::Result<()>
+    where crate::gates::Parameter: From<T>
     {
         self.add_gate(crate::gates::RZ::new(lambda), &[bit])
     }
@@ -499,7 +502,8 @@ impl Circuit
     /// Add a U<sub>1</sub> gate.
     ///
     /// Add a `U`<sub>`1`</sub>`(λ)` gate operating on qubit `bit`, to this circuit.
-    pub fn u1(&mut self, lambda: f64, bit: usize) -> crate::error::Result<()>
+    pub fn u1<T>(&mut self, lambda: T, bit: usize) -> crate::error::Result<()>
+    where crate::gates::Parameter: From<T>
     {
         self.add_gate(crate::gates::U1::new(lambda), &[bit])
     }
@@ -507,7 +511,8 @@ impl Circuit
     /// Add a U<sub>2</sub> gate.
     ///
     /// Add a `U`<sub>`2`</sub>`(ϕ, λ)` gate operating on qubit `bit`, to this circuit.
-    pub fn u2(&mut self, phi: f64, lambda: f64, bit: usize) -> crate::error::Result<()>
+    pub fn u2<Tp, Tl>(&mut self, phi: Tp, lambda: Tl, bit: usize) -> crate::error::Result<()>
+    where crate::gates::Parameter: From<Tp> + From<Tl>
     {
         self.add_gate(crate::gates::U2::new(phi, lambda), &[bit])
     }
@@ -515,8 +520,9 @@ impl Circuit
     /// Add a U<sub>3</sub> gate.
     ///
     /// Add a `U`<sub>`3`</sub>`(θ, ϕ, λ)` gate operating on qubit `bit`, to this circuit.
-    pub fn u3(&mut self, theta: f64, phi: f64, lambda: f64, bit: usize)
+    pub fn u3<Tt, Tp, Tl>(&mut self, theta: Tt, phi: Tp, lambda: Tl, bit: usize)
          -> crate::error::Result<()>
+    where crate::gates::Parameter: From<Tt> + From<Tp> + From<Tl>
     {
         self.add_gate(crate::gates::U3::new(theta, phi, lambda), &[bit])
     }

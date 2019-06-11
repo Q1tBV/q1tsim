@@ -27,16 +27,19 @@ use crate::gates::Gate;
 /// ```
 pub struct RY
 {
-    theta: f64,
+    theta: crate::gates::Parameter,
     desc: String
 }
 
 impl RY
 {
     /// Create a new `R`<sub>`Y`</sub> gate.
-    pub fn new(theta: f64) -> Self
+    pub fn new<T>(theta: T) -> Self
+    where crate::gates::Parameter: From<T>
     {
-        RY { theta: theta, desc: format!("RY({:.4})", theta) }
+        let param = crate::gates::Parameter::from(theta);
+        let desc = format!("RY({:.4})", param);
+        RY { theta: param, desc: desc }
     }
 }
 
@@ -59,15 +62,17 @@ impl crate::gates::Gate for RY
 
     fn matrix(&self) -> crate::cmatrix::CMatrix
     {
-        let c = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
-        let s = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
+        let htheta = 0.5 * self.theta.value();
+        let c = num_complex::Complex::new((htheta).cos(), 0.0);
+        let s = num_complex::Complex::new((htheta).sin(), 0.0);
         array![[c, -s], [s, c]]
     }
 
     fn apply_slice(&self, mut state: crate::cmatrix::CVecSliceMut)
     {
-        let cos_t = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
-        let sin_t = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
+        let htheta = 0.5 * self.theta.value();
+        let cos_t = num_complex::Complex::new((htheta).cos(), 0.0);
+        let sin_t = num_complex::Complex::new((htheta).sin(), 0.0);
 
         let mut s = state.to_owned();
         s *= sin_t;
@@ -86,8 +91,9 @@ impl crate::gates::Gate for RY
 
     fn apply_mat_slice(&self, mut state: crate::cmatrix::CMatSliceMut)
     {
-        let cos_t = num_complex::Complex::new((0.5 * self.theta).cos(), 0.0);
-        let sin_t = num_complex::Complex::new((0.5 * self.theta).sin(), 0.0);
+        let htheta = 0.5 * self.theta.value();
+        let cos_t = num_complex::Complex::new((htheta).cos(), 0.0);
+        let sin_t = num_complex::Complex::new((htheta).sin(), 0.0);
 
         let mut s = state.to_owned();
         s *= sin_t;

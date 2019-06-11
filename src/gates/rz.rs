@@ -28,16 +28,19 @@ use crate::gates::Gate;
 /// ```
 pub struct RZ
 {
-    lambda: f64,
+    lambda: crate::gates::Parameter,
     desc: String
 }
 
 impl RZ
 {
-    /// Create a new `R`<sub>`Z`</sub> gate.
-    pub fn new(lambda: f64) -> Self
+    /// Create a new `R`<sub>`Z`</sub> gate with fixed angle `lambda`
+    pub fn new<T>(lambda: T) -> Self
+    where crate::gates::Parameter: From<T>
     {
-        RZ { lambda: lambda, desc: format!("RZ({:.4})", lambda) }
+        let param = crate::gates::Parameter::from(lambda);
+        let desc = format!("RZ({:.4})", param);
+        RZ { lambda: param, desc: desc }
     }
 }
 
@@ -61,7 +64,7 @@ impl crate::gates::Gate for RZ
     fn matrix(&self) -> crate::cmatrix::CMatrix
     {
         let z = crate::cmatrix::COMPLEX_ZERO;
-        let p = num_complex::Complex::from_polar(&1.0, &(0.5 * self.lambda));
+        let p = num_complex::Complex::from_polar(&1.0, &(0.5 * self.lambda.value()));
         array![[p.conj(), z], [z, p]]
     }
 
@@ -70,13 +73,14 @@ impl crate::gates::Gate for RZ
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
         let n = state.len() / 2;
+        let hlambda = 0.5 * self.lambda.value();
         {
             let mut slice = state.slice_mut(s![..n]);
-            slice *= num_complex::Complex::from_polar(&1.0, &(-0.5*self.lambda));
+            slice *= num_complex::Complex::from_polar(&1.0, &(-hlambda));
         }
         {
             let mut slice = state.slice_mut(s![n..]);
-            slice *= num_complex::Complex::from_polar(&1.0, &( 0.5*self.lambda));
+            slice *= num_complex::Complex::from_polar(&1.0, &( hlambda));
         }
     }
 
@@ -85,13 +89,14 @@ impl crate::gates::Gate for RZ
         assert!(state.len() % 2 == 0, "Number of rows is not even.");
 
         let n = state.rows() / 2;
+        let hlambda = 0.5 * self.lambda.value();
         {
             let mut slice = state.slice_mut(s![..n, ..]);
-            slice *= num_complex::Complex::from_polar(&1.0, &(-0.5*self.lambda));
+            slice *= num_complex::Complex::from_polar(&1.0, &(-hlambda));
         }
         {
             let mut slice = state.slice_mut(s![n.., ..]);
-            slice *= num_complex::Complex::from_polar(&1.0, &( 0.5*self.lambda));
+            slice *= num_complex::Complex::from_polar(&1.0, &( hlambda));
         }
     }
 }

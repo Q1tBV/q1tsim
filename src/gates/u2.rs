@@ -26,17 +26,21 @@ use crate::gates::Gate;
 /// ```
 pub struct U2
 {
-    phi: f64,
-    lambda: f64,
+    phi: crate::gates::Parameter,
+    lambda: crate::gates::Parameter,
     desc: String
 }
 
 impl U2
 {
     /// Create a new `U`<sub>`2`</sub> gate.
-    pub fn new(phi: f64, lambda: f64) -> Self
+    pub fn new<Tp, Tl>(phi: Tp, lambda: Tl) -> Self
+    where crate::gates::Parameter: From<Tp> + From<Tl>
     {
-        U2 { phi: phi, lambda: lambda, desc: format!("U2({:.4}, {:.4})", phi, lambda) }
+        let pphi = crate::gates::Parameter::from(phi);
+        let plambda = crate::gates::Parameter::from(lambda);
+        let desc = format!("U2({:.4}, {:.4})", pphi, plambda);
+        U2 { phi: pphi, lambda: plambda, desc: desc }
     }
 
     pub fn cost() -> f64
@@ -64,11 +68,13 @@ impl crate::gates::Gate for U2
 
     fn matrix(&self) -> crate::cmatrix::CMatrix
     {
+        let lambda = self.lambda.value();
+        let phi = self.phi.value();
         let x = ::std::f64::consts::FRAC_1_SQRT_2;
         array![[ num_complex::Complex::new(x, 0.0),
-                -num_complex::Complex::from_polar(&x, &self.lambda)],
-               [ num_complex::Complex::from_polar(&x, &self.phi),
-                 num_complex::Complex::from_polar(&x, &(self.phi+self.lambda))]]
+                -num_complex::Complex::from_polar(&x, &lambda)],
+               [ num_complex::Complex::from_polar(&x, &phi),
+                 num_complex::Complex::from_polar(&x, &(phi+lambda))]]
     }
 }
 
@@ -88,7 +94,7 @@ impl crate::export::CQasm for U2
     {
         let name = &bit_names[bits[0]];
         Ok(format!("rz {}, {}\nh {}\nrz {} {}", name,
-            self.lambda + ::std::f64::consts::PI, name, name, self.phi))
+            self.lambda.value() + ::std::f64::consts::PI, name, name, self.phi))
     }
 }
 
