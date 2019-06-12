@@ -2,6 +2,16 @@ import cffi
 import json
 import q1tsimffi
 
+class RefParam(object):
+    def __init__(self, value):
+        self.ptr = cffi.FFI().new('double *', value)
+
+    def __float__(self):
+        return self.ptr[0]
+
+    def assign(self, value):
+        self.ptr[0] = value
+
 class Circuit(object):
     """A quantum circuit
 
@@ -45,8 +55,9 @@ class Circuit(object):
                 self.__sim.circuit_add_gate(self.__ptr, cname, qbits, len(qbits), cffi.FFI.NULL, 0)
             )
         else:
+            cparams = q1tsimffi.make_parameters(params)
             res = q1tsimffi.unpack_result(
-                self.__sim.circuit_add_gate(self.__ptr, cname, qbits, len(qbits), params, len(params))
+                self.__sim.circuit_add_gate(self.__ptr, cname, qbits, len(qbits), cparams, len(params))
             )
         return res
 
@@ -143,7 +154,7 @@ class Circuit(object):
 
         Add an RZ(λ) gate operating on qubit `bit`, to this circuit.
         """
-        return self.add_gate('RZ', [qbit], [theta])
+        return self.add_gate('RZ', [qbit], [lmb])
 
     def s(self, qbit):
         """Add a phase gate

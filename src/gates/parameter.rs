@@ -24,7 +24,9 @@ pub enum Parameter
     /// Direct value
     Direct(f64),
     /// Reference value, mutable outside the circuit, with its name
-    Reference(::std::rc::Rc<::std::cell::RefCell<f64>>, String)
+    Reference(::std::rc::Rc<::std::cell::RefCell<f64>>, String),
+    /// Reference parameter from external code
+    FFIRef(*const f64)
 }
 
 impl Parameter
@@ -41,7 +43,8 @@ impl Parameter
         match *self
         {
             Parameter::Direct(p) => p,
-            Parameter::Reference(ref p, _) => *p.borrow()
+            Parameter::Reference(ref p, _) => *p.borrow(),
+            Parameter::FFIRef(p) => unsafe { *p }
         }
     }
 }
@@ -60,17 +63,12 @@ impl ::std::fmt::Display for Parameter
     {
         match *self
         {
-            Parameter::Direct(p) => {
-                if let Some(prec) = f.precision()
-                {
-                    write!(f, "{:.prec$}", p, prec=prec)
-                }
-                else
-                {
-                    write!(f, "{}", p)
-                }
-            },
-            Parameter::Reference(_, ref name) => write!(f, "{}", name)
+            Parameter::Direct(p) => p.fmt(f),
+            Parameter::Reference(_, ref name) => name.fmt(f),
+            Parameter::FFIRef(ptr) => {
+                let p = unsafe { *ptr };
+                p.fmt(f)
+            }
         }
     }
 }

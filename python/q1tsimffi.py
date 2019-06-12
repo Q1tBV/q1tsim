@@ -15,6 +15,11 @@ ffi.cdef("""
     } histelem_t;
     typedef struct
     {
+        double value;
+        double* value_ptr;
+    } parameter_t;
+    typedef struct
+    {
         void* data;
         size_t length;
         size_t size;
@@ -29,12 +34,12 @@ ffi.cdef("""
     size_t circuit_nr_cbits(const circuit_t *ptr);
     result_t circuit_add_gate(circuit_t *ptr, const char* gate,
         const size_t* qbits, size_t nr_qubits,
-        const double* param_ptr, size_t nr_params);
+        const parameter_t* param_ptr, size_t nr_params);
     result_t circuit_add_conditional_gate(circuit_t *ptr,
         const size_t* control_ptr, size_t nr_control, uint64_t target,
         const char* gate,
         const size_t* qbits_ptr, size_t nr_qbits,
-        const double* param_ptr, size_t nr_params);
+        const parameter_t* param_ptr, size_t nr_params);
     result_t circuit_measure(circuit_t *ptr, size_t qbit, size_t cbit, char dir,
         uint8_t collapse);
     result_t circuit_measure_all(circuit_t *ptr, const size_t* cbits, size_t nr_cbits,
@@ -68,6 +73,17 @@ def unpack_result(res):
         return hist
     else:
         raise Exception("Unknown data type code: {}".format(res.restype))
+
+def make_parameters(values):
+    res = ffi.new('parameter_t[]', len(values))
+    for (i, val) in enumerate(values):
+        if type(val) == float:
+            res[i].value = val
+            res[i].value_ptr = ffi.NULL
+        else:
+            res[i].value = 0.0
+            res[i].value_ptr = val.ptr
+    return res
 
 def q1tsim():
     return qsim_obj

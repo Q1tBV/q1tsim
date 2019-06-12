@@ -31,6 +31,29 @@ impl CHistElem
     }
 }
 
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CParameter
+{
+    value: f64,
+    value_ptr: *const f64
+}
+
+impl From<CParameter> for crate::gates::Parameter
+{
+    fn from(p: CParameter) -> crate::gates::Parameter
+    {
+        if p.value_ptr.is_null()
+        {
+            crate::gates::Parameter::Direct(p.value)
+        }
+        else
+        {
+            crate::gates::Parameter::FFIRef(p.value_ptr)
+        }
+    }
+}
+
 #[repr(C)]
 pub struct CResult
 {
@@ -241,7 +264,7 @@ macro_rules! add_parametrized_gate
 #[no_mangle]
 pub extern "C" fn circuit_add_gate(ptr: *mut Circuit, gate: *const c_char,
     qbits_ptr: *const usize, nr_qbits: usize,
-    param_ptr: *const f64, nr_params: usize) -> CResult
+    param_ptr: *const CParameter, nr_params: usize) -> CResult
 {
     if ptr.is_null()
     {
@@ -315,7 +338,7 @@ pub extern "C" fn circuit_add_conditional_gate(ptr: *mut Circuit,
     control_ptr: *const usize, nr_control: usize, target: u64,
     gate: *const c_char,
     qbits_ptr: *const usize, nr_qbits: usize,
-    param_ptr: *const f64, nr_params: usize) -> CResult
+    param_ptr: *const CParameter, nr_params: usize) -> CResult
 {
     if ptr.is_null()
     {
