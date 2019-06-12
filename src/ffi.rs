@@ -16,6 +16,11 @@ fn to_cstring(msg: &str) -> *const c_char
     ptr
 }
 
+fn cstring_free(ptr: *mut c_char)
+{
+    unsafe { ::std::ffi::CString::from_raw(ptr); }
+}
+
 #[repr(C)]
 pub struct CHistElem
 {
@@ -119,12 +124,16 @@ impl CResult
         match self.restype
         {
             RESULT_ERROR|RESULT_STRING => {
-                let ptr = self.data as *mut c_char;
-                unsafe { ::std::ffi::CString::from_raw(ptr); }
+                cstring_free(self.data as *mut c_char);
             },
             RESULT_HISTOGRAM => {
                 let ptr = self.data as *mut CHistElem;
-                unsafe { Vec::from_raw_parts(ptr, self.length, self.size); }
+                let mut elems = unsafe { Vec::from_raw_parts(ptr, self.length, self.size) };
+                for elem in elems.iter_mut()
+                {
+                    let ptr = std::mem::replace(&mut elem.key, ::std::ptr::null());
+                    cstring_free(ptr as *mut c_char);
+                }
             },
             RESULT_EMPTY|_ => { /* ignore */ }
         }

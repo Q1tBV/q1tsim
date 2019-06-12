@@ -56,23 +56,25 @@ ffi.cdef("""
 qsim_obj = ffi.dlopen("../target/debug/libq1tsim.so")
 
 def unpack_result(res):
-    if res.restype == RESULT_ERROR:
-        msg = ffi.string(ffi.cast("const char*", res.data)).decode('utf-8')
+    restype = res.restype
+    try:
+        if restype == RESULT_ERROR:
+            msg = ffi.string(ffi.cast("const char*", res.data)).decode('utf-8')
+            raise Exception(msg)
+        if res.restype == RESULT_EMPTY:
+            return None
+        elif res.restype == RESULT_STRING:
+            msg = ffi.string(ffi.cast("const char*", res.data)).decode('utf-8')
+            return msg
+        elif res.restype == RESULT_HISTOGRAM:
+            elems = ffi.cast("const histelem_t*", res.data)
+            hist = dict((ffi.string(elems[i].key).decode('utf-8'), elems[i].count)
+                        for i in range(res.length))
+            return hist
+        else:
+            raise Exception("Unknown data type code: {}".format(res.restype))
+    finally:
         qsim_obj.result_free(res)
-        raise Exception(msg)
-    if res.restype == RESULT_EMPTY:
-        return None
-    elif res.restype == RESULT_STRING:
-        msg = ffi.string(ffi.cast("const char*", res.data)).decode('utf-8')
-        return msg
-    elif res.restype == RESULT_HISTOGRAM:
-        elems = ffi.cast("const histelem_t*", res.data)
-        hist = dict((ffi.string(elems[i].key).decode('utf-8'), elems[i].count)
-                    for i in range(res.length))
-        qsim_obj.result_free(res)
-        return hist
-    else:
-        raise Exception("Unknown data type code: {}".format(res.restype))
 
 def make_parameters(values):
     res = ffi.new('parameter_t[]', len(values))
