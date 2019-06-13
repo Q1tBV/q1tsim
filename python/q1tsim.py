@@ -3,14 +3,37 @@ import json
 import q1tsimffi
 
 class RefParam(object):
+    """Structure for reference parameters
+
+    A RefPrama struct is used for passing parameters to a gate by reference,
+    i.e. one can change these parameters between executions of the same circuit.
+    To use them, simply construct a RefParam with an initial value
+
+    theta = RefParam(3.14)
+
+    and pass it to a gate expecting a float parameter in the same way a direct
+    value would be given
+
+    circuit.cx(theta)
+
+    To change the parameter, use the assign() method. The next execution of the
+    circuit will use the updated value, without constructing a new circuit.
+    """
     def __init__(self, value):
-        self.ptr = cffi.FFI().new('double *', value)
+        """Create a new reference parameter with initial value value."""
+        self.__ptr = cffi.FFI().new('double *', value)
 
     def __float__(self):
-        return self.ptr[0]
+        """Convert to float, i.e. return the value of this parameter."""
+        return self.__ptr[0]
 
     def assign(self, value):
-        self.ptr[0] = value
+        """Asign a new value value to this parameter."""
+        self.__ptr[0] = value
+
+    def pointer(self):
+        """Return the pointer to the parameter value."""
+        return self.__ptr
 
 class Circuit(object):
     """A quantum circuit

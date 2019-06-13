@@ -84,7 +84,7 @@ def make_parameters(values):
             res[i].value_ptr = ffi.NULL
         else:
             res[i].value = 0.0
-            res[i].value_ptr = val.ptr
+            res[i].value_ptr = val.pointer()
     return res
 
 def q1tsim():
