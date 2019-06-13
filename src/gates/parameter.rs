@@ -64,7 +64,7 @@ impl ::std::fmt::Display for Parameter
         match *self
         {
             Parameter::Direct(p) => p.fmt(f),
-            Parameter::Reference(_, ref name) => name.fmt(f),
+            Parameter::Reference(_, ref name) => write!(f, "{}", name),
             Parameter::FFIRef(ptr) => {
                 let p = unsafe { *ptr };
                 p.fmt(f)
