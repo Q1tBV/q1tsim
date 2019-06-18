@@ -68,7 +68,7 @@ pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> crate::permut
 {
     let mut idxs: Vec<usize> = (0..(1 << nr_bits)).collect();
     idxs.sort_by_key(|&i| get_sort_key(i, nr_bits, affected_bits));
-    crate::permutation::Permutation::new(idxs).inverse()
+    crate::permutation::Permutation::new(idxs).unwrap().inverse()
 }
 
 /// Apply a gate

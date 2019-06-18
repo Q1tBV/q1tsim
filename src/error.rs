@@ -150,6 +150,12 @@ pub enum Error
     NotExecuted,
     /// Acting with a non-stabilizer gate on a stabilizer circuit
     NotAStabilizer(String),
+    /// Trying to create an empty permutation
+    EmptyPermutation,
+    /// Permutation contains elements higher than its length
+    InvalidPermutationElement(usize, usize),
+    /// Permutation contains elements that occur multiple times
+    DoublePermutationElement(usize),
     /// Other errors that should not occur
     InternalError(String),
     /// Error reating to the export of a circuit
@@ -207,6 +213,15 @@ impl ::std::fmt::Display for Error
             Error::NotAStabilizer(ref desc) => {
                 write!(f, "{} is no a stabilizer gate", desc)
             },
+            Error::EmptyPermutation => {
+                write!(f, "The permutation is empty")
+            },
+            Error::InvalidPermutationElement(elem, count) => {
+                write!(f, "Invalid element {} in permutation of length {}", elem, count)
+            },
+            Error::DoublePermutationElement(elem) => {
+                write!(f, "Element {} occurs multiple times in permutation", elem)
+            }
             Error::InternalError(ref err) => {
                 write!(f, "Internal error: {}", err)
             },
