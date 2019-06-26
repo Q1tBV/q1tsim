@@ -68,7 +68,7 @@ pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> crate::permut
 {
     let mut idxs: Vec<usize> = (0..(1 << nr_bits)).collect();
     idxs.sort_by_key(|&i| get_sort_key(i, nr_bits, affected_bits));
-    crate::permutation::Permutation::new(idxs).unwrap().inverse()
+    crate::permutation::Permutation::new(idxs).unwrap()
 }
 
 /// Apply a gate
@@ -100,9 +100,9 @@ where G: Gate + ?Sized
     {
         let perm = bit_permutation(nr_bits, bits);
         let mut work = crate::cmatrix::CVector::zeros(1 << nr_bits);
-        perm.apply_inverse_vec_into(vec.view(), work.view_mut());
+        perm.apply_vec_into(vec.view(), work.view_mut());
         gate.apply_slice(work.view_mut());
-        perm.apply_vec_into(work.view(), vec);
+        perm.apply_inverse_vec_into(work.view(), vec);
     }
 }
 
@@ -136,10 +136,10 @@ where G: Gate + ?Sized
         let perm = bit_permutation(nr_bits, bits);
         let mut work = crate::cmatrix::CMatrix::zeros((matrix.rows(), matrix.cols()));
         ndarray::Zip::from(matrix.gencolumns()).and(work.gencolumns_mut())
-            .apply(|s, d| perm.apply_inverse_vec_into(s, d));
+            .apply(|s, d| perm.apply_vec_into(s, d));
         gate.apply_mat_slice(work.view_mut());
         ndarray::Zip::from(matrix.gencolumns_mut()).and(work.gencolumns())
-            .apply(|d, s| perm.apply_vec_into(s, d));
+            .apply(|d, s| perm.apply_inverse_vec_into(s, d));
     }
 }
 
