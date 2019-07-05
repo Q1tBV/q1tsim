@@ -127,15 +127,32 @@ macro_rules! declare_controlled_type
         $(#[$attr])*
         pub struct $name
         {
-            $( #[allow(dead_code)] $arg: f64, )*
+            $( #[allow(dead_code)] $arg: $crate::gates::Parameter, )*
             cgate: $crate::gates::C<$gate_type>
         }
     }
 }
 
+// XXX FIXME: we need a proper fix for declaring controlled parametrized gates
+// with an arbitrary number of (possible reference) parameters. This currently
+// only supports using reference parameters in single-parameter gates.
 #[macro_export]
 macro_rules! declare_controlled_impl
 {
+    ($name:ident, $gate_type:ty, $arg:ident) => {
+        impl $name
+        {
+            pub fn new<T>($arg: T) -> Self
+            where T: Clone, $crate::gates::Parameter: From<T>
+            {
+                $name
+                {
+                    $arg: $crate::gates::Parameter::from($arg.clone()),
+                    cgate: $crate::gates::C::new(<$gate_type>::new($arg))
+                }
+            }
+        }
+    };
     ($name:ident, $gate_type:ty $(, $arg:ident)*) => {
         impl $name
         {
@@ -143,9 +160,27 @@ macro_rules! declare_controlled_impl
             {
                 $name
                 {
-                    $( $arg: $arg, )*
+                    $( $arg: $crate::gates::Parameter::from($arg), )*
                     cgate: $crate::gates::C::new(<$gate_type>::new($($arg, )*))
                 }
+            }
+        }
+    };
+    ($name:ident, $gate_type:ty, cost=$cost:expr, $arg:ident) => {
+        impl $name
+        {
+            pub fn new<T>($arg: T) -> Self
+            where T: Clone, $crate::gates::Parameter: From<T>
+            {
+                $name
+                {
+                    $arg: $crate::gates::Parameter::from($arg.clone()),
+                    cgate: $crate::gates::C::new(<$gate_type>::new($arg))
+                }
+            }
+            pub fn cost() -> f64
+            {
+                $cost
             }
         }
     };
@@ -156,7 +191,7 @@ macro_rules! declare_controlled_impl
             {
                 $name
                 {
-                    $( $arg: $arg, )*
+                    $( $arg: $crate::gates::Parameter::from($arg), )*
                     cgate: $crate::gates::C::new(<$gate_type>::new($($arg, )*))
                 }
             }

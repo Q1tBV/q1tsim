@@ -285,49 +285,52 @@ pub extern "C" fn circuit_add_gate(ptr: *mut Circuit, gate: *const c_char,
     }
     else
     {
-        let circuit = unsafe { &mut *ptr };
-        let qbits = unsafe { ::std::slice::from_raw_parts(qbits_ptr, nr_qbits) };
-        let params = if param_ptr.is_null()
-            {
-                &[]
-            }
-            else
-            {
-                unsafe { ::std::slice::from_raw_parts(param_ptr, nr_params) }
-            };
-
         if let Ok(gate_name) = unsafe { ::std::ffi::CStr::from_ptr(gate).to_str() }
         {
-            let res = match gate_name.to_lowercase().as_str()
-            {
-                "ch"   => { circuit.add_gate(CH::new(), qbits) },
-                "cx"   => { circuit.add_gate(CX::new(), qbits) },
-                "cy"   => { circuit.add_gate(CY::new(), qbits) },
-                "cz"   => { circuit.add_gate(CZ::new(), qbits) },
-                "h"    => { circuit.add_gate(H::new(), qbits) },
-                "i"    => { circuit.add_gate(I::new(), qbits) },
-                "rx"   => { add_parametrized_gate!(1, circuit, RX, qbits, params) },
-                "ry"   => { add_parametrized_gate!(1, circuit, RY, qbits, params) },
-                "rz"   => { add_parametrized_gate!(1, circuit, RZ, qbits, params) },
-                "s"    => { circuit.add_gate(S::new(), qbits) },
-                "sdg"  => { circuit.add_gate(Sdg::new(), qbits) },
-                "swap" => { circuit.add_gate(Swap::new(), qbits) },
-                "t"    => { circuit.add_gate(T::new(), qbits) },
-                "tdg"  => { circuit.add_gate(Tdg::new(), qbits) },
-                "u1"   => { add_parametrized_gate!(1, circuit, U1, qbits, params) },
-                "u2"   => { add_parametrized_gate!(2, circuit, U2, qbits, params) },
-                "u3"   => { add_parametrized_gate!(3, circuit, U3, qbits, params) },
-                "v"    => { circuit.add_gate(V::new(), qbits) },
-                "vdg"  => { circuit.add_gate(Vdg::new(), qbits) },
-                "x"    => { circuit.add_gate(X::new(), qbits) },
-                "y"    => { circuit.add_gate(Y::new(), qbits) },
-                "z"    => { circuit.add_gate(Z::new(), qbits) },
-                _ => {
-                    Err(crate::error::Error::from(
-                        crate::error::ParseError::UnknownGate(String::from(gate_name))
-                    ))
+            let circuit = unsafe { &mut *ptr };
+            let qbits = unsafe { ::std::slice::from_raw_parts(qbits_ptr, nr_qbits) };
+            let params = if param_ptr.is_null()
+                {
+                    &[]
                 }
-            };
+                else
+                {
+                    unsafe { ::std::slice::from_raw_parts(param_ptr, nr_params) }
+                };
+
+            let res = match gate_name.to_lowercase().as_str()
+                {
+                    "ch"   => { circuit.add_gate(CH::new(), qbits) },
+                    "crx"   => { add_parametrized_gate!(1, circuit, CRX, qbits, params) },
+                    "cry"   => { add_parametrized_gate!(1, circuit, CRY, qbits, params) },
+                    "crz"   => { add_parametrized_gate!(1, circuit, CRZ, qbits, params) },
+                    "cx"   => { circuit.add_gate(CX::new(), qbits) },
+                    "cy"   => { circuit.add_gate(CY::new(), qbits) },
+                    "cz"   => { circuit.add_gate(CZ::new(), qbits) },
+                    "h"    => { circuit.add_gate(H::new(), qbits) },
+                    "i"    => { circuit.add_gate(I::new(), qbits) },
+                    "rx"   => { add_parametrized_gate!(1, circuit, RX, qbits, params) },
+                    "ry"   => { add_parametrized_gate!(1, circuit, RY, qbits, params) },
+                    "rz"   => { add_parametrized_gate!(1, circuit, RZ, qbits, params) },
+                    "s"    => { circuit.add_gate(S::new(), qbits) },
+                    "sdg"  => { circuit.add_gate(Sdg::new(), qbits) },
+                    "swap" => { circuit.add_gate(Swap::new(), qbits) },
+                    "t"    => { circuit.add_gate(T::new(), qbits) },
+                    "tdg"  => { circuit.add_gate(Tdg::new(), qbits) },
+                    "u1"   => { add_parametrized_gate!(1, circuit, U1, qbits, params) },
+                    "u2"   => { add_parametrized_gate!(2, circuit, U2, qbits, params) },
+                    "u3"   => { add_parametrized_gate!(3, circuit, U3, qbits, params) },
+                    "v"    => { circuit.add_gate(V::new(), qbits) },
+                    "vdg"  => { circuit.add_gate(Vdg::new(), qbits) },
+                    "x"    => { circuit.add_gate(X::new(), qbits) },
+                    "y"    => { circuit.add_gate(Y::new(), qbits) },
+                    "z"    => { circuit.add_gate(Z::new(), qbits) },
+                    _ => {
+                        Err(crate::error::Error::from(
+                            crate::error::ParseError::UnknownGate(String::from(gate_name))
+                        ))
+                    }
+                };
 
             match res
             {

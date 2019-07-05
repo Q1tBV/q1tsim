@@ -118,6 +118,30 @@ class Circuit(object):
         """
         return self.add_gate('CH', [control, target])
 
+    def crx(self, theta, control, target):
+        """Add a conditional RX gate.
+
+        Add a conditional RX(θ) gate, controlled by qubit control, and operating
+        on qubit target, to this circuit.
+        """
+        return self.add_gate('CRX', [control, target], [theta])
+
+    def cry(self, theta, control, target):
+        """Add a conditional RY gate.
+
+        Add a conditional RY(θ) gate, controlled by qubit control, and operating
+        on qubit target, to this circuit.
+        """
+        return self.add_gate('CRY', [control, target], [theta])
+
+    def crz(self, lmb, control, target):
+        """Add a conditional RZ gate.
+
+        Add a conditional RZ(λ) gate, controlled by qubit control, and operating
+        on qubit target, to this circuit.
+        """
+        return self.add_gate('CRZ', [control, target], [theta])
+
     def cx(self, control, target):
         """Add a CX gate.
 
