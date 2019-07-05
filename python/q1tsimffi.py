@@ -1,9 +1,34 @@
 import cffi
+import os
+import os.path
 
 RESULT_ERROR = 0
 RESULT_EMPTY = 1
 RESULT_STRING = 2
 RESULT_HISTOGRAM = 3
+
+def get_q1tsim_lib(ffi):
+	if os.name == 'nt':
+		paths = (
+			'./q1tsim.dll',
+			'../target/release/q1tsim.dll',
+			'../target/debug/q1tsim.dll'
+		)
+	else:
+		paths = (
+			'./libq1tsim.so',
+			'../target/release/libq1tsim.so',
+			'../target/debug/libq1tsim.so'
+		)
+
+	for fname in paths:
+		if os.path.exists(fname):
+			try:
+				return ffi.dlopen(fname)
+			except OSError:
+				pass
+
+	raise Exception('Failed to open q1tsim library')
 
 ffi = cffi.FFI()
 ffi.cdef("""
@@ -53,7 +78,7 @@ ffi.cdef("""
     result_t circuit_open_qasm(const circuit_t *ptr);
     result_t circuit_c_qasm(const circuit_t *ptr);
 """)
-qsim_obj = ffi.dlopen("../target/debug/libq1tsim.so")
+qsim_obj = get_q1tsim_lib(ffi)
 
 def unpack_result(res):
     restype = res.restype
