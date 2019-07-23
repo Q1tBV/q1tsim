@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rand::distributions::Distribution;
+use rand_distr::Distribution;
 
 /// Quantum state.
 ///
@@ -123,7 +123,7 @@ impl VectorState
             let distr = rand::distributions::WeightedIndex::new(
                 self.states.column(col_idx).iter().map(|c| c.norm_sqr())
             ).unwrap();
-            for idx in distr.sample_iter(rng).take(self.counts[col_idx])
+            for idx in distr.sample_iter(&mut *rng).take(self.counts[col_idx])
             {
                 let entry = count_map.entry(idx).or_insert(0);
                 *entry += 1;
@@ -289,7 +289,7 @@ impl crate::qustate::QuState for VectorState
             // Sometimes, the sum may add up to slightly more than 1, due to
             // numerical inaccuracies. This causes the Binomial distribution to
             // panic, so cap w0.
-            let distribution = rand::distributions::Binomial::new(c as u64, w0.min(1.0));
+            let distribution = rand_distr::Binomial::new(c as u64, w0.min(1.0)).unwrap();
             let n0 = rng.sample(distribution) as usize;
             n0s.push(n0);
             new_nr_states += if n0 == 0 || n0 == c { 1 } else { 2 };
@@ -397,7 +397,7 @@ impl crate::qustate::QuState for VectorState
         for (&w0, &c) in w0s.iter().zip(self.counts.iter())
         {
             // Compute how many times we measure 0
-            let distribution = rand::distributions::Binomial::new(c as u64, w0.min(1.0));
+            let distribution = rand_distr::Binomial::new(c as u64, w0.min(1.0)).unwrap();
             let n0 = rng.sample(distribution) as usize;
 
             // Store the result.

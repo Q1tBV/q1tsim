@@ -166,7 +166,7 @@ impl crate::qustate::QuState for StabilizerState
                     }
                 },
                 MeasurementInfo::Random(i) => {
-                    let distribution = rand::distributions::Binomial::new(count as u64, 0.5);
+                    let distribution = rand_distr::Binomial::new(count as u64, 0.5).unwrap();
                     let n0 = rng.sample(distribution) as usize;
 
                     if n0 == 0
@@ -256,7 +256,7 @@ impl crate::qustate::QuState for StabilizerState
                     MeasurementInfo::Deterministic(false) => count,
                     MeasurementInfo::Deterministic(true) => 0,
                     MeasurementInfo::Random(_) => {
-                        let distribution = rand::distributions::Binomial::new(count as u64, 0.5);
+                        let distribution = rand_distr::Binomial::new(count as u64, 0.5).unwrap();
                         rng.sample(distribution) as usize
                     }
                 };
@@ -306,7 +306,7 @@ impl crate::qustate::QuState for StabilizerState
                         MeasurementInfo::Deterministic(false) => c,
                         MeasurementInfo::Deterministic(true) => 0,
                         MeasurementInfo::Random(_) => {
-                            let distribution = rand::distributions::Binomial::new(c as u64, 0.5);
+                            let distribution = rand_distr::Binomial::new(c as u64, 0.5).unwrap();
                             rng.sample(distribution) as usize
                         }
                     };

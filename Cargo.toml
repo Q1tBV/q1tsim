@@ -14,15 +14,16 @@ q1tsim-derive = { path = "q1tsim-derive", version = "0.1.0" }
 num-complex="0.2"
 num-traits="0.2"
 ndarray = "0.12"
-rand="0.6"
+rand="0.7"
+rand_distr="0.2"
 regex="1.0"
 
 [dev-dependencies]
 criterion="0.2"
 matches="0.1"
 statrs="0.7"
-rand_core="0.4"
-rand_hc="0.1"
+rand_core="0.5"
+rand_hc="0.2"
 
 [[bench]]
 name="bench_main"
