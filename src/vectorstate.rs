@@ -207,29 +207,8 @@ impl crate::qustate::QuState for VectorState
                 String::from(gate.description())));
         }
 
-        let mut ranges = vec![];
-        let mut off = 0;
-        for (icol, &count) in self.counts.iter().enumerate()
-        {
-            let mut begin = off;
-            let mut prev = control[off];
-            for ibit in off+1..off+count
-            {
-                if control[ibit] != prev
-                {
-                    ranges.push((icol, ibit-begin, prev));
-                    begin = ibit;
-                    prev = !prev;
-                }
-            }
-            if begin < off+count
-            {
-                ranges.push((icol, off+count-begin, prev));
-            }
-
-            off += count;
-        }
-
+        let ranges = crate::qustate::collect_conditional_ranges(&self.counts,
+            control);
         let mut new_states = crate::cmatrix::CMatrix::zeros((1 << self.nr_bits, ranges.len()));
         for (new_icol, &(icol, _, apply)) in ranges.iter().enumerate()
         {
