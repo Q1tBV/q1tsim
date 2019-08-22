@@ -156,6 +156,8 @@ pub enum Error
     InvalidPermutationElement(usize, usize),
     /// Permutation contains elements that occur multiple times
     DoublePermutationElement(usize),
+    /// Operation is not implemented for a gate type
+    OpNotImplemented(String, String),
     /// Other errors that should not occur
     InternalError(String),
     /// Error reating to the export of a circuit
@@ -219,6 +221,9 @@ impl ::std::fmt::Display for Error
             Error::InvalidPermutationElement(elem, count) => {
                 write!(f, "Invalid element {} in permutation of length {}", elem, count)
             },
+            Error::OpNotImplemented(ref op, ref desc) => {
+                write!(f, "Operation {} is not implemented for {} gates", op, desc)
+            }
             Error::DoublePermutationElement(elem) => {
                 write!(f, "Element {} occurs multiple times in permutation", elem)
             }

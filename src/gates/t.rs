@@ -18,6 +18,7 @@ use crate::gates::Gate;
 ///
 /// The `T` gate rotates the state over π/4 radians around the `z` axis of
 /// the Bloch sphere. It is the square root of the `S` gate.
+#[derive(Clone)]
 pub struct T
 {
 }
@@ -104,10 +105,21 @@ impl crate::export::Latex for T
     }
 }
 
+impl crate::arithmetic::Square for T
+{
+    type SqType = crate::gates::S;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::S::new())
+    }
+}
+
 /// Conjugate of `T` gate
 ///
 /// The `T`<sup>`†`</sup> gate rotates the state over -π/4 radians around the
 /// `z` axis of the Bloch sphere. It is the conjugate of the `T` gate.
+#[derive(Clone)]
 pub struct Tdg
 {
 }
@@ -194,12 +206,23 @@ impl crate::export::Latex for Tdg
     }
 }
 
+impl crate::arithmetic::Square for Tdg
+{
+    type SqType = crate::gates::Sdg;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::Sdg::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::{T, Tdg};
     use crate::gates::{gate_test, Gate};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::arithmetic::Square;
 
     #[test]
     fn test_description()
@@ -351,5 +374,19 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{T^\dagger} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = T::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = Tdg::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

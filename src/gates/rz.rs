@@ -26,6 +26,7 @@ use crate::gates::Gate;
 /// │          0 exp(iλ/2)│
 /// └                     ┘
 /// ```
+#[derive(Clone)]
 pub struct RZ
 {
     lambda: crate::gates::Parameter,

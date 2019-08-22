@@ -18,6 +18,7 @@ use crate::stabilizer::PauliOp;
 /// The identity gate
 ///
 /// The identity gate leaves the qubits on which it acts unchanged.
+#[derive(Clone)]
 pub struct I
 {
 }
@@ -97,12 +98,23 @@ impl crate::export::Latex for I
     }
 }
 
+impl crate::arithmetic::Square for I
+{
+    type SqType = Self;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(Self::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::I;
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{gate_test, Gate};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -182,5 +194,14 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut ops = [PauliOp::X];
         assert_eq!(I::new().conjugate(&mut ops), Ok(false));
         assert_eq!(ops, [PauliOp::X]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = I::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

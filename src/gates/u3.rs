@@ -26,6 +26,7 @@ use crate::gates::Gate;
 /// │exp(iϕ)sin(θ/2)   exp(i(λ+ϕ))cos(θ/2)│
 /// └                                     ┘
 /// ```
+#[derive(Clone)]
 pub struct U3
 {
     theta: crate::gates::Parameter,

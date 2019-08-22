@@ -284,6 +284,7 @@
 
 #[macro_use] pub mod cmatrix;
 #[macro_use] pub mod gates;
+pub mod arithmetic;
 pub mod circuit;
 pub mod error;
 pub mod export;

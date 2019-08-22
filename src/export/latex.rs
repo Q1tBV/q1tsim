@@ -559,6 +559,7 @@ mod tests
 {
     use super::{LatexExportState, Latex};
 
+    #[derive(Clone)]
     struct NoLatexGate;
 
     impl crate::gates::Gate for NoLatexGate

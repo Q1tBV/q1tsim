@@ -19,15 +19,16 @@ use crate::gates::{Gate, CX};
 /// A controlled gate is a gate which acts upon a control bit: when
 /// the control bit is zero, it leaves the target unchanged; when the control
 /// bit is one, the gate is applied.
+#[derive(Clone)]
 pub struct C<G>
-where G: crate::gates::Gate
+where G: crate::gates::Gate + Clone
 {
     gate: G,
     desc: String
 }
 
 impl<G> C<G>
-where G: crate::gates::Gate
+where G: crate::gates::Gate + Clone
 {
     /// Create a new controlled gate for `gate`.
     pub fn new(gate: G) -> Self
@@ -38,7 +39,7 @@ where G: crate::gates::Gate
 }
 
 impl<G> crate::gates::Gate for C<G>
-where G: crate::gates::Gate
+where G: 'static + crate::gates::Gate + Clone
 {
     fn cost(&self) -> f64
     {
@@ -81,7 +82,7 @@ where G: crate::gates::Gate
 }
 
 impl<G> crate::export::Latex for C<G>
-where G: crate::gates::Gate + crate::export::Latex
+where G: 'static + crate::gates::Gate + Clone + crate::export::Latex
 {
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
@@ -125,6 +126,7 @@ macro_rules! declare_controlled_type
 {
     ($(#[$attr:meta])* $name:ident, $gate_type:ty $(, $arg:ident)*) => {
         $(#[$attr])*
+        #[derive(Clone)]
         pub struct $name
         {
             $( #[allow(dead_code)] $arg: f64, )*

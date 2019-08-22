@@ -24,6 +24,7 @@ use crate::stabilizer::PauliOp;
 ///     │ 1-i 1+i │
 ///     └         ┘
 /// ```
+#[derive(Clone)]
 pub struct V
 {
 }
@@ -109,9 +110,20 @@ impl crate::export::Latex for V
     }
 }
 
+impl crate::arithmetic::Square for V
+{
+    type SqType = crate::gates::X;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::X::new())
+    }
+}
+
 /// Conjugate of `V` gate.
 ///
 /// The `V`<sup>`†`</sup> is the conjugate of the `V` gate.
+#[derive(Clone)]
 pub struct Vdg
 {
 }
@@ -197,12 +209,23 @@ impl crate::export::Latex for Vdg
     }
 }
 
+impl crate::arithmetic::Square for Vdg
+{
+    type SqType = crate::gates::X;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::X::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::{V, Vdg};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{gate_test, Gate};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -343,5 +366,19 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut op = [PauliOp::Y];
         assert_eq!(Vdg::new().conjugate(&mut op), Ok(true));
         assert_eq!(op, [PauliOp::Z]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = V::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = Vdg::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

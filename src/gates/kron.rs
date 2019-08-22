@@ -17,7 +17,9 @@ use crate::stabilizer::PauliOp;
 
 /// Gate describing the Kronecker product of two other gates operating on
 /// different qubits.
+#[derive(Clone)]
 pub struct Kron<G0, G1>
+where G0: Clone, G1: Clone
 {
     g0: G0,
     g1: G1,
@@ -25,7 +27,7 @@ pub struct Kron<G0, G1>
 }
 
 impl<G0, G1> Kron<G0, G1>
-where G0: crate::gates::Gate, G1: crate::gates::Gate
+where G0: crate::gates::Gate + Clone, G1: crate::gates::Gate + Clone
 {
     /// Create a new Kronecker product gate `g1` ⊗ `g2`.
     pub fn new(g0: G0, g1: G1) -> Self
@@ -36,7 +38,8 @@ where G0: crate::gates::Gate, G1: crate::gates::Gate
 }
 
 impl<G0, G1> crate::gates::Gate for Kron<G0, G1>
-where G0: crate::gates::Gate, G1: crate::gates::Gate
+where G0: 'static + crate::gates::Gate + Clone,
+    G1: 'static + crate::gates::Gate + Clone
 {
     fn cost(&self) -> f64
     {
@@ -85,7 +88,8 @@ where G0: crate::gates::Gate, G1: crate::gates::Gate
 }
 
 impl<G0, G1> crate::export::OpenQasm for Kron<G0, G1>
-where G0: crate::export::OpenQasm, G1: crate::export::OpenQasm
+where G0: 'static + crate::export::OpenQasm + Clone,
+    G1: 'static + crate::export::OpenQasm + Clone
 {
     fn open_qasm(&self, bit_names: &[String], bits: &[usize])
         -> crate::error::Result<String>
@@ -107,7 +111,8 @@ where G0: crate::export::OpenQasm, G1: crate::export::OpenQasm
 }
 
 impl<G0, G1> crate::export::CQasm for Kron<G0, G1>
-where G0: crate::export::CQasm, G1: crate::export::CQasm
+where G0: 'static + crate::export::CQasm + Clone,
+    G1: 'static + crate::export::CQasm + Clone
 {
     fn c_qasm(&self, bit_names: &[String], bits: &[usize])
         -> crate::error::Result<String>
@@ -129,7 +134,8 @@ where G0: crate::export::CQasm, G1: crate::export::CQasm
 }
 
 impl<G0, G1> crate::export::Latex for Kron<G0, G1>
-where G0: crate::export::Latex, G1: crate::export::Latex
+where G0: 'static + crate::export::Latex + Clone,
+    G1: 'static + crate::export::Latex + Clone
 {
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
@@ -142,12 +148,33 @@ where G0: crate::export::Latex, G1: crate::export::Latex
     }
 }
 
+impl<G0, G1> crate::arithmetic::Square for Kron<G0, G1>
+where G0: 'static + crate::arithmetic::Square + Clone, G0::SqType: crate::gates::Gate + Clone,
+    G1: 'static + crate::arithmetic::Square + Clone, G1::SqType: crate::gates::Gate + Clone,
+{
+    type SqType = crate::gates::Kron<G0::SqType, G1::SqType>;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        if let Ok(g0sq) = self.g0.square()
+        {
+            if let Ok(g1sq) = self.g1.square()
+            {
+                return Ok(Kron::new(g0sq, g1sq));
+            }
+        }
+        Err(crate::error::Error::OpNotImplemented(String::from("square"),
+            String::from(self.description())))
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::Kron;
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{gate_test, CX, Gate, H, I, T, X};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -340,5 +367,14 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = Kron::new(X::new(), T::new());
         let mut ops = [PauliOp::Z, PauliOp::Z];
         assert!(matches!(gate.conjugate(&mut ops), Err(crate::error::Error::NotAStabilizer(_))));
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = Kron::new(H::new(), X::new());
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

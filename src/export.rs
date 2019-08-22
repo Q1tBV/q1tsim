@@ -26,12 +26,26 @@ pub use self::openqasm::OpenQasm;
 pub trait CircuitGate: Gate + OpenQasm + CQasm + Latex
 {
     fn as_gate(&self) -> &Gate;
+    fn clone_box(&self) -> Box<CircuitGate>;
 }
 
-impl<G: Gate + OpenQasm + CQasm + Latex> CircuitGate for G
+impl<G: 'static + Clone + Gate + OpenQasm + CQasm + Latex> CircuitGate for G
 {
     fn as_gate(&self) -> &Gate
     {
         self
+    }
+
+    fn clone_box(&self) -> Box<CircuitGate>
+    {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<CircuitGate>
+{
+    fn clone(&self) -> Self
+    {
+        self.clone_box()
     }
 }

@@ -24,6 +24,7 @@ use crate::gates::Gate;
 ///           │exp(iϕ)    exp(i(λ+ϕ))│
 ///           └                      ┘
 /// ```
+#[derive(Clone)]
 pub struct U2
 {
     phi: crate::gates::Parameter,

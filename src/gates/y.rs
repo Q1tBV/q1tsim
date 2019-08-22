@@ -19,6 +19,7 @@ use crate::stabilizer::PauliOp;
 ///
 /// The Y gate rotates the state over π radians around the `y` axis of the Bloch
 /// sphere.
+#[derive(Clone)]
 pub struct Y
 {
 }
@@ -124,11 +125,22 @@ impl crate::export::Latex for Y
     }
 }
 
+impl crate::arithmetic::Square for Y
+{
+    type SqType = crate::gates::I;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::I::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{gate_test, Gate, Y};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -213,5 +225,14 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut op = [PauliOp::Y];
         assert_eq!(Y::new().conjugate(&mut op), Ok(false));
         assert_eq!(op, [PauliOp::Y]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = Y::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

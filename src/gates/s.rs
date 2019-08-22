@@ -26,6 +26,7 @@ use crate::stabilizer::PauliOp;
 /// │ 0 i │
 /// └     ┘
 /// ```
+#[derive(Clone)]
 pub struct S
 {
 }
@@ -130,6 +131,16 @@ impl crate::export::Latex for S
     }
 }
 
+impl crate::arithmetic::Square for S
+{
+    type SqType = crate::gates::Z;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::Z::new())
+    }
+}
+
 /// Conjugate of Clifford `S` gate
 ///
 /// The `S`<sup>`†`</sup> gate rotates the state over -π/2 radians around the
@@ -141,6 +152,7 @@ impl crate::export::Latex for S
 /// │ 0 -i │
 /// └      ┘
 /// ```
+#[derive(Clone)]
 pub struct Sdg
 {
 }
@@ -245,11 +257,22 @@ impl crate::export::Latex for Sdg
     }
 }
 
+impl crate::arithmetic::Square for Sdg
+{
+    type SqType = crate::gates::Z;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::Z::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{gate_test, Gate, S, Sdg};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -389,5 +412,19 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut op = [PauliOp::Y];
         assert_eq!(Sdg::new().conjugate(&mut op), Ok(false));
         assert_eq!(op, [PauliOp::X]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = S::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = Sdg::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

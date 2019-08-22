@@ -16,6 +16,7 @@ use crate::gates::Gate;
 use crate::stabilizer::PauliOp;
 
 /// Controlled `Z` gate.
+#[derive(Clone)]
 pub struct CZ
 {
     cgate: crate::gates::C<crate::gates::Z>
@@ -112,6 +113,15 @@ impl crate::export::Latex for CZ
     }
 }
 
+impl crate::arithmetic::Square for CZ
+{
+    type SqType = crate::gates::Kron<crate::gates::I, crate::gates::I>;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::Kron::new(crate::gates::I::new(), crate::gates::I::new()))
+    }
+}
 
 #[cfg(test)]
 mod tests
@@ -120,6 +130,7 @@ mod tests
     use crate::cmatrix;
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::gates::{gate_test, Gate};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -236,5 +247,14 @@ r#"\Qcircuit @C=1em @R=.7em {
             assert_eq!(op[1], r1);
             assert_eq!(phase, p);
         }
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = CZ::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

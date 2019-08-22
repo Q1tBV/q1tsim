@@ -25,6 +25,7 @@ use crate::gates::Gate;
 /// │ sin(θ/2)  cos(θ/2) │
 /// └                    ┘
 /// ```
+#[derive(Clone)]
 pub struct RY
 {
     theta: crate::gates::Parameter,

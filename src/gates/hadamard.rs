@@ -20,6 +20,7 @@ use crate::stabilizer::PauliOp;
 /// The Hadamard gate maps the zero state |0&rang; to the symmetric combination
 /// of |0&rang; and |1&rang;, and the |1&rang; state to the anti-symmetric
 /// combination.
+#[derive(Clone)]
 pub struct H
 {
 }
@@ -149,11 +150,22 @@ impl crate::export::Latex for H
     }
 }
 
+impl crate::arithmetic::Square for H
+{
+    type SqType = crate::gates::I;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::I::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use crate::gates::{gate_test, Gate, H};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -238,5 +250,14 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut ops = [PauliOp::Y];
         assert_eq!(gate.conjugate(&mut ops), Ok(true));
         assert_eq!(ops, [PauliOp::Y]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = H::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

@@ -18,6 +18,7 @@ use crate::stabilizer::PauliOp;
 /// The `Swap` gate
 ///
 /// The `Swap` gate swap two qubits.
+#[derive(Clone)]
 pub struct Swap
 {
 }
@@ -151,6 +152,15 @@ impl crate::export::Latex for Swap
     }
 }
 
+impl crate::arithmetic::Square for Swap
+{
+    type SqType = crate::gates::Kron<crate::gates::I, crate::gates::I>;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::Kron::new(crate::gates::I::new(), crate::gates::I::new()))
+    }
+}
 
 #[cfg(test)]
 mod tests
@@ -158,6 +168,7 @@ mod tests
     use super::Swap;
     use crate::export::{LatexExportState, Latex, OpenQasm, CQasm};
     use crate::gates::{gate_test, Gate};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -279,5 +290,14 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut ops = [PauliOp::I, PauliOp::X];
         assert_eq!(Swap::new().conjugate(&mut ops), Ok(false));
         assert_eq!(ops, [PauliOp::X, PauliOp::I]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = Swap::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

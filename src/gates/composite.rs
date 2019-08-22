@@ -43,6 +43,7 @@ impl SubGateDesc
 }
 
 /// Operation in a composite gate.
+#[derive(Clone)]
 struct SubGate
 {
     /// The gate
@@ -69,6 +70,7 @@ impl SubGate
 ///
 /// Struct Composite provides for user-defined gates that are made out of a
 /// sequence of more primitive gates.
+#[derive(Clone)]
 pub struct Composite
 {
     // The name of the gate

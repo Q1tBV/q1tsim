@@ -19,6 +19,7 @@ use crate::stabilizer::PauliOp;
 ///
 /// The Z gate rotates the state over π radians around the `z` axis of
 /// the Bloch sphere, i.e. it flips the sign of the |1⟩ components of the qubit.
+#[derive(Clone)]
 pub struct Z
 {
 }
@@ -114,12 +115,23 @@ impl crate::export::Latex for Z
     }
 }
 
+impl crate::arithmetic::Square for Z
+{
+    type SqType = crate::gates::I;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(crate::gates::I::new())
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::Z;
     use crate::gates::{gate_test, Gate};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -203,5 +215,14 @@ r#"\Qcircuit @C=1em @R=.7em {
         let mut op = [PauliOp::Y];
         assert_eq!(Z::new().conjugate(&mut op), Ok(true));
         assert_eq!(op, [PauliOp::Y]);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = Z::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

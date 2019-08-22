@@ -19,6 +19,7 @@ use crate::stabilizer::PauliOp;
 ///
 /// The `Loop` gate represents a static loop, i.e. a set of instructions that
 /// is executed a fixed number of times.
+#[derive(Clone)]
 pub struct Loop
 {
     /// The loop label, naming the loop
@@ -219,12 +220,23 @@ impl crate::export::Latex for Loop
     }
 }
 
+impl crate::arithmetic::Square for Loop
+{
+    type SqType = Self;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(Self::new(&self.label, 2 * self.nr_iterations, self.body.clone()))
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
     use super::Loop;
     use crate::export::{CQasm, OpenQasm, Latex, LatexExportState};
     use crate::gates::{gate_test, Composite, Gate};
+    use crate::arithmetic::Square;
     use crate::stabilizer::PauliOp;
 
     #[test]
@@ -437,5 +449,21 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = Loop::new("myloop", 3, body);
         let mut ops = [PauliOp::X, PauliOp::Y];
         assert!(matches!(gate.conjugate(&mut ops), Err(crate::error::Error::NotAStabilizer(_))));
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let body = Composite::from_string("body", "H 0; CX 0 1").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let body = Composite::from_string("body", "H 0; Vdg 1; CX 1 0").unwrap();
+        let gate = Loop::new("myloop", 3, body);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }
