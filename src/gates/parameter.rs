@@ -19,6 +19,7 @@
 /// excution, but with a different value for a parameter. For reference
 /// parameters, a name is associated with the parameter for the description,
 /// since its value can change.
+#[derive(Clone)]
 pub enum Parameter
 {
     /// Direct value

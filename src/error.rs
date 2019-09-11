@@ -158,6 +158,10 @@ pub enum Error
     DoublePermutationElement(usize),
     /// Operation is not implemented for a gate type
     OpNotImplemented(String, String),
+    /// Unknown function name when evalutating expression
+    UnknownFunction(String),
+    /// Unknown variable when evalutating expression
+    UnknownVariable(String),
     /// Other errors that should not occur
     InternalError(String),
     /// Error reating to the export of a circuit
@@ -226,6 +230,12 @@ impl ::std::fmt::Display for Error
             }
             Error::DoublePermutationElement(elem) => {
                 write!(f, "Element {} occurs multiple times in permutation", elem)
+            }
+            Error::UnknownFunction(ref name) => {
+                write!(f, "Unknown function {}", name)
+            }
+            Error::UnknownVariable(ref name) => {
+                write!(f, "Unknown variable {}", name)
             }
             Error::InternalError(ref err) => {
                 write!(f, "Internal error: {}", err)

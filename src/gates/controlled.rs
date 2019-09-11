@@ -249,12 +249,18 @@ macro_rules! declare_controlled_qasm
                     if let Some(len) = res[istart..].find('}')
                     {
                         let iend = istart + len + 1;
-                        let replacement;
-                        match crate::gates::Composite::parse_sum_expression(&res[istart+1..iend-1])
+                        let mut replacement = None;
+                        match crate::expression::Expression::parse(&res[istart+1..iend-1])
                         {
-                            Ok((val, "")) => { replacement = Some(val.to_string()); },
-                            _             => { replacement = None; }
+                            Ok((val, "")) => {
+                                if let Ok(nr) = val.eval()
+                                {
+                                    replacement = Some(nr.to_string());
+                                }
+                            },
+                            _             => {}
                         }
+
                         if let Some(repl) = replacement
                         {
                             res.replace_range(istart..iend, &repl);

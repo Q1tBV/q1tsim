@@ -118,231 +118,6 @@ impl Composite
         }
     }
 
-    /// Parse a real number
-    ///
-    /// Parse a real number. This can be either in the form of a real literal,
-    /// an integer literal (which is converted to a real number), or the string
-    /// "pi", which obviously indicates the number π. On success, the parsed
-    /// number is returned, together with the remainder of the string to be
-    /// parsed. On failure, a ParseError::InvalidArgument error is returned.
-    fn parse_real_literal(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let real = regex::Regex::new(
-            r"^\s*((?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?)"
-        ).unwrap();
-        let integer = regex::Regex::new(r"^\s*([1-9][0-9]*|0)").unwrap();
-        let pi = regex::Regex::new(r"^\s*pi").unwrap();
-
-        if let Some(captures) = real.captures(expr)
-        {
-            let m = captures.get(0).unwrap();
-            if let Ok(nr) = captures[1].parse::<f64>()
-            {
-                Ok((nr, &expr[m.end()..]))
-            }
-            else
-            {
-                // It's probably impossible to get here with the above regular
-                // expression. Too large numbers are mapped to Inf.
-                Err(crate::error::ParseError::InvalidArgument(String::from(expr)))
-            }
-        }
-        else if let Some(captures) = integer.captures(expr)
-        {
-            let m = captures.get(0).unwrap();
-            if let Ok(nr) = captures[1].parse::<u64>()
-            {
-                Ok((nr as f64, &expr[m.end()..]))
-            }
-            else
-            {
-                Err(crate::error::ParseError::InvalidArgument(String::from(expr)))
-            }
-        }
-        else if let Some(m) = pi.find(expr)
-        {
-            Ok((::std::f64::consts::PI, &expr[m.end()..]))
-        }
-        else
-        {
-            Err(crate::error::ParseError::InvalidArgument(String::from(expr)))
-        }
-    }
-
-    /// Parse a possibly parenthesized expression
-    ///
-    /// Parse an argument to a gate. This function expects either an expression
-    /// in parentheses, or a literal real number. On success, the parsed
-    /// number is returned, together with the remainder of the string to be
-    /// parsed. On failure, a ParseError is returned.
-    fn parse_parenthesized_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let fun_open = regex::Regex::new(r"^\s*\(").unwrap();
-        let fun_close = regex::Regex::new(r"^\s*\)").unwrap();
-        if let Some(m) = fun_open.find(expr)
-        {
-            let (result, rest) = Self::parse_sum_expression(&expr[m.end()..])?;
-            if let Some(m) = fun_close.find(rest)
-            {
-                Ok((result, &rest[m.end()..]))
-            }
-            else
-            {
-                Err(crate::error::ParseError::UnclosedParentheses(String::from(expr)))
-            }
-        }
-        else
-        {
-            Self::parse_real_literal(expr)
-        }
-    }
-
-    /// Parse a function call
-    ///
-    /// Parse an argument to a gate. If a function call is found, it is parsed
-    /// in this function, otherwise control is passed on to
-    /// `parse_parenthesized_expression()`. The functions that are recognised
-    /// are `sin`, `cos`, `tan`, `exp`, `ln`, and `sqrt`. On success, the parsed
-    /// number is returned, together with the remainder of the string to be
-    /// parsed. On failure, a ParseError is returned.
-    fn parse_function_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let fun_open = regex::Regex::new(r"^\s*(sin|cos|tan|exp|ln|sqrt)\s*\(").unwrap();
-        let fun_close = regex::Regex::new(r"^\s*\)").unwrap();
-        if let Some(captures) = fun_open.captures(expr)
-        {
-            let m = captures.get(0).unwrap();
-            let (arg, new_rest) = Self::parse_sum_expression(&expr[m.end()..])?;
-            if let Some(m) = fun_close.find(new_rest)
-            {
-                let result = match &captures[1]
-                {
-                    "sin"  => arg.sin(),
-                    "cos"  => arg.cos(),
-                    "tan"  => arg.tan(),
-                    "exp"  => arg.exp(),
-                    "ln"   => arg.ln(),
-                    "sqrt" => arg.sqrt(),
-                    // LCOV_EXCL_START
-                    _      => { unreachable!() }
-                    // LCOV_EXCL_STOP
-                };
-                Ok((result, &new_rest[m.end()..]))
-            }
-            else
-            {
-                Err(crate::error::ParseError::UnclosedParentheses(String::from(expr)))
-            }
-        }
-        else
-        {
-            Self::parse_parenthesized_expression(expr)
-        }
-    }
-
-    /// Parse a power-raising expression
-    ///
-    /// Parse an argument to a gate, in the form of a number possibly raised
-    /// to another number.  On success, the parsed number is returned, together
-    /// with the remainder of the string to be parsed. On failure, a ParseError
-    /// is returned.
-    fn parse_power_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let op = regex::Regex::new(r"^\s*\^").unwrap();
-        let (left, rest) = Self::parse_function_expression(expr)?;
-        if let Some(m) = op.find(rest)
-        {
-            let (right, new_rest) = Self::parse_power_expression(&rest[m.end()..])?;
-            Ok((left.powf(right), new_rest))
-        }
-        else
-        {
-            Ok((left, rest))
-        }
-    }
-
-    /// Parse a negated expression
-    ///
-    /// Parse an argument to a gate, in the form of a number that is zero or
-    /// more times negated.  On success, the parsed number is returned, together
-    /// with the remainder of the string to be parsed. On failure, a ParseError
-    /// is returned.
-    fn parse_negative_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let op = regex::Regex::new(r"^\s*\-").unwrap();
-        let mut rest = expr;
-        let mut flip_sign = false;
-        while let Some(m) = op.find(rest)
-        {
-            rest = &rest[m.end()..];
-            flip_sign = !flip_sign;
-        }
-
-        let (mut result, new_rest) = Self::parse_power_expression(rest)?;
-        if flip_sign
-        {
-            result = -result;
-        }
-
-        Ok((result, new_rest))
-    }
-
-    /// Parse a product expression
-    ///
-    /// Parse an argument to a gate, in the form of a product or quotient of one
-    /// or more expressions. On success, the parsed number is returned, together
-    /// with the remainder of the string to be parsed. On failure, a ParseError
-    /// is returned.
-    fn parse_product_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let op = regex::Regex::new(r"^\s*([*/])").unwrap();
-        let (mut left, mut rest) = Self::parse_negative_expression(expr)?;
-        while let Some(captures) = op.captures(rest)
-        {
-            let m = captures.get(0).unwrap();
-            let (right, new_rest) = Self::parse_negative_expression(&rest[m.end()..])?;
-            if &captures[1] == "*"
-            {
-                left *= right;
-            }
-            else
-            {
-                left /= right;
-            }
-            rest = new_rest;
-        }
-
-        Ok((left, rest))
-    }
-
-    /// Parse a sum expression
-    ///
-    /// Parse an argument to a gate, in the form of a sum or difference of one
-    /// or more expressions. On success, the parsed number is returned, together
-    /// with the remainder of the string to be parsed. On failure, a ParseError
-    /// is returned.
-    pub fn parse_sum_expression(expr: &str) -> crate::error::ParseResult<(f64, &str)>
-    {
-        let op = regex::Regex::new(r"^\s*([-+])").unwrap();
-        let (mut left, mut rest) = Self::parse_product_expression(expr)?;
-        while let Some(captures) = op.captures(rest)
-        {
-            let m = captures.get(0).unwrap();
-            let (right, new_rest) = Self::parse_product_expression(&rest[m.end()..])?;
-            if &captures[1] == "+"
-            {
-                left += right;
-            }
-            else
-            {
-                left -= right;
-            }
-            rest = new_rest;
-        }
-
-        Ok((left, rest))
-    }
-
     /// Parse arguments to a subgate.
     ///
     /// Parse arguments to a subgate, if any, from description string `desc`.
@@ -350,7 +125,7 @@ impl Composite
     /// is returned. If there is an argument list, then if it can be parsed
     /// successfully, the arguments are returned,¸together with the rest of the
     /// description string that needs to be parsed for bit numbers. On failure,
-    /// ParseError::InvalidArgument is returned.
+    /// a ParseError is returned.
     fn parse_gate_args(desc: &str) -> crate::error::ParseResult<(Vec<f64>, &str)>
     {
         let open_args = regex::Regex::new(r"^\s*\(").unwrap();
@@ -358,12 +133,30 @@ impl Composite
         let close_args = regex::Regex::new(r"^\s*\)").unwrap();
         if let Some(m) = open_args.find(desc)
         {
-            let (arg, mut rest) = Self::parse_sum_expression(&desc[m.end()..])?;
-            let mut args = vec![arg];
+            let (arg, mut rest) = crate::expression::Expression::parse(&desc[m.end()..])?;
+            let mut args = vec![];
+            match arg.eval()
+            {
+                Ok(x) => { args.push(x); },
+                _     => {
+                    return Err(
+                        crate::error::ParseError::InvalidArgument(String::from(m.as_str()))
+                    );
+                }
+            }
+
             while let Some(m) = sep_args.find(rest)
             {
-                let (arg, new_rest) = Self::parse_sum_expression(&rest[m.end()..])?;
-                args.push(arg);
+                let (arg, new_rest) = crate::expression::Expression::parse(&rest[m.end()..])?;
+                match arg.eval()
+                {
+                    Ok(x) => { args.push(x); },
+                    _     => {
+                        return Err(
+                            crate::error::ParseError::InvalidArgument(String::from(m.as_str()))
+                        );
+                    }
+                }
                 rest = new_rest;
             }
 

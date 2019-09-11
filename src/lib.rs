@@ -288,6 +288,7 @@ pub mod arithmetic;
 pub mod circuit;
 pub mod error;
 pub mod export;
+pub mod expression;
 pub mod permutation;
 pub mod qustate;
 pub mod vectorstate;
