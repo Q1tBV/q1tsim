@@ -1,6 +1,6 @@
 [package]
 name = "q1tsim"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Gé Vissers <ge@q1t.nl>"]
 description="A simple, efficient, quantum computer simulator."
 repository="https://github.com/Q1tBV/q1tsim"
