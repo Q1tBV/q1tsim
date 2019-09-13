@@ -618,19 +618,25 @@ impl Circuit
     pub fn reexecute_with_rng<R: rand::Rng>(&mut self, rng: &mut R)
         -> crate::error::Result<()>
     {
-        let c_state = self.c_state.as_mut().unwrap();
-        let ops = &self.ops;
-        match self.q_state
+        if let Some(c_state) = self.c_state.as_mut()
         {
-            Some(QuStateRepr::Stabilizer(ref mut state)) => {
-                Self::do_execute_with(state, c_state, ops, rng)
-            },
-            Some(QuStateRepr::Vector(ref mut state)) => {
-                Self::do_execute_with(state, c_state, ops, rng)
-            },
-            _ => {
-                Err(crate::error::Error::NotExecuted)
+            let ops = &self.ops;
+            match self.q_state
+            {
+                Some(QuStateRepr::Stabilizer(ref mut state)) => {
+                    Self::do_execute_with(state, c_state, ops, rng)
+                },
+                Some(QuStateRepr::Vector(ref mut state)) => {
+                    Self::do_execute_with(state, c_state, ops, rng)
+                },
+                _ => {
+                    Err(crate::error::Error::NotExecuted)
+                }
             }
+        }
+        else
+        {
+            Err(crate::error::Error::NotExecuted)
         }
     }
 
