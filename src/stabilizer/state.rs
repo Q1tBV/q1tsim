@@ -75,31 +75,8 @@ impl crate::qustate::QuState for StabilizerState
                 self.nr_shots, String::from(gate.description())));
         }
 
-        // XXX FIXME: computing the ranges is the same in vectorstate. Take it
-        // out and make a common function.
-        let mut ranges = vec![];
-        let mut off = 0;
-        for (icol, &count) in self.counts.iter().enumerate()
-        {
-            let mut begin = off;
-            let mut prev = control[off];
-            for ibit in off+1..off+count
-            {
-                if control[ibit] != prev
-                {
-                    ranges.push((icol, ibit-begin, prev));
-                    begin = ibit;
-                    prev = !prev;
-                }
-            }
-            if begin < off+count
-            {
-                ranges.push((icol, off+count-begin, prev));
-            }
-
-            off += count;
-        }
-
+        let ranges = crate::qustate::collect_conditional_ranges(&self.counts,
+            control);
         let mut new_tableaus = Vec::with_capacity(ranges.len());
         for &(icol, _, apply) in ranges.iter()
         {
@@ -166,7 +143,7 @@ impl crate::qustate::QuState for StabilizerState
                     }
                 },
                 MeasurementInfo::Random(i) => {
-                    let distribution = rand::distributions::Binomial::new(count as u64, 0.5);
+                    let distribution = rand_distr::Binomial::new(count as u64, 0.5).unwrap();
                     let n0 = rng.sample(distribution) as usize;
 
                     if n0 == 0
@@ -256,7 +233,7 @@ impl crate::qustate::QuState for StabilizerState
                     MeasurementInfo::Deterministic(false) => count,
                     MeasurementInfo::Deterministic(true) => 0,
                     MeasurementInfo::Random(_) => {
-                        let distribution = rand::distributions::Binomial::new(count as u64, 0.5);
+                        let distribution = rand_distr::Binomial::new(count as u64, 0.5).unwrap();
                         rng.sample(distribution) as usize
                     }
                 };
@@ -306,7 +283,7 @@ impl crate::qustate::QuState for StabilizerState
                         MeasurementInfo::Deterministic(false) => c,
                         MeasurementInfo::Deterministic(true) => 0,
                         MeasurementInfo::Random(_) => {
-                            let distribution = rand::distributions::Binomial::new(c as u64, 0.5);
+                            let distribution = rand_distr::Binomial::new(c as u64, 0.5).unwrap();
                             rng.sample(distribution) as usize
                         }
                     };

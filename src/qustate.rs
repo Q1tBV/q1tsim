@@ -87,3 +87,41 @@ pub trait QuState
     /// for all runs.
     fn reset_all(&mut self);
 }
+
+/// Collect which states to apply conditional gate to into ranges
+///
+/// A quantum calculation is represented by a set of quantum states, where each
+/// separate state is combined with the number of times it has been attained
+/// in the calculation. Given such a quantum state, and `N` control bits
+/// (where `N` is the total number of runs in the calculation), this function
+/// collects triplets (`start`, `length`, `apply`), where a conditional
+/// gate should be applied to `length` copies of the quantum state at index
+/// `start` if `apply` is `true`, and not copied unchanged if it is `false`.
+pub fn collect_conditional_ranges(counts: &[usize], control: &[bool])
+    -> Vec<(usize, usize, bool)>
+{
+    let mut ranges = vec![];
+    let mut off = 0;
+    for (icol, &count) in counts.iter().enumerate()
+    {
+        let mut begin = off;
+        let mut prev = control[off];
+        for ibit in off+1..off+count
+        {
+            if control[ibit] != prev
+            {
+                ranges.push((icol, ibit-begin, prev));
+                begin = ibit;
+                prev = !prev;
+            }
+        }
+        if begin < off+count
+        {
+            ranges.push((icol, off+count-begin, prev));
+        }
+
+        off += count;
+    }
+
+    ranges
+}
