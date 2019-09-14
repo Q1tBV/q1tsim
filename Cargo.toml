@@ -10,7 +10,7 @@ readme="README.md"
 edition="2018"
 
 [dependencies]
-q1tsim-derive = { path = "q1tsim-derive", version = "0.1.0" }
+q1tsim-derive = { path = "q1tsim-derive", version = "0.2.0" }
 num-complex="0.2"
 num-traits="0.2"
 ndarray = "0.12"

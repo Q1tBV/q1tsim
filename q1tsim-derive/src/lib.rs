@@ -22,7 +22,7 @@ use quote::quote;
 
 macro_rules! gen_derive
 {
-    ($trait_name:ident, $fn_name:ident) => {
+    ($path:path, $trait_name:ident, $fn_name:ident) => {
         #[proc_macro_derive($trait_name)]
         pub fn $fn_name(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         {
@@ -30,16 +30,17 @@ macro_rules! gen_derive
 
             let name = &ast.ident;
             let gen = quote! {
-                impl q1tsim::export::$trait_name for #name {}
+                impl $path::$trait_name for #name {}
             };
             gen.into()
         }
     }
 }
 
-gen_derive!(OpenQasm, open_qasm_derive);
-gen_derive!(CQasm, c_qasm_derive);
-gen_derive!(Latex, latex_derive);
+gen_derive!(q1tsim::export, OpenQasm, open_qasm_derive);
+gen_derive!(q1tsim::export, CQasm, c_qasm_derive);
+gen_derive!(q1tsim::export, Latex, latex_derive);
+gen_derive!(q1tsim::arithmetic, Square, square_derive);
 
 #[proc_macro_derive(ExportGate)]
 pub fn export_gate_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream

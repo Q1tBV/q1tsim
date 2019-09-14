@@ -1,6 +1,6 @@
 [package]
 name = "q1tsim-derive"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Gé Vissers <ge@q1t.nl>"]
 description="Derive macros for the q1tsim crate."
 repository="https://github.com/Q1tBV/q1tsim/qt1sim-derive"
