@@ -110,10 +110,31 @@ impl crate::export::Latex for U2
     }
 }
 
+impl crate::arithmetic::Square for U2
+{
+    type SqType = crate::gates::U3;
+
+    // NOTE: the U3 given below as the square of U2 is exact up to a global
+    // phase exp(i(lambda+phi-pi)/2).
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        match (&self.phi, &self.lambda)
+        {
+            (&crate::gates::Parameter::Direct(p), &crate::gates::Parameter::Direct(l)) => {
+                let pi = ::std::f64::consts::PI;
+                Ok(crate::gates::U3::new(l+p-pi, p-0.5*pi, l-0.5*pi))
+            },
+            _ => Err(crate::error::Error::ReferenceArithmetic)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, U2};
+    use super::U2;
+    use crate::arithmetic::Square;
+    use crate::gates::{gate_test, Gate};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use num_complex::Complex;
 
@@ -204,5 +225,45 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_2(0.7854, -3.1400)} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let phi = 1.2;
+        let lambda = -2.3;
+        let phase = num_complex::Complex::from_polar(&1.0,
+            &(0.5*(lambda+phi-::std::f64::consts::PI)));
+        let gate = U2::new(phi, lambda);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(phase * gate.square().unwrap().matrix(), &sq_mat);
+
+        let phi = 2.4;
+        let lambda = 0.0;
+        let phase = num_complex::Complex::from_polar(&1.0,
+            &(0.5*(lambda+phi-::std::f64::consts::PI)));
+        let gate = U2::new(phi, lambda);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(phase * gate.square().unwrap().matrix(), &sq_mat);
+
+        let phi = 0.0;
+        let lambda = -2.3;
+        let phase = num_complex::Complex::from_polar(&1.0,
+            &(0.5*(lambda+phi-::std::f64::consts::PI)));
+        let gate = U2::new(phi, lambda);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(phase * gate.square().unwrap().matrix(), &sq_mat);
+
+        let phi = 2.28;
+        let lambda = 17.12;
+        let phase = num_complex::Complex::from_polar(&1.0,
+            &(0.5*(lambda+phi-::std::f64::consts::PI)));
+        let gate = U2::new(phi, lambda);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(phase * gate.square().unwrap().matrix(), &sq_mat);
     }
 }

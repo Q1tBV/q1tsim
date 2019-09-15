@@ -141,10 +141,26 @@ impl crate::export::Latex for RX
     }
 }
 
+impl crate::arithmetic::Square for RX
+{
+    type SqType = Self;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        match self.theta
+        {
+            crate::gates::Parameter::Direct(x) => Ok(Self::new(2.0 * x)),
+            _                                  => Err(crate::error::Error::ReferenceArithmetic)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, RX};
+    use super::RX;
+    use crate::arithmetic::Square;
+    use crate::gates::{gate_test, Gate};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
 
     #[test]
@@ -230,5 +246,24 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{R_x(-24.0000)} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = RX::new(0.0);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = RX::new(1.3);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = RX::new(-2.5);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

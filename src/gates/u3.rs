@@ -116,10 +116,18 @@ impl crate::export::Latex for U3
     }
 }
 
+// Use default implementation for Square (i.e., fail)
+impl crate::arithmetic::Square for U3
+{
+    type SqType = Self;
+}
+
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, U3};
+    use super::U3;
+    use crate::arithmetic::Square;
+    use crate::gates::{gate_test, Gate};
     use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use num_complex::Complex;
 
@@ -211,5 +219,12 @@ r#"\Qcircuit @C=1em @R=.7em {
     \lstick{\ket{0}} & \gate{U_3(1.5708, 12.0000, -3.1400)} & \qw \\
 }
 "#);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = U3::new(::std::f64::consts::FRAC_PI_2, 12.0, -3.14);
+        assert!(matches!(gate.square(), Err(crate::error::Error::OpNotImplemented(_, _))));
     }
 }

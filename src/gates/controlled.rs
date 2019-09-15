@@ -21,14 +21,14 @@ use crate::gates::{Gate, CX};
 /// bit is one, the gate is applied.
 #[derive(Clone)]
 pub struct C<G>
-where G: crate::gates::Gate + Clone
+where G: Clone + crate::gates::Gate
 {
     gate: G,
     desc: String
 }
 
 impl<G> C<G>
-where G: crate::gates::Gate + Clone
+where G: Clone + crate::gates::Gate
 {
     /// Create a new controlled gate for `gate`.
     pub fn new(gate: G) -> Self
@@ -39,7 +39,7 @@ where G: crate::gates::Gate + Clone
 }
 
 impl<G> crate::gates::Gate for C<G>
-where G: 'static + crate::gates::Gate + Clone
+where G: 'static + Clone + crate::gates::Gate
 {
     fn cost(&self) -> f64
     {
@@ -82,7 +82,7 @@ where G: 'static + crate::gates::Gate + Clone
 }
 
 impl<G> crate::export::Latex for C<G>
-where G: 'static + crate::gates::Gate + Clone + crate::export::Latex
+where G: 'static + Clone + crate::gates::Gate + crate::export::Latex
 {
     fn latex(&self, bits: &[usize], state: &mut crate::export::LatexExportState)
         -> crate::error::Result<()>
@@ -118,6 +118,18 @@ where G: 'static + crate::gates::Gate + Clone + crate::export::Latex
         state.end_range_op();
 
         Ok(())
+    }
+}
+
+impl<G> crate::arithmetic::Square for C<G>
+where G: 'static + Clone + crate::arithmetic::Square,
+    G::SqType: Clone + crate::gates::Gate
+{
+    type SqType = C<G::SqType>;
+
+    fn square(&self) -> crate::error::Result<Self::SqType>
+    {
+        Ok(C::new(self.gate.square()?))
     }
 }
 
@@ -178,6 +190,28 @@ macro_rules! declare_controlled_cost
     };
     () => {
         fn cost(&self) -> f64 { self.cgate.cost() }
+    };
+}
+
+#[macro_export]
+macro_rules! declare_controlled_impl_gate
+{
+    ($name:ident, $gate_type:ty $(, cost=$cost:expr)*) => {
+        impl $crate::gates::Gate for $name
+        {
+            declare_controlled_cost!($($cost)*);
+            fn description(&self) -> &str { self.cgate.description() }
+            fn nr_affected_bits(&self) -> usize { self.cgate.nr_affected_bits() }
+            fn matrix(&self) -> $crate::cmatrix::CMatrix { self.cgate.matrix() }
+            fn apply_slice(&self, state: $crate::cmatrix::CVecSliceMut)
+            {
+                self.cgate.apply_slice(state);
+            }
+            fn apply_mat_slice(&self, state: $crate::cmatrix::CMatSliceMut)
+            {
+                self.cgate.apply_mat_slice(state);
+            }
+        }
     };
 }
 
@@ -292,25 +326,19 @@ macro_rules! declare_controlled_latex
 }
 
 #[macro_export]
-macro_rules! declare_controlled_impl_gate
+macro_rules! declare_controlled_square
 {
-    ($name:ident, $gate_type:ty $(, cost=$cost:expr)*) => {
-        impl $crate::gates::Gate for $name
+    ($gate_name:ident, $gate_type:ty) => {
+        impl $crate::arithmetic::Square for $gate_name
         {
-            declare_controlled_cost!($($cost)*);
-            fn description(&self) -> &str { self.cgate.description() }
-            fn nr_affected_bits(&self) -> usize { self.cgate.nr_affected_bits() }
-            fn matrix(&self) -> $crate::cmatrix::CMatrix { self.cgate.matrix() }
-            fn apply_slice(&self, state: $crate::cmatrix::CVecSliceMut)
+            type SqType = $crate::gates::C<<$gate_type as $crate::arithmetic::Square>::SqType>;
+
+            fn square(&self) -> crate::error::Result<Self::SqType>
             {
-                self.cgate.apply_slice(state);
-            }
-            fn apply_mat_slice(&self, state: $crate::cmatrix::CMatSliceMut)
-            {
-                self.cgate.apply_mat_slice(state);
+                self.cgate.square()
             }
         }
-    };
+    }
 }
 
 #[macro_export]
@@ -323,6 +351,7 @@ macro_rules! declare_controlled
         declare_controlled_qasm!(OpenQasm, $name, open_qasm);
         declare_controlled_qasm!(CQasm, $name, c_qasm);
         declare_controlled_latex!($name);
+        declare_controlled_square!($name, $gate_type);
     };
     ($(#[$attr:meta])* $name:ident, $gate_type:ty, cost=$cost:expr $(, arg=$arg:ident)* $(, open_qasm=$open_qasm:expr)* $(, c_qasm=$c_qasm:expr)*) => {
         declare_controlled_type!($(#[$attr])* $name, $gate_type $(, $arg)*);
@@ -331,6 +360,7 @@ macro_rules! declare_controlled
         declare_controlled_qasm!(OpenQasm, $name, open_qasm $(, qasm=$open_qasm)* $(, arg=$arg)*);
         declare_controlled_qasm!(CQasm, $name, c_qasm $(, qasm=$c_qasm)* $(, arg=$arg)*);
         declare_controlled_latex!($name);
+        declare_controlled_square!($name, $gate_type);
     };
 }
 
@@ -489,10 +519,11 @@ declare_controlled!(
 #[cfg(test)]
 mod tests
 {
-    use crate::gates::{gate_test, Gate, H, X};
-    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use super::{C, CCRX, CCRY, CCRZ, CCX, CCZ, CH, CRX, CRY, CRZ, CS, CTdg,
         CU1, CU3, CV};
+    use crate::arithmetic::Square;
+    use crate::gates::{gate_test, Gate, H, RY, X};
+    use crate::export::{Latex, LatexExportState, OpenQasm, CQasm};
     use crate::cmatrix;
 
     #[test]
@@ -792,5 +823,29 @@ r#"\Qcircuit @C=1em @R=.7em {
         let gate = CCX::new();
         let mut state = LatexExportState::new(3, 0);
         let _ltx = gate.latex(&[1, 2, 0], &mut state);
+    }
+
+    #[test]
+    fn test_square()
+    {
+        let gate = C::new(X::new());
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = C::new(C::new(RY::new(1.23)));
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = CRY::new(1.23);
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
+
+        let gate = CCX::new();
+        let mat = gate.matrix();
+        let sq_mat = mat.dot(&mat);
+        assert_complex_matrix_eq!(gate.square().unwrap().matrix(), &sq_mat);
     }
 }

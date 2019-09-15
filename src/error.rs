@@ -158,6 +158,8 @@ pub enum Error
     DoublePermutationElement(usize),
     /// Operation is not implemented for a gate type
     OpNotImplemented(String, String),
+    /// Cannot do arithmetic with reference parameters
+    ReferenceArithmetic,
     /// Unknown function name when evalutating expression
     UnknownFunction(String),
     /// Unknown variable when evalutating expression
@@ -227,16 +229,19 @@ impl ::std::fmt::Display for Error
             },
             Error::OpNotImplemented(ref op, ref desc) => {
                 write!(f, "Operation {} is not implemented for {} gates", op, desc)
-            }
+            },
+            Error::ReferenceArithmetic => {
+                write!(f, "Cannot do arithmetic with reference parameters")
+            },
             Error::DoublePermutationElement(elem) => {
                 write!(f, "Element {} occurs multiple times in permutation", elem)
-            }
+            },
             Error::UnknownFunction(ref name) => {
                 write!(f, "Unknown function {}", name)
-            }
+            },
             Error::UnknownVariable(ref name) => {
                 write!(f, "Unknown variable {}", name)
-            }
+            },
             Error::InternalError(ref err) => {
                 write!(f, "Internal error: {}", err)
             },
