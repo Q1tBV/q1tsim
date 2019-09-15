@@ -33,7 +33,7 @@ To use q1tsim in your Rust application, add the following to your `Cargo.toml` f
 
 ```toml
 [dependencies]
-q1tsim = "0.4"
+q1tsim = "0.5"
 ```
 
 As an example, here is a 3-qubit quantum Fourier transform of the |000⟩ quantum

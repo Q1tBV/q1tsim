@@ -1,3 +1,14 @@
+# [0.5.0] 2019-09-13
+
+- Added reference parameters. This allows one to change the parameters to a gate
+between executions of a circuit without having to create a new circuit (and also
+preserving the quantum state).
+- Added a python interface to add the option of using `q1tsim` simulator from Python.
+- Update the dependency on the `rand` crate to version 0.7. This fixes a situation
+in drawing from a binomial distribution being very slow when the success chance was
+close to zero.
+- Small bug fixes and code reorganization.
+
 # [0.4.0] 2019-05-29
 
 Much more efficient simulation of stabilizer circuits. Stabilizer circuits consist

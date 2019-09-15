@@ -287,6 +287,7 @@
 pub mod arithmetic;
 pub mod circuit;
 pub mod error;
+pub mod ffi;
 pub mod export;
 pub mod expression;
 pub mod permutation;
