@@ -66,6 +66,11 @@ class Circuit(object):
         """The number of classical bits in this circuit"""
         return self.__sim.circuit_nr_cbits(self.__ptr)
 
+    def cstate(self):
+        """Return the classical state (i.e. measurement results) of this circuit"""
+        res = q1tsimffi.unpack_result(self.__sim.circuit_cstate(self.__ptr))
+        return res
+
     def add_gate(self, name, qbits, params=None):
         """Add a gate.
 

@@ -6,6 +6,7 @@ RESULT_ERROR = 0
 RESULT_EMPTY = 1
 RESULT_STRING = 2
 RESULT_HISTOGRAM = 3
+RESULT_CSTATE = 5
 
 def get_q1tsim_lib(ffi):
 	if os.name == 'nt':
@@ -57,6 +58,7 @@ ffi.cdef("""
     void circuit_free(circuit_t *ptr);
     size_t circuit_nr_qbits(const circuit_t *ptr);
     size_t circuit_nr_cbits(const circuit_t *ptr);
+    result_t circuit_cstate(const circuit_t *ptr);
     result_t circuit_add_gate(circuit_t *ptr, const char* gate,
         const size_t* qbits, size_t nr_qubits,
         const parameter_t* param_ptr, size_t nr_params);
@@ -96,6 +98,10 @@ def unpack_result(res):
             hist = dict((ffi.string(elems[i].key).decode('utf-8'), elems[i].count)
                         for i in range(res.length))
             return hist
+        elif res.restype == RESULT_CSTATE:
+            ptr = ffi.cast("const uint64_t*", res.data)
+            elems = ffi.unpack(ptr, res.length)
+            return elems
         else:
             raise Exception("Unknown data type code: {}".format(res.restype))
     finally:

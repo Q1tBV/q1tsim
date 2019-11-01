@@ -6,6 +6,7 @@ const RESULT_ERROR: u32 = 0;
 const RESULT_EMPTY: u32 = 1;
 const RESULT_STRING: u32 = 2;
 const RESULT_HISTOGRAM: u32 = 3;
+const RESULT_CSTATE: u32 = 5;
 
 fn to_cstring(msg: &str) -> *const c_char
 {
@@ -119,6 +120,22 @@ impl CResult
         }
     }
 
+    fn c_state(state: &[u64]) -> Self
+    {
+        let elems = state.to_vec();
+        let ptr = elems.as_ptr();
+        let length = elems.len();
+        let size = elems.capacity();
+        ::std::mem::forget(elems);
+        CResult
+        {
+            data: ptr as *const ::std::ffi::c_void,
+            length: length,
+            size: size,
+            restype: RESULT_CSTATE
+        }
+    }
+
     fn free(self)
     {
         match self.restype
@@ -134,6 +151,11 @@ impl CResult
                     let ptr = std::mem::replace(&mut elem.key, ::std::ptr::null());
                     cstring_free(ptr as *mut c_char);
                 }
+            },
+            RESULT_CSTATE => {
+                let ptr = self.data as *mut u64;
+                let elems = unsafe { Vec::from_raw_parts(ptr, self.length, self.size) };
+                /* and drop elems */
             },
             RESULT_EMPTY|_ => { /* ignore */ }
         }
@@ -177,6 +199,18 @@ pub extern "C" fn circuit_nr_cbits(ptr: *const Circuit) -> usize
     assert!(!ptr.is_null());
     let circuit = unsafe { &*ptr };
     circuit.nr_cbits()
+}
+
+#[no_mangle]
+pub extern "C" fn circuit_cstate(ptr: *const Circuit) -> CResult
+{
+    assert!(!ptr.is_null());
+    let circuit = unsafe { &*ptr };
+    match circuit.cstate()
+    {
+        Some(state) => CResult::c_state(state.as_slice().unwrap()),
+        None => CResult::error("Circuit has not been run yet")
+    }
 }
 
 macro_rules! add_parametrized_gate
