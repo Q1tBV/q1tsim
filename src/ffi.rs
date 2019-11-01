@@ -154,8 +154,8 @@ impl CResult
             },
             RESULT_CSTATE => {
                 let ptr = self.data as *mut u64;
-                let elems = unsafe { Vec::from_raw_parts(ptr, self.length, self.size) };
-                /* and drop elems */
+                let _elems = unsafe { Vec::from_raw_parts(ptr, self.length, self.size) };
+                /* and drop _elems */
             },
             RESULT_EMPTY|_ => { /* ignore */ }
         }
