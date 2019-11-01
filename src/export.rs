@@ -25,24 +25,24 @@ pub use self::openqasm::OpenQasm;
 /// Trait combining the traits necessary for a gate in a quantum circuit
 pub trait CircuitGate: Gate + OpenQasm + CQasm + Latex
 {
-    fn as_gate(&self) -> &Gate;
-    fn clone_box(&self) -> Box<CircuitGate>;
+    fn as_gate(&self) -> &dyn Gate;
+    fn clone_box(&self) -> Box<dyn CircuitGate>;
 }
 
 impl<G: 'static + Clone + Gate + OpenQasm + CQasm + Latex> CircuitGate for G
 {
-    fn as_gate(&self) -> &Gate
+    fn as_gate(&self) -> &dyn Gate
     {
         self
     }
 
-    fn clone_box(&self) -> Box<CircuitGate>
+    fn clone_box(&self) -> Box<dyn CircuitGate>
     {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<CircuitGate>
+impl Clone for Box<dyn CircuitGate>
 {
     fn clone(&self) -> Self
     {

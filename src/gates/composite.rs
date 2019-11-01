@@ -47,7 +47,7 @@ impl SubGateDesc
 struct SubGate
 {
     /// The gate
-    gate: Box<CircuitGate>,
+    gate: Box<dyn CircuitGate>,
     /// The bits on which the gate acts
     bits: Vec<usize>
 }

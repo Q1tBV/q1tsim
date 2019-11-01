@@ -31,9 +31,9 @@ pub enum Basis
 enum CircuitOp
 {
     /// Apply a gate to the state
-    Gate(Box<CircuitGate>, Vec<usize>),
+    Gate(Box<dyn CircuitGate>, Vec<usize>),
     /// Conditionally apply a gate, depending on classical bits
-    ConditionalGate(Vec<usize>, u64, Box<CircuitGate>, Vec<usize>),
+    ConditionalGate(Vec<usize>, u64, Box<dyn CircuitGate>, Vec<usize>),
     /// Reset a qubit to |0⟩
     Reset(usize),
     /// Reset the quantum state to |00...0⟩
