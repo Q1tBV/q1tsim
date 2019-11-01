@@ -368,7 +368,7 @@ macro_rules! declare_controlled_square
         {
             type SqType = $crate::gates::C<<$gate_type as $crate::arithmetic::Square>::SqType>;
 
-            fn square(&self) -> crate::error::Result<Self::SqType>
+            fn square(&self) -> $crate::error::Result<Self::SqType>
             {
                 self.cgate.square()
             }

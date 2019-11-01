@@ -1,7 +1,7 @@
 use criterion::{criterion_group, Criterion};
 use q1tsim::{declare_controlled, declare_controlled_cost, declare_controlled_type,
     declare_controlled_impl, declare_controlled_impl_gate, declare_controlled_latex,
-    declare_controlled_qasm};
+    declare_controlled_qasm, declare_controlled_square};
 use q1tsim::circuit::Circuit;
 use q1tsim::gates::{CCX};
 
