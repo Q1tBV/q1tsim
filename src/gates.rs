@@ -36,20 +36,6 @@ mod x;
 mod y;
 mod z;
 
-/// Generates the new row number for the row that initially
-/// was at number `idx`, in a system of `nr_bits` qubits, in which a
-/// gate is operating on the qubits in `affected_bits`.
-fn get_sort_key(idx: usize, nr_bits: usize, affected_bits: &[usize]) -> usize
-{
-    let mut res = 0;
-    for b in affected_bits
-    {
-        let s = nr_bits - b - 1;
-        res = (res << 1) | ((idx >> s) & 1);
-    }
-    res
-}
-
 /// Reorder bits.
 ///
 /// When applying multi-bit gates, the rows in the state are shuffled
@@ -66,9 +52,31 @@ fn get_sort_key(idx: usize, nr_bits: usize, affected_bits: &[usize]) -> usize
 /// gate `G` on bits `affected_bits` in a `nr_bits`-sized system.
 pub fn bit_permutation(nr_bits: usize, affected_bits: &[usize]) -> crate::permutation::Permutation
 {
-    let mut idxs: Vec<usize> = (0..(1 << nr_bits)).collect();
-    idxs.sort_by_key(|&i| get_sort_key(i, nr_bits, affected_bits));
-    crate::permutation::Permutation::new(idxs).unwrap()
+    let mut perm1: Vec<_> = (0..(1 << nr_bits)).collect();
+    let mut ab = affected_bits.to_vec();
+    while !ab.is_empty()
+    {
+        let s = ab.pop().unwrap();
+        let idx = nr_bits - s - 1;
+        let bit = 1 << idx;
+        let lmask = bit - 1;
+        let umask = !(bit | lmask);
+
+        for i in perm1.iter_mut()
+        {
+            *i = (*i & umask) >> 1 | (*i & lmask) | (*i & bit) << s;
+        }
+
+        for iab in ab.iter_mut()
+        {
+            if *iab < s
+            {
+                *iab += 1;
+            }
+        }
+    }
+
+    crate::permutation::Permutation::new(perm1).unwrap().inverse()
 }
 
 /// Apply a gate
