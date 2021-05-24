@@ -38,7 +38,7 @@ q1tsim = "0.5"
 
 As an example, here is a 3-qubit quantum Fourier transform of the |000⟩ quantum
 state:
-```
+```rust
 extern crate q1tsim;
 
 use q1tsim::{circuit, gates};
